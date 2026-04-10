@@ -13,6 +13,8 @@ export interface Spot {
   trübungsPräferenz: 'getrübt' | 'mittel' | 'klar' | 'alle';
   temperaturMin: number;
   jahreszeitBonus: { frühling: number; sommer: number; herbst: number; winter: number };
+  taktik: string;
+  koderTipp: string;
 }
 
 export const SPOTS: Spot[] = [
@@ -25,7 +27,9 @@ export const SPOTS: Spot[] = [
     bootNötig: true, uferAngling: false,
     struktur: ['Spundwand', 'Dalben', 'Kante'],
     trübungsPräferenz: 'getrübt', temperaturMin: 5,
-    jahreszeitBonus: { frühling: 10, sommer: 5, herbst: 15, winter: 5 }
+    jahreszeitBonus: { frühling: 10, sommer: 5, herbst: 15, winter: 5 },
+    taktik: 'Köder schräg stromauf werfen und am gestrafften Seil in die Strömungsschatten der Dalben treiben lassen. Vorsicht vor Hängern!',
+    koderTipp: 'Große Shads (12-14cm) in UV-Farben oder dunklem Grün.'
   },
   {
     id: 'dove-elbe',
@@ -36,7 +40,9 @@ export const SPOTS: Spot[] = [
     bootNötig: false, uferAngling: true,
     struktur: ['Böschungskante', 'Buhnen', 'Tiefloch'],
     trübungsPräferenz: 'mittel', temperaturMin: 4,
-    jahreszeitBonus: { frühling: 15, sommer: 10, herbst: 10, winter: 5 }
+    jahreszeitBonus: { frühling: 15, sommer: 10, herbst: 10, winter: 5 },
+    taktik: 'Kanten konsequent abfischen. Besonders an den Übergängen von flach zu tief konzentrieren. Faulenzen mit kurzen Sprüngen.',
+    koderTipp: 'Schlanke No-Action Shads in natürlichen Dekoren.'
   },
   {
     id: 'harburger-hafen',
@@ -47,7 +53,9 @@ export const SPOTS: Spot[] = [
     bootNötig: false, uferAngling: true,
     struktur: ['Kaimauer', 'Spundwand', 'Einlaufrinne'],
     trübungsPräferenz: 'getrübt', temperaturMin: 3,
-    jahreszeitBonus: { frühling: 8, sommer: 5, herbst: 12, winter: 10 }
+    jahreszeitBonus: { frühling: 8, sommer: 5, herbst: 12, winter: 10 },
+    taktik: 'Vertikalangeln entlang der Kaimauern oder klassisches Jiggen. Köderkontakt zum Boden ist hier entscheidend.',
+    koderTipp: 'Leichtere Jigs (7-10g) mit Action-Shads in grellen Farben.'
   },
   {
     id: 'billwerder-bucht',
@@ -58,7 +66,9 @@ export const SPOTS: Spot[] = [
     bootNötig: false, uferAngling: true,
     struktur: ['Einlaufrinne', 'Flachwasserkante', 'Röhricht-Kante'],
     trübungsPräferenz: 'getrübt', temperaturMin: 8,
-    jahreszeitBonus: { frühling: 12, sommer: 15, herbst: 8, winter: 0 }
+    jahreszeitBonus: { frühling: 12, sommer: 15, herbst: 8, winter: 0 },
+    taktik: 'An den Einläufen fischen. Bei Trübung stehen die Fische oft flach. Aggressive Führung kann Bisse provozieren.',
+    koderTipp: 'Chatterbaits oder Krebshappen am Offset-Haken.'
   },
   {
     id: 'aussenalster',
@@ -69,7 +79,9 @@ export const SPOTS: Spot[] = [
     bootNötig: false, uferAngling: true,
     struktur: ['Tiefrinne', 'Uferkante', 'Brücken-Schatten'],
     trübungsPräferenz: 'mittel', temperaturMin: 10,
-    jahreszeitBonus: { frühling: 5, sommer: 8, herbst: 12, winter: 3 }
+    jahreszeitBonus: { frühling: 5, sommer: 8, herbst: 12, winter: 3 },
+    taktik: 'In der Dämmerung Uferzonen abwerfen. Tagsüber langsame Führung am Grund im tieferen Bereich.',
+    koderTipp: 'Wobbler für den Abend, tagsüber Pintails (10cm).'
   },
   {
     id: 'elbe-blankenese',
@@ -80,7 +92,9 @@ export const SPOTS: Spot[] = [
     bootNötig: true, uferAngling: false,
     struktur: ['Buhnen', 'Nebenrinne', 'Tiefrinne'],
     trübungsPräferenz: 'alle', temperaturMin: 6,
-    jahreszeitBonus: { frühling: 15, sommer: 8, herbst: 20, winter: 10 }
+    jahreszeitBonus: { frühling: 15, sommer: 8, herbst: 20, winter: 10 },
+    taktik: 'In den Kehrwässern der Buhnenköpfe fischen. Bei Kenterwasser auf den Kanten zum Hauptstrom suchen.',
+    koderTipp: 'Schwere Jigs (20-30g) mit stabilen Gummifischen.'
   },
   {
     id: 'mittelkanal',
@@ -91,7 +105,9 @@ export const SPOTS: Spot[] = [
     bootNötig: false, uferAngling: true,
     struktur: ['Kaimauer', 'Einleitungsrohre', 'Unterstand'],
     trübungsPräferenz: 'klar', temperaturMin: 5,
-    jahreszeitBonus: { frühling: 8, sommer: 12, herbst: 8, winter: 8 }
+    jahreszeitBonus: { frühling: 8, sommer: 12, herbst: 8, winter: 8 },
+    taktik: 'Präzises Werfen unter Brücken und an Rohrauslässe. Viel Strecke machen, da die Fische oft punktuell stehen.',
+    koderTipp: 'Natürliche Köderfarben, Schlanke 10cm Gummis.'
   }
 ];
 
