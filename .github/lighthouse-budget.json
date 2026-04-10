@@ -1,0 +1,11 @@
+[{
+  "path": "/*",
+  "timings": [
+    { "metric": "interactive", "budget": 5000 }
+  ],
+  "scores": [
+    { "category": "performance", "minScore": 0.8 },
+    { "category": "accessibility", "minScore": 0.9 },
+    { "category": "pwa", "minScore": 0.8 }
+  ]
+}]
