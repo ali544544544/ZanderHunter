@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAngelIndex } from './hooks/useAngelIndex';
 import { getKoderEmpfehlung, generateBriefing } from './data/koderLogik';
 import { SPOTS, calculateSpotScore } from './data/spots';
@@ -12,17 +12,25 @@ import SpotList from './components/SpotList';
 import KoderCard from './components/KoderCard';
 import Briefing from './components/Briefing';
 import ZanderInfo from './components/ZanderInfo';
+import DataStatus from './components/DataStatus';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder'>('jetzt');
-  const { score, loading, conditions, pegel, weather, tide, moon } = useAngelIndex();
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const { score, loading, conditions, weather, pegel, tide, moon } = useAngelIndex();
+
+  useEffect(() => {
+    if (!loading && (weather || pegel)) {
+      setLastUpdated(new Date());
+    }
+  }, [loading, weather, pegel]);
 
   const koder = conditions ? getKoderEmpfehlung(conditions) : [];
   const topSpot = conditions ? SPOTS.map(s => ({...s, currentScore: calculateSpotScore(s, conditions)})).sort((a, b) => b.currentScore - a.currentScore)[0] : null;
   const briefingText = conditions ? generateBriefing(conditions, topSpot, koder) : 'Lade Daten...';
 
   return (
-    <div className="min-h-screen pb-24 max-w-lg mx-auto px-4 pt-6">
+    <div className="min-h-screen pb-32 max-w-lg mx-auto px-4 pt-6">
       <header className="flex justify-between items-center mb-8 px-2">
         <div>
           <h1 className="text-3xl font-black text-white tracking-tighter">ZanderHunter</h1>
@@ -66,7 +74,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 p-3 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 p-3 pb-8 z-40">
         <div className="max-w-lg mx-auto flex justify-around">
           <button 
             onClick={() => setActiveTab('jetzt')}
@@ -93,6 +101,8 @@ const App: React.FC = () => {
           </button>
         </div>
       </nav>
+
+      <DataStatus lastUpdated={lastUpdated} />
     </div>
   );
 };
