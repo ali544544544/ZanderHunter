@@ -1,4 +1,4 @@
-import { getStromPhase, getTideOffset, getLocalConditions } from '../utils/calculations';
+import { getLocalConditions } from '../utils/calculations';
 
 export interface Spot {
   id: string;
