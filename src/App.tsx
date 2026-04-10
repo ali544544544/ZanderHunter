@@ -11,6 +11,7 @@ import DayChart from './components/DayChart';
 import SpotList from './components/SpotList';
 import KoderCard from './components/KoderCard';
 import Briefing from './components/Briefing';
+import ZanderInfo from './components/ZanderInfo';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder'>('jetzt');
@@ -41,6 +42,7 @@ const App: React.FC = () => {
             {!loading && <TideTimeline events={tide || []} />}
             {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} />}
             <DayChart currentScore={score} />
+            <ZanderInfo />
           </>
         )}
 
