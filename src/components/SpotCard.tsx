@@ -95,7 +95,7 @@ const SpotCard: React.FC<SpotCardProps> = ({ spot, score, conditions }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-[10px] pt-2">
+          <div className="grid grid-cols-3 gap-2 text-[10px] pt-2">
             <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-700">
               <span className="text-slate-500 block mb-0.5 uppercase tracking-tighter">Wassertiefe</span>
               <span className="text-slate-200 font-bold">{spot.tiefe}</span>
@@ -103,6 +103,12 @@ const SpotCard: React.FC<SpotCardProps> = ({ spot, score, conditions }) => {
             <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-700">
               <span className="text-slate-500 block mb-0.5 uppercase tracking-tighter">Beste Tide</span>
               <span className="text-slate-200 font-bold capitalize">{advice.bestePhase}</span>
+            </div>
+            <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+              <span className="text-slate-500 block mb-0.5 uppercase tracking-tighter">Lokale Tide</span>
+              <span className="text-blue-400 font-bold">
+                {advice.tideOffset > 0 ? `+${advice.tideOffset}` : advice.tideOffset} min
+              </span>
             </div>
           </div>
         </div>

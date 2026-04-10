@@ -1,4 +1,4 @@
-import { getStromPhase, getTideOffset } from '../utils/calculations';
+import { getStromPhase, getTideOffset, getLocalConditions } from '../utils/calculations';
 
 export interface Spot {
   id: string;
@@ -126,14 +126,12 @@ export function getSeason(date: Date): 'frühling' | 'sommer' | 'herbst' | 'wint
 }
 
 export function calculateSpotScore(spot: Spot, conditions: any, date: Date = new Date()) {
+  const local = getLocalConditions(spot, conditions, date);
   let score = 50;
   
   // 1. Geographical Tide Logic
-  const offset = getTideOffset(spot.lng);
-  const localPhase = getStromPhase(date, conditions.tideEvents || [], offset);
-  
   if (spot.bestePhase === 'alle') score += 10;
-  else if (spot.bestePhase === localPhase) score += 25;
+  else if (spot.bestePhase === local.stromPhase) score += 25;
   else score -= 10;
   
   // 2. Wind Logic (Harbor spots are protected)
@@ -143,15 +141,22 @@ export function calculateSpotScore(spot: Spot, conditions: any, date: Date = new
   if (conditions.windSpeed > windLimit) score -= 30;
   else if (conditions.windSpeed < windLimit * 0.5) score += 5;
   
-  // 3. Environment
+  // 3. Environment & Solunar
   if (spot.trübungsPräferenz === 'alle') score += 5;
   else if (spot.trübungsPräferenz === conditions.trübung) score += 15;
   else score -= 5;
   
+  if (local.solunar === 'major') score += 10;
+  else if (local.solunar === 'minor') score += 5;
+
   if (conditions.wasserTemp < spot.temperaturMin) score -= 20;
   
-  const season = getSeason(new Date());
+  const season = getSeason(date);
   score += spot.jahreszeitBonus[season];
+
+  // Extra individual variance based on lat/lng (micro-adjustments)
+  const variance = (spot.lat * 100 + spot.lng * 100) % 3;
+  score += (variance - 1.5); 
   
   return Math.max(0, Math.min(100, score));
 }

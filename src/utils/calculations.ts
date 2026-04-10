@@ -9,6 +9,7 @@ export interface AngelConditions {
   mondPhase: string;
   windSpeed: number;
   niederschlag48h: number;
+  tideEvents?: { time: Date, type: 'HW' | 'NW' }[];
 }
 
 export function calculateAngelIndex(conditions: AngelConditions): number {
@@ -129,4 +130,21 @@ export function getSolunarStatus(date: Date, lat: number, lng: number): 'major' 
   }
 
   return 'außerhalb';
+}
+
+export function getLocalConditions(spot: { lat: number, lng: number }, global: AngelConditions, date: Date = new Date()) {
+  const offset = getTideOffset(spot.lng);
+  const localPhase = getStromPhase(date, global.tideEvents || [], offset);
+  const solunar = getSolunarStatus(date, spot.lat, spot.lng);
+  
+  // Calculate a distance-based solar shift (very subtle)
+  const solarShift = (spot.lng - 9.96) * 4; // minutes
+  
+  return {
+    ...global,
+    stromPhase: localPhase,
+    solunar,
+    tideOffset: offset,
+    solarShift
+  };
 }

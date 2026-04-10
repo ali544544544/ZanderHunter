@@ -1,3 +1,5 @@
+import { getLocalConditions } from '../utils/calculations';
+
 export interface KoderEmpfehlung {
   priorität: number;
   name: string;
@@ -97,6 +99,7 @@ export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpf
 }
 
 export function generateDynamicSpotAdvice(spot: any, conditions: any) {
+  const local = getLocalConditions(spot, conditions);
   const isUserSpot = spot.id.startsWith('user-');
   
   // Logic for dynamic advice
@@ -106,13 +109,13 @@ export function generateDynamicSpotAdvice(spot: any, conditions: any) {
 
   if (!isUserSpot) return { taktik: spot.taktik, koderTipp: spot.koderTipp, bestePhase: spot.bestePhase };
 
-  // Taktik based on Tide & Type
+  // Taktik based on Tide & Type & Solunar
   if (spot.type === 'hafen') {
-    taktik = 'Vertikalangeln an Spundwänden oder langsame Führung am Boden. Die Strömung ist hier sekundär.';
-  } else if (conditions.stromPhase === 'ablauf') {
+    taktik = `Vertikalangeln an Spundwänden. ${local.solunar === 'major' ? 'Beißzeit-Peak!' : 'Geduld haben.'}`;
+  } else if (local.stromPhase === 'ablauf') {
     taktik = 'Stromauf werfen und den Köder mit der Strömung in die Buhne führen. Die Bisse kommen oft hart.';
-  } else if (conditions.stromPhase === 'auflauf') {
-    taktik = 'In den Strömungskanten fischen. Nutze schwerere Jigs, um trotz des Gegendrucks Grundkontakt zu halten.';
+  } else if (local.stromPhase === 'auflauf') {
+    taktik = 'In den Strömungskanten fischen. Nutze schwerere Jigs für stabilen Grundkontakt.';
   } else {
     taktik = 'Kenterwasser-Fokus! Zander ziehen jetzt oft flacher zum Jagen. Konzentriere dich auf die Kanten.';
   }
@@ -126,5 +129,5 @@ export function generateDynamicSpotAdvice(spot: any, conditions: any) {
     koderTipp = conditions.wasserTemp < 10 ? 'Zander-Peitsche & Naturfarben' : 'Action-Shads (10-12cm)';
   }
 
-  return { taktik, koderTipp, bestePhase };
+  return { taktik, koderTipp, bestePhase, tideOffset: local.tideOffset };
 }
