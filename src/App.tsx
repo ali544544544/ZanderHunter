@@ -13,9 +13,10 @@ import KoderCard from './components/KoderCard';
 import Briefing from './components/Briefing';
 import ZanderInfo from './components/ZanderInfo';
 import DataStatus from './components/DataStatus';
+import ForecastView from './components/ForecastView';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder'>('jetzt');
+  const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { score, loading, conditions, weather, pegel, tide, moon } = useAngelIndex();
 
@@ -70,6 +71,8 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
+        {activeTab === 'forecast' && (
+          <ForecastView />
         )}
       </main>
 
@@ -98,6 +101,14 @@ const App: React.FC = () => {
           >
             <span className="text-2xl mb-1">🐟</span>
             <span className="text-[10px] uppercase font-bold">Taktik</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('forecast')}
+            className={`btn-tab ${activeTab === 'forecast' ? 'active' : 'text-slate-500'}`}
+          >
+            <span className="text-2xl mb-1">📅</span>
+            <span className="text-[10px] uppercase font-bold">Kalender</span>
           </button>
         </div>
       </nav>
