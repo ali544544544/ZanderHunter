@@ -14,6 +14,7 @@ export function usePegel() {
 
   useEffect(() => {
     async function fetchPegel() {
+      try {
         // Append timestamp for cache busting
         const cb = `?_cb=${Date.now()}`;
         
