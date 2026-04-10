@@ -125,12 +125,12 @@ export function getSeason(date: Date): 'frühling' | 'sommer' | 'herbst' | 'wint
   return 'winter';
 }
 
-export function calculateSpotScore(spot: Spot, conditions: any) {
+export function calculateSpotScore(spot: Spot, conditions: any, date: Date = new Date()) {
   let score = 50;
   
   // 1. Geographical Tide Logic
   const offset = getTideOffset(spot.lng);
-  const localPhase = getStromPhase(new Date(), conditions.tideEvents || [], offset);
+  const localPhase = getStromPhase(date, conditions.tideEvents || [], offset);
   
   if (spot.bestePhase === 'alle') score += 10;
   else if (spot.bestePhase === localPhase) score += 25;

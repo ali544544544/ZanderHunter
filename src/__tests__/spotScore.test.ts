@@ -6,7 +6,7 @@ describe('calculateSpotScore', () => {
     id: 'test',
     name: 'Test Spot',
     beschreibung: 'Test',
-    lat: 0, lng: 0,
+    lat: 53.5, lng: 9.96, // St. Pauli reference (offset 0)
     tiefe: '5m',
     bestePhase: 'ablauf',
     windtoleranz: 20,
@@ -20,15 +20,34 @@ describe('calculateSpotScore', () => {
     koderTipp: 'Test Köder'
   };
 
+  const fixedDate = new Date('2024-04-10T12:00:00Z');
+  // Tide Events: HW at 11:00, NW at 17:00 -> 12:00 is Ablaufwasser
+  const mockTideEvents = [
+    { time: new Date('2024-04-10T11:00:00Z'), type: 'HW' as const },
+    { time: new Date('2024-04-10T17:00:00Z'), type: 'NW' as const }
+  ];
+
   it('erhöht Score bei passender Strömungsphase', () => {
-    const conditions = { stromPhase: 'ablauf', windSpeed: 5, trübung: 'mittel', wasserTemp: 10 };
-    const score = calculateSpotScore(mockSpot, conditions);
+    const conditions = { 
+      stromPhase: 'ablauf', 
+      windSpeed: 5, 
+      trübung: 'mittel', 
+      wasserTemp: 10,
+      tideEvents: mockTideEvents
+    };
+    const score = calculateSpotScore(mockSpot, conditions, fixedDate);
     expect(score).toBeGreaterThan(50);
   });
 
   it('senkt Score bei zu viel Wind', () => {
-    const conditions = { stromPhase: 'ablauf', windSpeed: 30, trübung: 'getrübt', wasserTemp: 10 };
-    const score = calculateSpotScore(mockSpot, conditions);
-    expect(score).toBeLessThanOrEqual(70); 
+    const conditions = { 
+      stromPhase: 'ablauf', 
+      windSpeed: 40, 
+      trübung: 'getrübt', 
+      wasserTemp: 10,
+      tideEvents: mockTideEvents
+    };
+    const score = calculateSpotScore(mockSpot, conditions, fixedDate);
+    expect(score).toBeLessThanOrEqual(60); 
   });
 });
