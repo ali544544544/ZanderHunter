@@ -1,3 +1,5 @@
+import { getStromPhase, getTideOffset } from '../utils/calculations';
+
 export interface Spot {
   id: string;
   name: string;
@@ -15,6 +17,8 @@ export interface Spot {
   jahreszeitBonus: { frühling: number; sommer: number; herbst: number; winter: number };
   taktik: string;
   koderTipp: string;
+  type?: 'elbe' | 'hafen' | 'kanal';
+  isWindExposed?: boolean;
 }
 
 export const SPOTS: Spot[] = [
@@ -107,7 +111,9 @@ export const SPOTS: Spot[] = [
     trübungsPräferenz: 'klar', temperaturMin: 5,
     jahreszeitBonus: { frühling: 8, sommer: 12, herbst: 8, winter: 8 },
     taktik: 'Präzises Werfen unter Brücken und an Rohrauslässe. Viel Strecke machen, da die Fische oft punktuell stehen.',
-    koderTipp: 'Natürliche Köderfarben, Schlanke 10cm Gummis.'
+    koderTipp: 'Natürliche Köderfarben, Schlanke 10cm Gummis.',
+    type: 'kanal',
+    isWindExposed: false
   }
 ];
 
@@ -121,13 +127,23 @@ export function getSeason(date: Date): 'frühling' | 'sommer' | 'herbst' | 'wint
 
 export function calculateSpotScore(spot: Spot, conditions: any) {
   let score = 50;
+  
+  // 1. Geographical Tide Logic
+  const offset = getTideOffset(spot.lng);
+  const localPhase = getStromPhase(new Date(), conditions.tideEvents || [], offset);
+  
   if (spot.bestePhase === 'alle') score += 10;
-  else if (spot.bestePhase === conditions.stromPhase) score += 25;
+  else if (spot.bestePhase === localPhase) score += 25;
   else score -= 10;
   
-  if (conditions.windSpeed > spot.windtoleranz) score -= 30;
-  else if (conditions.windSpeed < spot.windtoleranz * 0.5) score += 5;
+  // 2. Wind Logic (Harbor spots are protected)
+  const isProtected = spot.type === 'hafen' || spot.type === 'kanal' || !spot.isWindExposed;
+  const windLimit = isProtected ? spot.windtoleranz * 1.5 : spot.windtoleranz;
   
+  if (conditions.windSpeed > windLimit) score -= 30;
+  else if (conditions.windSpeed < windLimit * 0.5) score += 5;
+  
+  // 3. Environment
   if (spot.trübungsPräferenz === 'alle') score += 5;
   else if (spot.trübungsPräferenz === conditions.trübung) score += 15;
   else score -= 5;

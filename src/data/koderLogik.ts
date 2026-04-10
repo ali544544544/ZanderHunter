@@ -98,27 +98,32 @@ export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpf
 
 export function generateDynamicSpotAdvice(spot: any, conditions: any) {
   const isUserSpot = spot.id.startsWith('user-');
-  if (!isUserSpot) return { taktik: spot.taktik, koderTipp: spot.koderTipp, bestePhase: spot.bestePhase };
-
+  
   // Logic for dynamic advice
   let taktik = '';
   let koderTipp = '';
-  const bestePhase = 'Ablauf / Kenter'; // Standard for Elbe
+  const bestePhase = spot.type === 'hafen' || spot.type === 'kanal' ? 'Alle Phasen' : 'Ablauf / Kenter';
 
-  // Taktik based on Tide
-  if (conditions.stromPhase === 'ablauf') {
-    taktik = 'Stromauf werfen und den Köder mit der Strömung zum Grund führen. Köderkontakt halten!';
+  if (!isUserSpot) return { taktik: spot.taktik, koderTipp: spot.koderTipp, bestePhase: spot.bestePhase };
+
+  // Taktik based on Tide & Type
+  if (spot.type === 'hafen') {
+    taktik = 'Vertikalangeln an Spundwänden oder langsame Führung am Boden. Die Strömung ist hier sekundär.';
+  } else if (conditions.stromPhase === 'ablauf') {
+    taktik = 'Stromauf werfen und den Köder mit der Strömung in die Buhne führen. Die Bisse kommen oft hart.';
   } else if (conditions.stromPhase === 'auflauf') {
-    taktik = 'Gegen die Flut fischen. Kleinere Sprünge machen, da der Wasserdruck den Köder ohnehin anhebt.';
+    taktik = 'In den Strömungskanten fischen. Nutze schwerere Jigs, um trotz des Gegendrucks Grundkontakt zu halten.';
   } else {
-    taktik = 'Kenterwasser! Die Fische sind aktiv. Präzise Kanten abwerfen und den Köder etwas länger stehen lassen.';
+    taktik = 'Kenterwasser-Fokus! Zander ziehen jetzt oft flacher zum Jagen. Konzentriere dich auf die Kanten.';
   }
 
-  // Lure based on Turbidity & Temp
+  // Lure based on Turbidity & Temp & Type
   if (conditions.trübung === 'getrübt') {
-    koderTipp = 'Schockfarben (Chartreuse/Pink)';
+    koderTipp = 'Schockfarben (UV-Chartreuse/Pink)';
+  } else if (spot.type === 'hafen') {
+    koderTipp = 'Dunkle Farben (Braun/Schwarz) oder Natur-Dekore';
   } else {
-    koderTipp = conditions.wasserTemp < 10 ? 'Natürliche Dekore & schlank' : 'Action-Shads (Grün/Silber)';
+    koderTipp = conditions.wasserTemp < 10 ? 'Zander-Peitsche & Naturfarben' : 'Action-Shads (10-12cm)';
   }
 
   return { taktik, koderTipp, bestePhase };

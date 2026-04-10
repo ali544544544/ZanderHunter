@@ -13,11 +13,12 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
   const [lng, setLng] = useState<number | ''>('');
   const [tiefe, setTiefe] = useState('3-5 m');
   const [bootNotig, setBootNotig] = useState(false);
+  const [spotType, setSpotType] = useState<'elbe' | 'hafen' | 'kanal'>('elbe');
+  const [isExposed, setIsExposed] = useState(true);
 
   // Simple coordinate extraction from Google Maps URL
   const handleLinkChange = (url: string) => {
     setMapsLink(url);
-    // Regex for: @lat,lng or place/lat,lng
     const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
     const match = url.match(regex);
     if (match) {
@@ -40,20 +41,22 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
     const newSpot: Spot = {
       id: `user-${Date.now()}`,
       name,
-      beschreibung: 'Benutzerdefinierter Spot.',
+      beschreibung: `${spotType === 'hafen' ? 'Hafen-Spot' : spotType === 'kanal' ? 'Kanal-Spot' : 'Elb-Spot'}. Individuell angelegt.`,
       lat: Number(lat),
       lng: Number(lng),
       tiefe,
       bestePhase: 'alle',
-      windtoleranz: 30,
+      windtoleranz: spotType === 'hafen' ? 45 : 30, // Default tolerance based on type
       bootNötig: bootNotig,
       uferAngling: !bootNotig,
-      struktur: ['Kante', 'Unbekannt'],
+      struktur: [spotType === 'hafen' ? 'Spundwand' : 'Kante'],
       trübungsPräferenz: 'mittel',
       temperaturMin: 5,
       jahreszeitBonus: { frühling: 5, sommer: 5, herbst: 10, winter: 5 },
-      taktik: 'Eigener Spot. Probiere verschiedene Köder aus.',
-      koderTipp: 'Noch keine Empfehlung hinterlegt.'
+      taktik: '', // Will be dynamic
+      koderTipp: '', // Will be dynamic
+      type: spotType,
+      isWindExposed: isExposed
     };
 
     onAdd(newSpot);
@@ -62,7 +65,7 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 maxHeight-[90vh] overflow-y-auto">
         <h3 className="text-xl font-black text-white mb-6 uppercase tracking-tighter">Neuen Spot hinzufügen</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -71,17 +74,17 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
             <input 
               required
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium"
-              placeholder="z.B. Mein Geheimplatz Elbe"
+              placeholder="Name des Spots..."
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Google Maps Link (automatisch)</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Google Maps Link</label>
             <input 
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-xs"
-              placeholder="Link hier einfügen..."
+              placeholder="https://www.google.com/maps/..."
               value={mapsLink}
               onChange={(e) => handleLinkChange(e.target.value)}
             />
@@ -89,35 +92,43 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Breitengrad (Lat)</label>
-              <input 
-                required
-                type="number" step="any"
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Spot-Typ</label>
+              <select 
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none text-sm"
-                value={lat}
-                onChange={(e) => setLat(e.target.value === '' ? '' : parseFloat(e.target.value))}
-              />
+                value={spotType}
+                onChange={(e) => setSpotType(e.target.value as any)}
+              >
+                <option value="elbe">Elbe-Strom</option>
+                <option value="hafen">Hafenbecken</option>
+                <option value="kanal">Kanal/Nebengewässer</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Wind-Exposure</label>
+              <div 
+                onClick={() => setIsExposed(!isExposed)}
+                className={`w-full flex items-center justify-center space-x-2 rounded-xl px-4 py-3 cursor-pointer border transition-all ${isExposed ? 'bg-orange-500/20 border-orange-500 text-orange-400' : 'bg-green-500/20 border-green-500 text-green-400'}`}
+              >
+                <span className="text-xs font-bold uppercase">{isExposed ? 'Exponiert 💨' : 'Geschützt 🛡️'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Breitengrad (Lat)</label>
+              <input required type="number" step="any" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none text-sm" value={lat} onChange={(e) => setLat(e.target.value === '' ? '' : parseFloat(e.target.value))} />
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Längengrad (Lng)</label>
-              <input 
-                required
-                type="number" step="any"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none text-sm"
-                value={lng}
-                onChange={(e) => setLng(e.target.value === '' ? '' : parseFloat(e.target.value))}
-              />
+              <input required type="number" step="any" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none text-sm" value={lng} onChange={(e) => setLng(e.target.value === '' ? '' : parseFloat(e.target.value))} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tiefe</label>
-              <select 
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none text-sm"
-                value={tiefe}
-                onChange={(e) => setTiefe(e.target.value)}
-              >
+              <select className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none text-sm" value={tiefe} onChange={(e) => setTiefe(e.target.value)}>
                 <option>2-4 m</option>
                 <option>3-6 m</option>
                 <option>5-10 m</option>
@@ -130,26 +141,14 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
                 onClick={() => setBootNotig(!bootNotig)}
                 className={`w-full flex items-center justify-center space-x-2 rounded-xl px-4 py-3 cursor-pointer border transition-all ${bootNotig ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}
               >
-                <span className="text-lg">{bootNotig ? '🚤' : '🎣'}</span>
-                <span className="text-xs font-bold">{bootNotig ? 'JA' : 'NEIN'}</span>
+                <span className="text-xs font-bold">{bootNotig ? 'BOOT 🚤' : 'UFER 🎣'}</span>
               </div>
             </div>
           </div>
 
           <div className="flex space-x-3 pt-4">
-            <button 
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold uppercase tracking-tight text-xs transition-colors"
-            >
-              Abbrechen
-            </button>
-            <button 
-              type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-tight text-xs transition-all shadow-lg shadow-blue-900/40"
-            >
-              Speichern
-            </button>
+            <button type="button" onClick={onClose} className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold uppercase tracking-tight text-xs transition-colors">Abbrechen</button>
+            <button type="submit" className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-tight text-xs transition-all shadow-lg shadow-blue-900/40">Speichern</button>
           </div>
         </form>
       </div>

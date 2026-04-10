@@ -73,24 +73,37 @@ export function getMoonPhase(date: Date) {
   return { name: 'Abnehmend (Sichel)', icon: '🌘', illumination };
 }
 
-export function getStromPhase(currentTime: Date, tideEvents: { time: Date, type: 'HW' | 'NW' }[]): 'ablauf' | 'auflauf' | 'kenter' | 'stagnation' {
+export function getTideOffset(lng: number): number {
+  // Hamburg St. Pauli reference: ~9.96 Longitude
+  // The tide wave travels upstream (west to east).
+  // Difference between Blankenese and Geesthacht is about 2 hours for ~0.55 longitude degrees.
+  // Approximation: ~300 minutes per degree of longitude.
+  const referenceLng = 9.96;
+  const degreesDiff = lng - referenceLng;
+  return Math.round(degreesDiff * 300); // Minutes offset
+}
+
+export function getStromPhase(currentTime: Date, tideEvents: { time: Date, type: 'HW' | 'NW' }[], minuteOffset: number = 0): 'ablauf' | 'auflauf' | 'kenter' | 'stagnation' {
   if (tideEvents.length < 2) return 'stagnation';
   
-  const nextEvent = tideEvents.find(e => e.time > currentTime);
+  // Create virtual time shifted by the location's offset
+  const localTime = new Date(currentTime.getTime() - (minuteOffset * 60000));
+  
+  const nextEvent = tideEvents.find(e => e.time > localTime);
   if (!nextEvent) return 'stagnation';
   
-  const diffMinutes = (nextEvent.time.getTime() - currentTime.getTime()) / 60000;
+  const diffMinutes = (nextEvent.time.getTime() - localTime.getTime()) / 60000;
   
   // Kenterwasser: ±45 min um Ereignis
   if (diffMinutes < 45) return 'kenter';
   
   // Finde das letzte Ereignis
-  const pastEvents = tideEvents.filter(e => e.time <= currentTime);
+  const pastEvents = tideEvents.filter(e => e.time <= localTime);
   const lastEvent = pastEvents[pastEvents.length - 1];
   
   if (!lastEvent) return 'stagnation';
   
-  const sinceMinutes = (currentTime.getTime() - lastEvent.time.getTime()) / 60000;
+  const sinceMinutes = (localTime.getTime() - lastEvent.time.getTime()) / 60000;
   if (sinceMinutes < 45) return 'kenter';
 
   if (lastEvent.type === 'HW') return 'ablauf';
