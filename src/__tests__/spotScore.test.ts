@@ -15,7 +15,9 @@ describe('calculateSpotScore', () => {
     struktur: [],
     trübungsPräferenz: 'getrübt',
     temperaturMin: 5,
-    jahreszeitBonus: { frühling: 10, sommer: 5, herbst: 15, winter: 0 }
+    jahreszeitBonus: { frühling: 10, sommer: 5, herbst: 15, winter: 0 },
+    taktik: 'Test Taktik',
+    koderTipp: 'Test Köder'
   };
 
   it('erhöht Score bei passender Strömungsphase', () => {
