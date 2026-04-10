@@ -38,7 +38,7 @@ const App: React.FC = () => {
           <>
             <AngelIndex score={score} loading={loading} />
             {!loading && briefingText && <Briefing text={briefingText} />}
-            {!loading && <TideTimeline events={tide} />}
+            {!loading && <TideTimeline events={tide || []} />}
             {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} />}
             <DayChart />
           </>
