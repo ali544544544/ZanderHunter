@@ -10,7 +10,6 @@ const SpotCard: React.FC<SpotCardProps> = ({ spot, score }) => {
   const [expanded, setExpanded] = useState(false);
 
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
-  const embedMapsUrl = `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d10000!2d${spot.lng}!3d${spot.lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sde!2sde!4v1620000000000!5m2!1sde!2sde&q=${spot.lat},${spot.lng}`;
 
   return (
     <div className="card mb-3 overflow-hidden transition-all duration-300">
