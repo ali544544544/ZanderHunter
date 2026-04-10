@@ -107,7 +107,12 @@ export function generateDynamicSpotAdvice(spot: any, conditions: any) {
   let koderTipp = '';
   const bestePhase = spot.type === 'hafen' || spot.type === 'kanal' ? 'Alle Phasen' : 'Ablauf / Kenter';
 
-  if (!isUserSpot) return { taktik: spot.taktik, koderTipp: spot.koderTipp, bestePhase: spot.bestePhase };
+  if (!isUserSpot) return { 
+    taktik: spot.taktik, 
+    koderTipp: spot.koderTipp, 
+    bestePhase: spot.bestePhase,
+    tideOffset: local.tideOffset 
+  };
 
   // Taktik based on Tide & Type & Solunar
   if (spot.type === 'hafen') {
