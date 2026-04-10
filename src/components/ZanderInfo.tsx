@@ -3,7 +3,6 @@ import React from 'react';
 const ZanderInfo: React.FC = () => {
   const now = new Date();
   const month = now.getMonth(); // 0-indexed
-  const day = now.getDate();
 
   // Schonzeit Hamburg: 01.02. bis 31.05.
   const isSchonzeit = (month === 1) || (month === 2) || (month === 3) || (month === 4);
