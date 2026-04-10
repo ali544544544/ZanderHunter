@@ -158,5 +158,5 @@ export function calculateSpotScore(spot: Spot, conditions: any, date: Date = new
   const variance = (spot.lat * 100 + spot.lng * 100) % 3;
   score += (variance - 1.5); 
   
-  return Math.max(0, Math.min(100, score));
+  return Math.round(Math.max(0, Math.min(100, score)));
 }
