@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForecast, DailyForecast } from '../hooks/useForecast';
+import { useForecast } from '../hooks/useForecast';
 
 const ForecastView: React.FC = () => {
   const { forecast, loading, error } = useForecast();
