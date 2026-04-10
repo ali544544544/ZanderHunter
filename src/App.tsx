@@ -7,7 +7,6 @@ import { SPOTS, calculateSpotScore } from './data/spots';
 import AngelIndex from './components/AngelIndex';
 import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
-import DayChart from './components/DayChart';
 import SpotList from './components/SpotList';
 import KoderCard from './components/KoderCard';
 import Briefing from './components/Briefing';
@@ -20,7 +19,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { userSpots } = useUserSpots();
-  const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores } = useAngelIndex();
+  const { score, loading, conditions, weather, pegel, tide, moon } = useAngelIndex();
 
   useEffect(() => {
     if (!loading && (weather || pegel)) {
@@ -52,7 +51,6 @@ const App: React.FC = () => {
             {!loading && briefingText && <Briefing text={briefingText} />}
             {!loading && <TideTimeline events={tide || []} />}
             {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} />}
-            <DayChart scores={hourlyScores} />
             <ZanderInfo />
           </>
         )}
