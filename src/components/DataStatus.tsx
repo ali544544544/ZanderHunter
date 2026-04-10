@@ -36,14 +36,14 @@ const DataStatus: React.FC<DataStatusProps> = ({ lastUpdated }) => {
     <div className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-slate-700/50 px-4 py-1.5 flex justify-between items-center z-[60] animate-in slide-in-from-bottom duration-500 shadow-2xl">
       <div className="flex items-center space-x-2">
         <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-          Daten live: <span className="text-slate-200">{formattedLastUpdate}</span>
+        <span className="text-[9px] text-slate-200 font-bold uppercase tracking-wider">
+          {formattedLastUpdate}
         </span>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-          Auto-Update: <span className="text-blue-400 font-mono">{formatTime(timeLeft)}</span>
+      <div className="flex items-center space-x-3">
+        <div className="text-[9px] text-blue-400 font-mono font-bold uppercase tracking-wider">
+          {formatTime(timeLeft)}
         </div>
         
         <button 

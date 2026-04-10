@@ -14,17 +14,19 @@ export function usePegel() {
 
   useEffect(() => {
     async function fetchPegel() {
-      try {
+        // Append timestamp for cache busting
+        const cb = `?_cb=${Date.now()}`;
+        
         // Pegelstand Hamburg St. Pauli
-        const levelRes = await fetch('https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/HAMBURGSTPAULI/W/currentmeasurement.json');
+        const levelRes = await fetch(`https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/HAMBURGSTPAULI/W/currentmeasurement.json${cb}`);
         const levelJson = await levelRes.json();
         
         // Wassertemperatur Seemannshöft
-        const tempRes = await fetch('https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/SEEMANNSHOEFT/WT/currentmeasurement.json');
+        const tempRes = await fetch(`https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/SEEMANNSHOEFT/WT/currentmeasurement.json${cb}`);
         const tempJson = await tempRes.json();
 
         // Pegelstand letzte 2h für Trend
-        const trendRes = await fetch('https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/HAMBURGSTPAULI/W/measurements.json?start=PT2H');
+        const trendRes = await fetch(`https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/HAMBURGSTPAULI/W/measurements.json?start=PT2H&_cb=${Date.now()}`);
         const trendJson = await trendRes.json();
 
         let trend: 'fallend' | 'stabil' | 'steigend' = 'stabil';

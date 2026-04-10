@@ -21,8 +21,9 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
   useEffect(() => {
     async function fetchWeather() {
       try {
+        const cb = `&_cb=${Date.now()}`;
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code,precipitation&hourly=surface_pressure,precipitation&daily=sunrise,sunset&forecast_days=2&timezone=Europe/Berlin`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code,precipitation&hourly=surface_pressure,precipitation&daily=sunrise,sunset&forecast_days=2&timezone=Europe/Berlin${cb}`
         );
         const json = await response.json();
 
