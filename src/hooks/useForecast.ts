@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AngelConditions, calculateAngelIndex, getMoonPhase, getSolunarStatus, getStromPhase, getTideOffset } from '../utils/calculations';
+import { AngelConditions, calculateAngelIndex, getMoonPhase, getSolunarStatus, getStromPhase } from '../utils/calculations';
 import { TideEvent } from './useTide';
 
 export interface DailyForecast {

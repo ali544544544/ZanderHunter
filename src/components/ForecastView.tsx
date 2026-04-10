@@ -130,4 +130,3 @@ const ForecastView: React.FC = () => {
 };
 
 export default ForecastView;
- Greenland-Tide-Table-Reference: https://ali544544544.github.io/ZanderHunter/forecast

@@ -71,6 +71,8 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+        
         {activeTab === 'forecast' && (
           <ForecastView />
         )}
