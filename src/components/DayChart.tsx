@@ -1,11 +1,10 @@
 import React from 'react';
 
 interface DayChartProps {
-  currentScore?: number;
   scores?: number[];
 }
 
-const DayChart: React.FC<DayChartProps> = ({ currentScore = 65, scores = [] }) => {
+const DayChart: React.FC<DayChartProps> = ({ scores = [] }) => {
   const currentHour = new Date().getHours();
   
   // Use provided scores or fallback to mock logic if needed (safety first)

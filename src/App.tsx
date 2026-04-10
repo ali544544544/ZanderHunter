@@ -52,7 +52,7 @@ const App: React.FC = () => {
             {!loading && briefingText && <Briefing text={briefingText} />}
             {!loading && <TideTimeline events={tide || []} />}
             {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} />}
-            <DayChart currentScore={score} scores={hourlyScores} />
+            <DayChart scores={hourlyScores} />
             <ZanderInfo />
           </>
         )}

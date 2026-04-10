@@ -55,7 +55,6 @@ export function useAngelIndex() {
 
   // Calculate hourly scores for the next 24 hours
   const hourlyScores: number[] = [];
-  const startHour = 0; // Start at 00:00 of the current day for a full view
   
   for (let i = 0; i < 24; i++) {
     const hTime = new Date(now);
