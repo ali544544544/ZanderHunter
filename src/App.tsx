@@ -11,13 +11,13 @@ import DayChart from './components/DayChart';
 import SpotList from './components/SpotList';
 import KoderCard from './components/KoderCard';
 import Briefing from './components/Briefing';
-import ZanderInfo from './components/ZanderInfo';
-import DataStatus from './components/DataStatus';
 import ForecastView from './components/ForecastView';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [userSpots] = useLocalStorage('user-spots', []);
   const { score, loading, conditions, weather, pegel, tide, moon } = useAngelIndex();
 
   useEffect(() => {
@@ -74,7 +74,7 @@ const App: React.FC = () => {
         )}
         
         {activeTab === 'forecast' && (
-          <ForecastView />
+          <ForecastView spots={[...SPOTS, ...userSpots]} initialSpot={topSpot} />
         )}
       </main>
 
