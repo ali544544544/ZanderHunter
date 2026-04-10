@@ -58,7 +58,7 @@ const SpotList: React.FC<SpotListProps> = ({ conditions }) => {
         {filteredSpots.length > 0 ? (
           filteredSpots.map(spot => (
             <div key={spot.id} className="relative group">
-              <SpotCard spot={spot} score={spot.currentScore} />
+              <SpotCard spot={spot} score={spot.currentScore} conditions={conditions} />
               {spot.isUserSpot && (
                 <button 
                   onClick={() => deleteUserSpot(spot.id)}

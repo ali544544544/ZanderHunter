@@ -95,3 +95,31 @@ export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpf
   
   return parts.join(' ');
 }
+
+export function generateDynamicSpotAdvice(spot: any, conditions: any) {
+  const isUserSpot = spot.id.startsWith('user-');
+  if (!isUserSpot) return { taktik: spot.taktik, koderTipp: spot.koderTipp, bestePhase: spot.bestePhase };
+
+  // Logic for dynamic advice
+  let taktik = '';
+  let koderTipp = '';
+  const bestePhase = 'Ablauf / Kenter'; // Standard for Elbe
+
+  // Taktik based on Tide
+  if (conditions.stromPhase === 'ablauf') {
+    taktik = 'Stromauf werfen und den Köder mit der Strömung zum Grund führen. Köderkontakt halten!';
+  } else if (conditions.stromPhase === 'auflauf') {
+    taktik = 'Gegen die Flut fischen. Kleinere Sprünge machen, da der Wasserdruck den Köder ohnehin anhebt.';
+  } else {
+    taktik = 'Kenterwasser! Die Fische sind aktiv. Präzise Kanten abwerfen und den Köder etwas länger stehen lassen.';
+  }
+
+  // Lure based on Turbidity & Temp
+  if (conditions.trübung === 'getrübt') {
+    koderTipp = 'Schockfarben (Chartreuse/Pink)';
+  } else {
+    koderTipp = conditions.wasserTemp < 10 ? 'Natürliche Dekore & schlank' : 'Action-Shads (Grün/Silber)';
+  }
+
+  return { taktik, koderTipp, bestePhase };
+}

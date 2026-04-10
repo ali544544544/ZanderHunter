@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Spot } from '../data/spots';
+import { generateDynamicSpotAdvice } from '../data/koderLogik';
 
 interface SpotCardProps {
   spot: Spot;
   score: number;
+  conditions: any;
 }
 
-const SpotCard: React.FC<SpotCardProps> = ({ spot, score }) => {
+const SpotCard: React.FC<SpotCardProps> = ({ spot, score, conditions }) => {
   const [expanded, setExpanded] = useState(false);
+  const advice = generateDynamicSpotAdvice(spot, conditions);
 
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
 
@@ -44,7 +47,7 @@ const SpotCard: React.FC<SpotCardProps> = ({ spot, score }) => {
               <div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Taktik-Guide</span>
                 <p className="text-xs text-slate-300 leading-relaxed mt-1 bg-slate-900/40 p-2 rounded-lg border border-slate-700/50 italic">
-                  "{spot.taktik}"
+                  "{advice.taktik}"
                 </p>
               </div>
               
@@ -52,7 +55,7 @@ const SpotCard: React.FC<SpotCardProps> = ({ spot, score }) => {
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Köder-Tipp</span>
                 <div className="flex items-center space-x-2 mt-1">
                   <span className="text-lg">🪱</span>
-                  <p className="text-xs text-blue-400 font-bold">{spot.koderTipp}</p>
+                  <p className="text-xs text-blue-400 font-bold">{advice.koderTipp}</p>
                 </div>
               </div>
 
@@ -99,7 +102,7 @@ const SpotCard: React.FC<SpotCardProps> = ({ spot, score }) => {
             </div>
             <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-700">
               <span className="text-slate-500 block mb-0.5 uppercase tracking-tighter">Beste Tide</span>
-              <span className="text-slate-200 font-bold capitalize">{spot.bestePhase}</span>
+              <span className="text-slate-200 font-bold capitalize">{advice.bestePhase}</span>
             </div>
           </div>
         </div>
