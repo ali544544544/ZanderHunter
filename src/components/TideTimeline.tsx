@@ -6,12 +6,33 @@ interface TideTimelineProps {
 }
 
 const TideTimeline: React.FC<TideTimelineProps> = ({ events }) => {
+  const [showInfo, setShowInfo] = React.useState(false);
   const now = new Date();
   const upcoming = events.filter(e => e.time.getTime() > now.getTime() - 2 * 3600 * 1000).slice(0, 4);
 
   return (
     <div className="card">
-      <h3 className="text-slate-400 font-medium mb-4 uppercase tracking-wider text-sm">Tide-Timeline</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm">Tide-Timeline</h3>
+        <button 
+          onClick={() => setShowInfo(!showInfo)}
+          className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-800 text-slate-500 hover:text-blue-400 transition-colors border border-slate-700 text-[10px] font-bold"
+        >
+          i
+        </button>
+      </div>
+
+      {showInfo && (
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+          <h4 className="text-blue-400 text-[10px] font-black uppercase">Gezeiten-Lexikon</h4>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-slate-400 leading-tight">
+            <p><strong className="text-slate-200">HW:</strong> Hochwasser (Peak)</p>
+            <p><strong className="text-slate-200">NW:</strong> Niedrigwasser (Tal)</p>
+            <p className="col-span-2"><strong className="text-slate-200">Ablaufend:</strong> Strömung zur Nordsee. Oft die beste Beißzeit!</p>
+            <p className="col-span-2"><strong className="text-slate-200">Kenterwasser:</strong> Stillstand bei HW/NW (ca. 45 min).</p>
+          </div>
+        </div>
+      )}
       
       <div className="flex space-x-4 overflow-x-auto pb-2 scrollbar-hide">
         {upcoming.map((event, i) => {
