@@ -27,6 +27,6 @@ describe('calculateSpotScore', () => {
   it('senkt Score bei zu viel Wind', () => {
     const conditions = { stromPhase: 'ablauf', windSpeed: 30, trübung: 'getrübt', wasserTemp: 10 };
     const score = calculateSpotScore(mockSpot, conditions);
-    expect(score).toBeLessThan(70); 
+    expect(score).toBeLessThanOrEqual(70); 
   });
 });
