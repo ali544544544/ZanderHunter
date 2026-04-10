@@ -11,6 +11,13 @@ export interface WeatherData {
   precipitation48h: number;
   sunrise: string;
   sunset: string;
+  hourly: {
+    time: string[];
+    temperature: number[];
+    pressure: number[];
+    windSpeed: number[];
+    precipitation: number[];
+  };
 }
 
 export function useWeather(lat: number = 53.55, lng: number = 9.99) {
@@ -23,7 +30,7 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
       try {
         const cb = `&_cb=${Date.now()}`;
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code,precipitation&hourly=surface_pressure,precipitation&daily=sunrise,sunset&forecast_days=2&timezone=Europe/Berlin${cb}`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code,precipitation&hourly=temperature_2m,surface_pressure,wind_speed_10m,precipitation&daily=sunrise,sunset&forecast_days=2&timezone=Europe/Berlin${cb}`
         );
         const json = await response.json();
 
@@ -48,6 +55,13 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
           precipitation48h: precipSum,
           sunrise: json.daily.sunrise[0],
           sunset: json.daily.sunset[0],
+          hourly: {
+            time: json.hourly.time,
+            temperature: json.hourly.temperature_2m,
+            pressure: json.hourly.surface_pressure,
+            windSpeed: json.hourly.wind_speed_10m,
+            precipitation: json.hourly.precipitation
+          }
         });
       } catch (err) {
         setError('Wetterdaten nicht verfügbar');

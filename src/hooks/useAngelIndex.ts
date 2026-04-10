@@ -53,6 +53,31 @@ export function useAngelIndex() {
   if (weather.data.precipitation48h > 20 && pegel.data.waterLevel > 500) trübung = 'getrübt';
   else if (weather.data.precipitation48h < 5 && pegel.data.waterLevel < 450) trübung = 'klar';
 
+  // Calculate hourly scores for the next 24 hours
+  const hourlyScores: number[] = [];
+  const startHour = 0; // Start at 00:00 of the current day for a full view
+  
+  for (let i = 0; i < 24; i++) {
+    const hTime = new Date(now);
+    hTime.setHours(i, 0, 0, 0);
+    
+    // Find matching weather index (Open-Meteo hourly arrays start at 00:00)
+    const hIdx = i; 
+    
+    const hConditions: AngelConditions = {
+      stromPhase: getStromPhase(hTime, tide.events),
+      luftdruckTrend: 'stabil', // Prediction is complex, keep stable as default
+      wasserTemp: pegel.data.waterTemp,
+      tageszeit: (hTime.getHours() > sunrise.getHours() && hTime.getHours() < sunset.getHours()) ? 'tag' : 'nacht',
+      solunar: solunar.status, // For simplicity use current moon status
+      mondPhase: moon.name,
+      windSpeed: weather.data.hourly.windSpeed[hIdx] || weather.data.windSpeed,
+      niederschlag48h: weather.data.hourly.precipitation[hIdx] || 0
+    };
+    
+    hourlyScores.push(calculateAngelIndex(hConditions));
+  }
+
   return { 
     score, 
     loading: false, 
@@ -60,6 +85,7 @@ export function useAngelIndex() {
     weather: weather.data,
     pegel: pegel.data,
     tide: tide.events,
-    moon
+    moon,
+    hourlyScores
   };
 }

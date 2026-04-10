@@ -2,35 +2,32 @@ import React from 'react';
 
 interface DayChartProps {
   currentScore?: number;
+  scores?: number[];
 }
 
-const DayChart: React.FC<DayChartProps> = ({ currentScore = 65 }) => {
+const DayChart: React.FC<DayChartProps> = ({ currentScore = 65, scores = [] }) => {
   const currentHour = new Date().getHours();
   
-  // Generating 24 segments
+  // Use provided scores or fallback to mock logic if needed (safety first)
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
   return (
     <div className="card">
       <h3 className="text-slate-400 font-medium mb-6 uppercase tracking-wider text-xs flex justify-between items-center">
         <span>Tagesprognose (24h)</span>
-        <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20">Beta</span>
+        <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20">Aktiv</span>
       </h3>
       
       <div className="relative h-24 w-full flex items-end space-x-1 px-1">
         {hours.map(hour => {
-          // Semi-realistic mock logic centered around current score
-          const diff = Math.abs(hour - currentHour);
-          const variance = Math.sin(hour / 2) * 15;
-          const decay = Math.max(0, 1 - diff / 12);
-          const hourScore = Math.min(95, Math.max(10, currentScore * decay + variance + (20 * (1-decay))));
+          // Use provided score for this hour
+          const hourScore = scores[hour] || 0;
           
           const isNow = hour === currentHour;
           const isFutur = hour > currentHour;
 
           return (
             <div key={hour} className="group relative flex-1 flex flex-col items-center">
-              {/* Tooltip on Hover */}
               <div className="absolute -top-10 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 border border-slate-700 whitespace-nowrap">
                 {hour}:00 · {Math.round(hourScore)}%
               </div>
@@ -43,7 +40,7 @@ const DayChart: React.FC<DayChartProps> = ({ currentScore = 65 }) => {
                       ? 'bg-slate-600 hover:bg-slate-500' 
                       : 'bg-slate-700/40'
                 }`}
-                style={{ height: `${hourScore}%` }}
+                style={{ height: `${Math.max(5, hourScore)}%` }}
               ></div>
               
               {hour % 4 === 0 && (

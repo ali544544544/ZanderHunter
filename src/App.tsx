@@ -20,7 +20,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { userSpots } = useUserSpots();
-  const { score, loading, conditions, weather, pegel, tide, moon } = useAngelIndex();
+  const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores } = useAngelIndex();
 
   useEffect(() => {
     if (!loading && (weather || pegel)) {
@@ -52,7 +52,7 @@ const App: React.FC = () => {
             {!loading && briefingText && <Briefing text={briefingText} />}
             {!loading && <TideTimeline events={tide || []} />}
             {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} />}
-            <DayChart currentScore={score} />
+            <DayChart currentScore={score} scores={hourlyScores} />
             <ZanderInfo />
           </>
         )}
