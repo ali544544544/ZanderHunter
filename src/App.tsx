@@ -13,13 +13,14 @@ import Briefing from './components/Briefing';
 import ZanderInfo from './components/ZanderInfo';
 import DataStatus from './components/DataStatus';
 import ForecastView from './components/ForecastView';
+import DailyForecastChart from './components/DailyForecastChart';
 import { useUserSpots } from './hooks/useUserSpots';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { userSpots } = useUserSpots();
-  const { score, loading, conditions, weather, pegel, tide, moon } = useAngelIndex();
+  const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores } = useAngelIndex();
 
   useEffect(() => {
     if (!loading && (weather || pegel)) {
@@ -49,6 +50,13 @@ const App: React.FC = () => {
           <>
             <AngelIndex score={score} loading={loading} />
             {!loading && briefingText && <Briefing text={briefingText} />}
+            {!loading && hourlyScores && hourlyScores.length > 0 && (
+              <DailyForecastChart
+                hourlyScores={hourlyScores}
+                sunrise={weather?.sunrise}
+                sunset={weather?.sunset}
+              />
+            )}
             {!loading && <TideTimeline events={tide || []} />}
             {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} />}
             <ZanderInfo />
