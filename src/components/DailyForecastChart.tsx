@@ -1,12 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 
 interface DailyForecastChartProps {
   hourlyScores: number[];
-  sunrise?: string;  // ISO time string
-  sunset?: string;   // ISO time string
+  liveScore: number;      // The actual live Angel-Index score
+  sunrise?: string;       // ISO time string
+  sunset?: string;        // ISO time string
 }
 
-const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, sunrise, sunset }) => {
+const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, liveScore, sunrise, sunset }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [activeHour, setActiveHour] = useState<number | null>(null);
+  const [touchActive, setTouchActive] = useState(false);
+
   const now = new Date();
   const currentHour = now.getHours() + now.getMinutes() / 60;
 
@@ -24,7 +29,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
 
   // Chart dimensions
   const W = 360;
-  const H = 160;
+  const H = 180;
   const padX = 28;
   const padTop = 16;
   const padBot = 28;
@@ -35,6 +40,8 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
   const x = (hour: number) => padX + (hour / 23) * chartW;
   // Map score to y (inverted)
   const y = (score: number) => padTop + chartH - (score / 100) * chartH;
+  // Map x back to hour
+  const xToHour = (xPos: number) => Math.max(0, Math.min(23, Math.round(((xPos - padX) / chartW) * 23)));
 
   // Build smooth path using cardinal spline interpolation
   const points = hourlyScores.map((s, i) => ({ x: x(i), y: y(s) }));
@@ -60,14 +67,9 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
   const linePath = buildSmoothPath(points);
   const areaPath = linePath + ` L ${points[points.length - 1].x},${padTop + chartH} L ${points[0].x},${padTop + chartH} Z`;
 
-  // Current hour interpolated position
-  const floorH = Math.floor(currentHour);
-  const fracH = currentHour - floorH;
-  const currentScore = floorH < 23
-    ? hourlyScores[floorH] + (hourlyScores[floorH + 1] - hourlyScores[floorH]) * fracH
-    : hourlyScores[23];
+  // Use the actual live score for the current position on the chart
   const curX = x(currentHour);
-  const curY = y(currentScore);
+  const curY = y(liveScore);
 
   // Color for score
   const scoreColor = (s: number) => {
@@ -75,6 +77,14 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
     if (s >= 55) return '#84cc16';
     if (s >= 40) return '#f59e0b';
     return '#ef4444';
+  };
+
+  // Score label
+  const scoreLabel = (s: number) => {
+    if (s >= 75) return 'Sehr gut';
+    if (s >= 55) return 'Gut';
+    if (s >= 40) return 'Mittel';
+    return 'Schlecht';
   };
 
   // Best hour
@@ -91,6 +101,65 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
     { threshold: 40, color: '#f59e0b', opacity: 0.04 },
   ];
 
+  // Interactive: convert pointer/touch event to SVG coordinates
+  const getSvgX = useCallback((clientX: number): number => {
+    if (!svgRef.current) return 0;
+    const rect = svgRef.current.getBoundingClientRect();
+    const svgX = ((clientX - rect.left) / rect.width) * W;
+    return svgX;
+  }, [W]);
+
+  const handleInteraction = useCallback((clientX: number) => {
+    const svgX = getSvgX(clientX);
+    const hour = xToHour(svgX);
+    setActiveHour(hour);
+  }, [getSvgX]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    handleInteraction(e.clientX);
+  }, [handleInteraction]);
+
+  const handlePointerEnter = useCallback((e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse') {
+      handleInteraction(e.clientX);
+    }
+  }, [handleInteraction]);
+
+  const handlePointerLeave = useCallback(() => {
+    if (!touchActive) {
+      setActiveHour(null);
+    }
+  }, [touchActive]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setTouchActive(true);
+    const touch = e.touches[0];
+    handleInteraction(touch.clientX);
+  }, [handleInteraction]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    handleInteraction(touch.clientX);
+  }, [handleInteraction]);
+
+  const handleTouchEnd = useCallback(() => {
+    setTouchActive(false);
+    // Keep tooltip visible for a moment after touch ends
+    setTimeout(() => {
+      setActiveHour(null);
+    }, 1500);
+  }, []);
+
+  // Active hour data for tooltip
+  const activeScore = activeHour !== null ? hourlyScores[activeHour] : null;
+  const activeX = activeHour !== null ? x(activeHour) : 0;
+  const activeY = activeHour !== null && activeScore !== null ? y(activeScore) : 0;
+
+  // Determine if tooltip should flip to left side
+  const tooltipFlip = activeHour !== null && activeHour > 17;
+
   return (
     <div className="card space-y-3">
       <div className="flex justify-between items-center">
@@ -100,8 +169,10 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
         </div>
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-            <span className="text-[10px] text-slate-500 font-mono">JETZT: {Math.round(currentScore)}%</span>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: scoreColor(liveScore) }}></div>
+            <span className="text-[10px] font-mono font-bold" style={{ color: scoreColor(liveScore) }}>
+              LIVE: {liveScore}%
+            </span>
           </div>
         </div>
       </div>
@@ -118,30 +189,49 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
       </div>
 
       {/* SVG Chart */}
-      <div className="relative">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 'auto' }}>
+      <div className="relative select-none" style={{ touchAction: 'none' }}>
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full cursor-crosshair"
+          style={{ height: 'auto' }}
+          onPointerMove={handlePointerMove}
+          onPointerEnter={handlePointerEnter}
+          onPointerLeave={handlePointerLeave}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <defs>
             {/* Main gradient for the area fill */}
-            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="dfcAreaGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
               <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
             </linearGradient>
             {/* Line gradient based on score values */}
-            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+            <linearGradient id="dfcLineGrad" x1="0" y1="0" x2="1" y2="0">
               {hourlyScores.map((s, i) => (
                 <stop key={i} offset={`${(i / 23) * 100}%`} stopColor={scoreColor(s)} />
               ))}
             </linearGradient>
             {/* Glow filter for the current dot */}
-            <filter id="glow">
+            <filter id="dfcGlow">
               <feGaussianBlur stdDeviation="3" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+            {/* Hover glow filter */}
+            <filter id="dfcHoverGlow">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
             {/* Night gradient overlay */}
-            <linearGradient id="nightGrad" x1="0" y1="0" x2="1" y2="0">
+            <linearGradient id="dfcNightGrad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#0f172a" stopOpacity="0.5" />
               <stop offset={`${(sunriseHour / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0.5" />
               <stop offset={`${((sunriseHour + 0.5) / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0" />
@@ -165,7 +255,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
           ))}
 
           {/* Night overlay */}
-          <rect x={padX} y={padTop} width={chartW} height={chartH} fill="url(#nightGrad)" />
+          <rect x={padX} y={padTop} width={chartW} height={chartH} fill="url(#dfcNightGrad)" />
 
           {/* Horizontal grid lines */}
           {[25, 50, 75].map(val => (
@@ -188,10 +278,10 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
           <text x={x(sunsetHour)} y={padTop - 3} fill="#f97316" fontSize="9" textAnchor="middle">🌙</text>
 
           {/* Area fill */}
-          <path d={areaPath} fill="url(#areaGrad)" />
+          <path d={areaPath} fill="url(#dfcAreaGrad)" />
 
           {/* Main line */}
-          <path d={linePath} fill="none" stroke="url(#lineGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={linePath} fill="none" stroke="url(#dfcLineGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
           {/* Best hour marker */}
           <circle cx={x(bestHour)} cy={y(bestScore)} r="4" fill={scoreColor(bestScore)} opacity="0.8" />
@@ -200,9 +290,72 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
           {/* Current hour vertical line */}
           <line x1={curX} y1={padTop} x2={curX} y2={padTop + chartH} stroke="#3b82f6" strokeWidth="1" opacity="0.4" strokeDasharray="2,2" />
 
-          {/* Current hour dot with glow */}
-          <circle cx={curX} cy={curY} r="5" fill={scoreColor(currentScore)} filter="url(#glow)" />
+          {/* Current hour dot with glow — uses liveScore */}
+          <circle cx={curX} cy={curY} r="5" fill={scoreColor(liveScore)} filter="url(#dfcGlow)" />
           <circle cx={curX} cy={curY} r="3" fill="white" />
+
+          {/* Interactive hover/touch layer */}
+          {activeHour !== null && activeScore !== null && (
+            <g>
+              {/* Vertical scan line */}
+              <line
+                x1={activeX} y1={padTop} x2={activeX} y2={padTop + chartH}
+                stroke="#94a3b8" strokeWidth="0.8" opacity="0.6"
+              />
+
+              {/* Dot on curve */}
+              <circle cx={activeX} cy={activeY} r="6" fill={scoreColor(activeScore)} filter="url(#dfcHoverGlow)" />
+              <circle cx={activeX} cy={activeY} r="3.5" fill="#0f172a" />
+              <circle cx={activeX} cy={activeY} r="2" fill={scoreColor(activeScore)} />
+
+              {/* Tooltip background */}
+              <rect
+                x={tooltipFlip ? activeX - 82 : activeX + 8}
+                y={Math.max(padTop, Math.min(activeY - 22, padTop + chartH - 44))}
+                width="74"
+                height="44"
+                rx="8"
+                fill="#1e293b"
+                stroke="#334155"
+                strokeWidth="1"
+                opacity="0.95"
+              />
+              {/* Tooltip: Hour */}
+              <text
+                x={tooltipFlip ? activeX - 45 : activeX + 45}
+                y={Math.max(padTop + 14, Math.min(activeY - 7, padTop + chartH - 28))}
+                fill="#94a3b8"
+                fontSize="9"
+                textAnchor="middle"
+                fontFamily="monospace"
+                fontWeight="bold"
+              >
+                {activeHour.toString().padStart(2, '0')}:00 Uhr
+              </text>
+              {/* Tooltip: Score */}
+              <text
+                x={tooltipFlip ? activeX - 45 : activeX + 45}
+                y={Math.max(padTop + 30, Math.min(activeY + 9, padTop + chartH - 12))}
+                fill={scoreColor(activeScore)}
+                fontSize="14"
+                textAnchor="middle"
+                fontWeight="900"
+              >
+                {activeScore}%
+              </text>
+              {/* Tooltip: Label */}
+              <text
+                x={tooltipFlip ? activeX - 45 : activeX + 45}
+                y={Math.max(padTop + 40, Math.min(activeY + 19, padTop + chartH - 2))}
+                fill="#64748b"
+                fontSize="7"
+                textAnchor="middle"
+                fontWeight="bold"
+              >
+                {scoreLabel(activeScore).toUpperCase()}
+              </text>
+            </g>
+          )}
 
           {/* X-axis labels */}
           {xLabels.map(h => (
@@ -213,8 +366,16 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
 
           {/* Bottom border line */}
           <line x1={padX} y1={padTop + chartH} x2={padX + chartW} y2={padTop + chartH} stroke="#334155" strokeWidth="0.5" />
+
+          {/* Invisible hit area for better touch targets */}
+          <rect x={padX} y={padTop} width={chartW} height={chartH} fill="transparent" />
         </svg>
       </div>
+
+      {/* Hint text */}
+      <p className="text-center text-[9px] text-slate-600 italic">
+        {touchActive ? 'Finger bewegen um Stunden zu erkunden' : 'Tippe oder fahre über den Graphen'}
+      </p>
 
       {/* Legend */}
       <div className="flex justify-center space-x-4 text-[9px] text-slate-500 uppercase font-bold pt-1">

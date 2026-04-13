@@ -53,6 +53,7 @@ const App: React.FC = () => {
             {!loading && hourlyScores && hourlyScores.length > 0 && (
               <DailyForecastChart
                 hourlyScores={hourlyScores}
+                liveScore={score}
                 sunrise={weather?.sunrise}
                 sunset={weather?.sunset}
               />
