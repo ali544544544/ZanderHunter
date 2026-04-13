@@ -4,7 +4,6 @@ import { KoderEmpfehlung } from '../data/koderLogik';
 interface TaktikViewProps {
   conditions: any;
   weather: any;
-  pegel: any;
   koder: KoderEmpfehlung[];
   score: number;
 }
@@ -251,7 +250,7 @@ function getProTipps(conditions: any): { text: string; icon: string }[] {
 
 // ---- Component ----
 
-const TaktikView: React.FC<TaktikViewProps> = ({ conditions, weather, pegel, koder, score }) => {
+const TaktikView: React.FC<TaktikViewProps> = ({ conditions, weather, koder, score }) => {
   const [openSection, setOpenSection] = useState<string | null>('führung');
 
   const führungsTipps = getFührungsTipps(conditions);

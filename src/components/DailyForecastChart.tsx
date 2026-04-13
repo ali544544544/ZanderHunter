@@ -113,6 +113,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
     const svgX = getSvgX(clientX);
     const hour = xToHour(svgX);
     setActiveHour(hour);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getSvgX]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {

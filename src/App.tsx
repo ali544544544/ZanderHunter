@@ -72,7 +72,6 @@ const App: React.FC = () => {
           <TaktikView
             conditions={conditions}
             weather={weather}
-            pegel={pegel}
             koder={koder}
             score={score}
           />
