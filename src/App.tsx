@@ -8,7 +8,7 @@ import AngelIndex from './components/AngelIndex';
 import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
-import KoderCard from './components/KoderCard';
+import TaktikView from './components/TaktikView';
 import Briefing from './components/Briefing';
 import ZanderInfo from './components/ZanderInfo';
 import DataStatus from './components/DataStatus';
@@ -69,17 +69,13 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'koder' && (
-          <div className="space-y-8">
-            <KoderCard empfehlungen={koder} />
-            <div className="card space-y-4">
-              <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm">Technik & Taktik</h3>
-              <div className="space-y-3 text-sm text-slate-300">
-                <p>• <strong>Wurfrichtung:</strong> Gegen die Strömung werfen, Köder mit der Strömung führen.</p>
-                <p>• <strong>Führung:</strong> Lift-and-Drop. Kurze Sprünge am Grund, 2-3 Sek. Absinkphase.</p>
-                <p>• <strong>Biss:</strong> Oft nur ein feines "Tock". Sofort Quittieren (Anschlag!).</p>
-              </div>
-            </div>
-          </div>
+          <TaktikView
+            conditions={conditions}
+            weather={weather}
+            pegel={pegel}
+            koder={koder}
+            score={score}
+          />
         )}
         
         {activeTab === 'forecast' && (
