@@ -11,6 +11,8 @@ export interface WeatherData {
   precipitation48h: number;
   sunrise: string;
   sunset: string;
+  sunrises: string[];
+  sunsets: string[];
   hourly: {
     time: string[];
     temperature: number[];
@@ -55,6 +57,8 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
           precipitation48h: precipSum,
           sunrise: json.daily.sunrise[0],
           sunset: json.daily.sunset[0],
+          sunrises: json.daily.sunrise,
+          sunsets: json.daily.sunset,
           hourly: {
             time: json.hourly.time,
             temperature: json.hourly.temperature_2m,

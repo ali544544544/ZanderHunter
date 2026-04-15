@@ -2,30 +2,42 @@ import React, { useMemo, useState, useRef, useCallback } from 'react';
 
 interface DailyForecastChartProps {
   hourlyScores: number[];
-  liveScore: number;      // The actual live Angel-Index score
-  sunrise?: string;       // ISO time string
-  sunset?: string;        // ISO time string
+  startHour: number;
+  liveScore: number;
+  sunrises?: string[];
+  sunsets?: string[];
 }
 
-const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, liveScore, sunrise, sunset }) => {
+const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, startHour, liveScore, sunrises, sunsets }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [activeHour, setActiveHour] = useState<number | null>(null);
+  const [activeHourIndex, setActiveHourIndex] = useState<number | null>(null);
   const [touchActive, setTouchActive] = useState(false);
 
   const now = new Date();
-  const currentHour = now.getHours() + now.getMinutes() / 60;
 
   const sunriseHour = useMemo(() => {
-    if (!sunrise) return 6;
-    const d = new Date(sunrise);
-    return d.getHours() + d.getMinutes() / 60;
-  }, [sunrise]);
+    if (!sunrises || sunrises.length === 0) return 6;
+    const chartStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0);
+    
+    for (const iso of sunrises) {
+      const d = new Date(iso);
+      const diffHours = (d.getTime() - chartStart.getTime()) / (1000 * 60 * 60);
+      if (diffHours >= 0 && diffHours < 24) return diffHours;
+    }
+    return 6;
+  }, [sunrises, startHour, now]);
 
   const sunsetHour = useMemo(() => {
-    if (!sunset) return 20;
-    const d = new Date(sunset);
-    return d.getHours() + d.getMinutes() / 60;
-  }, [sunset]);
+    if (!sunsets || sunsets.length === 0) return 20;
+    const chartStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0);
+    
+    for (const iso of sunsets) {
+      const d = new Date(iso);
+      const diffHours = (d.getTime() - chartStart.getTime()) / (1000 * 60 * 60);
+      if (diffHours >= 0 && diffHours < 24) return diffHours;
+    }
+    return 20;
+  }, [sunsets, startHour, now]);
 
   // Chart dimensions
   const W = 360;
@@ -68,7 +80,9 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
   const areaPath = linePath + ` L ${points[points.length - 1].x},${padTop + chartH} L ${points[0].x},${padTop + chartH} Z`;
 
   // Use the actual live score for the current position on the chart
-  const curX = x(currentHour);
+  // Chart starts at `startHour`, so the offset for now is just the minutes
+  const currentOffset = now.getMinutes() / 60;
+  const curX = x(currentOffset);
   const curY = y(liveScore);
 
   // Color for score
@@ -87,12 +101,17 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
     return 'Schlecht';
   };
 
-  // Best hour
-  const bestHour = hourlyScores.indexOf(Math.max(...hourlyScores));
-  const bestScore = hourlyScores[bestHour];
+  // Best hour index
+  const bestHourIndex = hourlyScores.indexOf(Math.max(...hourlyScores));
+  const bestScore = hourlyScores[bestHourIndex];
+  const bestRealHour = (startHour + bestHourIndex) % 24;
 
-  // X-axis labels: show every 3 hours
-  const xLabels = [0, 3, 6, 9, 12, 15, 18, 21];
+  // X-axis labels
+  const xTickOffsets: number[] = [];
+  const firstTickOffset = (3 - (startHour % 3)) % 3;
+  for (let i = firstTickOffset; i < 24; i += 3) {
+    xTickOffsets.push(i);
+  }
 
   // Score zone thresholds
   const zones = [
@@ -111,8 +130,8 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
 
   const handleInteraction = useCallback((clientX: number) => {
     const svgX = getSvgX(clientX);
-    const hour = xToHour(svgX);
-    setActiveHour(hour);
+    const hourIdx = xToHour(svgX);
+    setActiveHourIndex(hourIdx);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getSvgX]);
 
@@ -129,7 +148,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
 
   const handlePointerLeave = useCallback(() => {
     if (!touchActive) {
-      setActiveHour(null);
+      setActiveHourIndex(null);
     }
   }, [touchActive]);
 
@@ -149,17 +168,18 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
     setTouchActive(false);
     // Keep tooltip visible for a moment after touch ends
     setTimeout(() => {
-      setActiveHour(null);
+      setActiveHourIndex(null);
     }, 1500);
   }, []);
 
   // Active hour data for tooltip
-  const activeScore = activeHour !== null ? hourlyScores[activeHour] : null;
-  const activeX = activeHour !== null ? x(activeHour) : 0;
-  const activeY = activeHour !== null && activeScore !== null ? y(activeScore) : 0;
+  const activeScore = activeHourIndex !== null ? hourlyScores[activeHourIndex] : null;
+  const activeX = activeHourIndex !== null ? x(activeHourIndex) : 0;
+  const activeY = activeHourIndex !== null && activeScore !== null ? y(activeScore) : 0;
+  const activeRealHour = activeHourIndex !== null ? (startHour + activeHourIndex) % 24 : null;
 
   // Determine if tooltip should flip to left side
-  const tooltipFlip = activeHour !== null && activeHour > 17;
+  const tooltipFlip = activeHourIndex !== null && activeHourIndex > 17;
 
   return (
     <div className="card space-y-3">
@@ -182,9 +202,9 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
       <div className="flex items-center space-x-2 bg-slate-950/40 rounded-xl px-3 py-2 border border-slate-800/50">
         <span className="text-lg">🎯</span>
         <div>
-          <span className="text-[10px] text-slate-500 font-bold uppercase">Beste Stunde heute</span>
+          <span className="text-[10px] text-slate-500 font-bold uppercase">Beste Stunde</span>
           <p className="text-sm font-bold" style={{ color: scoreColor(bestScore) }}>
-            {bestHour}:00 Uhr — {bestScore}%
+            {bestRealHour}:00 Uhr — {bestScore}%
           </p>
         </div>
       </div>
@@ -233,12 +253,25 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
             </filter>
             {/* Night gradient overlay */}
             <linearGradient id="dfcNightGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#0f172a" stopOpacity="0.5" />
-              <stop offset={`${(sunriseHour / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0.5" />
-              <stop offset={`${((sunriseHour + 0.5) / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0" />
-              <stop offset={`${((sunsetHour - 0.5) / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0" />
-              <stop offset={`${(sunsetHour / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#0f172a" stopOpacity="0.5" />
+              {sunriseHour < sunsetHour ? (
+                <>
+                  <stop offset="0%" stopColor="#0f172a" stopOpacity="0.5" />
+                  <stop offset={`${(sunriseHour / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0.5" />
+                  <stop offset={`${((sunriseHour + 0.5) / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0" />
+                  <stop offset={`${((sunsetHour - 0.5) / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0" />
+                  <stop offset={`${(sunsetHour / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#0f172a" stopOpacity="0.5" />
+                </>
+              ) : (
+                <>
+                  <stop offset="0%" stopColor="#0f172a" stopOpacity="0" />
+                  <stop offset={`${(sunsetHour / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0" />
+                  <stop offset={`${((sunsetHour + 0.5) / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0.5" />
+                  <stop offset={`${((sunriseHour - 0.5) / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0.5" />
+                  <stop offset={`${(sunriseHour / 24) * 100}%`} stopColor="#0f172a" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
+                </>
+              )}
             </linearGradient>
           </defs>
 
@@ -285,8 +318,8 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
           <path d={linePath} fill="none" stroke="url(#dfcLineGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
           {/* Best hour marker */}
-          <circle cx={x(bestHour)} cy={y(bestScore)} r="4" fill={scoreColor(bestScore)} opacity="0.8" />
-          <circle cx={x(bestHour)} cy={y(bestScore)} r="7" fill="none" stroke={scoreColor(bestScore)} strokeWidth="1" opacity="0.3" />
+          <circle cx={x(bestHourIndex)} cy={y(bestScore)} r="4" fill={scoreColor(bestScore)} opacity="0.8" />
+          <circle cx={x(bestHourIndex)} cy={y(bestScore)} r="7" fill="none" stroke={scoreColor(bestScore)} strokeWidth="1" opacity="0.3" />
 
           {/* Current hour vertical line */}
           <line x1={curX} y1={padTop} x2={curX} y2={padTop + chartH} stroke="#3b82f6" strokeWidth="1" opacity="0.4" strokeDasharray="2,2" />
@@ -296,7 +329,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
           <circle cx={curX} cy={curY} r="3" fill="white" />
 
           {/* Interactive hover/touch layer */}
-          {activeHour !== null && activeScore !== null && (
+          {activeHourIndex !== null && activeScore !== null && activeRealHour !== null && (
             <g>
               {/* Vertical scan line */}
               <line
@@ -331,7 +364,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
                 fontFamily="monospace"
                 fontWeight="bold"
               >
-                {activeHour.toString().padStart(2, '0')}:00 Uhr
+                {activeRealHour.toString().padStart(2, '0')}:00 Uhr
               </text>
               {/* Tooltip: Score */}
               <text
@@ -359,9 +392,9 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, l
           )}
 
           {/* X-axis labels */}
-          {xLabels.map(h => (
-            <text key={h} x={x(h)} y={H - 6} fill="#64748b" fontSize="8" textAnchor="middle" fontFamily="monospace">
-              {h.toString().padStart(2, '0')}
+          {xTickOffsets.map(offset => (
+            <text key={offset} x={x(offset)} y={H - 6} fill="#64748b" fontSize="8" textAnchor="middle" fontFamily="monospace">
+              {((startHour + offset) % 24).toString().padStart(2, '0')}
             </text>
           ))}
 

@@ -55,18 +55,24 @@ export function useAngelIndex() {
 
   // Calculate hourly scores for the next 24 hours
   const hourlyScores: number[] = [];
-  const sunriseMinutes = sunrise.getHours() * 60 + sunrise.getMinutes();
-  const sunsetMinutes = sunset.getHours() * 60 + sunset.getMinutes();
+  const startHour = now.getHours();
   
   for (let i = 0; i < 24; i++) {
     const hTime = new Date(now);
-    hTime.setHours(i, 0, 0, 0);
+    hTime.setHours(startHour + i, 0, 0, 0);
     
-    // Find matching weather index (Open-Meteo hourly arrays start at 00:00)
-    const hIdx = i; 
+    // Find matching weather index (Open-Meteo hourly arrays start at 00:00 of today)
+    const hIdx = startHour + i; 
     
-    // Determine tageszeit with proper dämmerung detection (±45 min around sunrise/sunset)
-    const hMinutes = i * 60;
+    // Choose the right sunrise/sunset string for today vs tomorrow
+    const dayOffset = hTime.getDate() === now.getDate() ? 0 : 1;
+    const hSunrise = new Date(weather.data.sunrises[dayOffset] || weather.data.sunrise);
+    const hSunset = new Date(weather.data.sunsets[dayOffset] || weather.data.sunset);
+    
+    const sunriseMinutes = hSunrise.getHours() * 60 + hSunrise.getMinutes();
+    const sunsetMinutes = hSunset.getHours() * 60 + hSunset.getMinutes();
+    const hMinutes = hTime.getHours() * 60;
+    
     let hTageszeit: 'dämmerung' | 'nacht' | 'tag' = 'tag';
     if (Math.abs(hMinutes - sunriseMinutes) < 45 || Math.abs(hMinutes - sunsetMinutes) < 45) {
       hTageszeit = 'dämmerung';
@@ -104,6 +110,7 @@ export function useAngelIndex() {
     pegel: pegel.data,
     tide: tide.events,
     moon,
-    hourlyScores
+    hourlyScores,
+    startHour
   };
 }

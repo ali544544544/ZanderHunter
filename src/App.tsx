@@ -20,7 +20,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { userSpots } = useUserSpots();
-  const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores } = useAngelIndex();
+  const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores, startHour } = useAngelIndex();
 
   useEffect(() => {
     if (!loading && (weather || pegel)) {
@@ -50,12 +50,13 @@ const App: React.FC = () => {
           <>
             <AngelIndex score={score} loading={loading} />
             {!loading && briefingText && <Briefing text={briefingText} />}
-            {!loading && hourlyScores && hourlyScores.length > 0 && (
+            {!loading && hourlyScores && hourlyScores.length > 0 && startHour !== undefined && (
               <DailyForecastChart
                 hourlyScores={hourlyScores}
+                startHour={startHour}
                 liveScore={score}
-                sunrise={weather?.sunrise}
-                sunset={weather?.sunset}
+                sunrises={weather?.sunrises}
+                sunsets={weather?.sunsets}
               />
             )}
             {!loading && <TideTimeline events={tide || []} />}
