@@ -32,19 +32,20 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
       try {
         const cb = `&_cb=${Date.now()}`;
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code,precipitation&hourly=temperature_2m,surface_pressure,wind_speed_10m,precipitation&daily=sunrise,sunset&forecast_days=2&timezone=Europe/Berlin${cb}`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code,precipitation&hourly=temperature_2m,surface_pressure,wind_speed_10m,precipitation&daily=sunrise,sunset&forecast_days=2&past_days=1&timezone=Europe/Berlin${cb}`
         );
         const json = await response.json();
 
+        const currentHourIndex = 24 + new Date().getHours();
         const currentPressure = json.current.surface_pressure;
-        const pastPressure = json.hourly.surface_pressure[json.hourly.surface_pressure.length - 4] || currentPressure;
+        const pastPressure = json.hourly.surface_pressure[currentHourIndex - 3] || currentPressure;
         
         let trend: 'fallend' | 'stabil' | 'steigend' = 'stabil';
         const diff = currentPressure - pastPressure;
         if (diff > 1) trend = 'steigend';
         else if (diff < -1) trend = 'fallend';
 
-        const precipSum = json.hourly.precipitation.slice(0, 48).reduce((a: number, b: number) => a + b, 0);
+        const precipSum = json.hourly.precipitation.slice(currentHourIndex - 48, currentHourIndex).reduce((a: number, b: number) => a + b, 0);
 
         setData({
           temperature: json.current.temperature_2m,
@@ -55,8 +56,8 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
           weatherCode: json.current.weather_code,
           precipitation: json.current.precipitation,
           precipitation48h: precipSum,
-          sunrise: json.daily.sunrise[0],
-          sunset: json.daily.sunset[0],
+          sunrise: json.daily.sunrise[1],
+          sunset: json.daily.sunset[1],
           sunrises: json.daily.sunrise,
           sunsets: json.daily.sunset,
           hourly: {

@@ -14,10 +14,10 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
   const [touchActive, setTouchActive] = useState(false);
 
   const now = new Date();
+  const chartStart = useMemo(() => new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0), [now, startHour]);
 
   const sunriseHour = useMemo(() => {
     if (!sunrises || sunrises.length === 0) return 6;
-    const chartStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0);
     
     for (const iso of sunrises) {
       const d = new Date(iso);
@@ -25,11 +25,10 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
       if (diffHours >= 0 && diffHours < 24) return diffHours;
     }
     return 6;
-  }, [sunrises, startHour, now]);
+  }, [sunrises, chartStart]);
 
   const sunsetHour = useMemo(() => {
     if (!sunsets || sunsets.length === 0) return 20;
-    const chartStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0);
     
     for (const iso of sunsets) {
       const d = new Date(iso);
@@ -37,7 +36,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
       if (diffHours >= 0 && diffHours < 24) return diffHours;
     }
     return 20;
-  }, [sunsets, startHour, now]);
+  }, [sunsets, chartStart]);
 
   // Chart dimensions
   const W = 360;
@@ -80,8 +79,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
   const areaPath = linePath + ` L ${points[points.length - 1].x},${padTop + chartH} L ${points[0].x},${padTop + chartH} Z`;
 
   // Use the actual live score for the current position on the chart
-  // Chart starts at `startHour`, so the offset for now is just the minutes
-  const currentOffset = now.getMinutes() / 60;
+  const currentOffset = (now.getTime() - chartStart.getTime()) / (1000 * 60 * 60);
   const curX = x(currentOffset);
   const curY = y(liveScore);
 
@@ -104,11 +102,11 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
   // Best hour index
   const bestHourIndex = hourlyScores.indexOf(Math.max(...hourlyScores));
   const bestScore = hourlyScores[bestHourIndex];
-  const bestRealHour = (startHour + bestHourIndex) % 24;
+  const bestRealHour = (((startHour + bestHourIndex) % 24) + 24) % 24;
 
   // X-axis labels
   const xTickOffsets: number[] = [];
-  const firstTickOffset = (3 - (startHour % 3)) % 3;
+  const firstTickOffset = (((3 - (startHour % 3)) % 3) + 3) % 3;
   for (let i = firstTickOffset; i < 24; i += 3) {
     xTickOffsets.push(i);
   }
@@ -173,13 +171,15 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
   }, []);
 
   // Active hour data for tooltip
-  const activeScore = activeHourIndex !== null ? hourlyScores[activeHourIndex] : null;
-  const activeX = activeHourIndex !== null ? x(activeHourIndex) : 0;
-  const activeY = activeHourIndex !== null && activeScore !== null ? y(activeScore) : 0;
-  const activeRealHour = activeHourIndex !== null ? (startHour + activeHourIndex) % 24 : null;
+  let displayHourIdx = activeHourIndex !== null ? activeHourIndex : Math.floor(currentOffset);
+  displayHourIdx = Math.max(0, Math.min(23, displayHourIdx));
+  const activeScore = hourlyScores[displayHourIdx];
+  const activeX = x(displayHourIdx);
+  const activeY = y(activeScore);
+  const activeRealHour = (((startHour + displayHourIdx) % 24) + 24) % 24;
 
   // Determine if tooltip should flip to left side
-  const tooltipFlip = activeHourIndex !== null && activeHourIndex > 17;
+  const tooltipFlip = displayHourIdx > 17;
 
   return (
     <div className="card space-y-3">
@@ -327,10 +327,13 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
           {/* Current hour dot with glow — uses liveScore */}
           <circle cx={curX} cy={curY} r="5" fill={scoreColor(liveScore)} filter="url(#dfcGlow)" />
           <circle cx={curX} cy={curY} r="3" fill="white" />
+          
+          <text x={curX + 6} y={padTop + 6} fill="#3b82f6" fontSize="8" fontWeight="bold" fontFamily="sans-serif">
+            JETZT
+          </text>
 
           {/* Interactive hover/touch layer */}
-          {activeHourIndex !== null && activeScore !== null && activeRealHour !== null && (
-            <g>
+          <g>
               {/* Vertical scan line */}
               <line
                 x1={activeX} y1={padTop} x2={activeX} y2={padTop + chartH}
@@ -389,12 +392,11 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
                 {scoreLabel(activeScore).toUpperCase()}
               </text>
             </g>
-          )}
 
           {/* X-axis labels */}
           {xTickOffsets.map(offset => (
             <text key={offset} x={x(offset)} y={H - 6} fill="#64748b" fontSize="8" textAnchor="middle" fontFamily="monospace">
-              {((startHour + offset) % 24).toString().padStart(2, '0')}
+              {((((startHour + offset) % 24) + 24) % 24).toString().padStart(2, '0')}
             </text>
           ))}
 
