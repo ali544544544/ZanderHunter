@@ -23,11 +23,13 @@ const fishOptions: { value: TargetFish; label: string; icon: React.ReactNode }[]
     value: 'zander',
     label: 'Zander',
     icon: (
-      <svg viewBox="0 0 64 32" aria-hidden="true" className="h-6 w-10">
-        <path d="M5 17c9-10 25-12 41-5l10-6-2 10 5 8-11-3C33 30 16 28 5 17Z" fill="currentColor" opacity="0.9" />
-        <path d="M18 14c6-3 15-4 25 0" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.45" />
-        <circle cx="44" cy="14" r="2" fill="#0f172a" />
-        <path d="M13 20c7 2 17 2 28-1" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
+      <svg viewBox="0 0 88 42" aria-hidden="true" className="h-7 w-14">
+        <path d="M6 23c12-13 33-17 57-7l15-9-4 15 8 11-17-5C43 41 18 36 6 23Z" fill="currentColor" />
+        <path d="M22 13 29 4l5 10M36 12l8-8 4 10M50 13l9-6 2 10" fill="currentColor" opacity="0.72" />
+        <path d="M17 23c14 5 31 5 48 0" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
+        <path d="M28 19c8-3 19-3 31 1" fill="none" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" opacity="0.45" />
+        <path d="M62 16 70 22 62 27" fill="#0f172a" opacity="0.22" />
+        <circle cx="66" cy="17" r="2.5" fill="#0f172a" />
       </svg>
     ),
   },
@@ -35,11 +37,13 @@ const fishOptions: { value: TargetFish; label: string; icon: React.ReactNode }[]
     value: 'hecht',
     label: 'Hecht',
     icon: (
-      <svg viewBox="0 0 72 32" aria-hidden="true" className="h-6 w-11">
-        <path d="M4 16c11-9 31-12 52-5l10-7-3 11 5 9-12-4C35 29 15 27 4 16Z" fill="currentColor" opacity="0.9" />
-        <path d="M43 10 56 15 43 20" fill="#0f172a" opacity="0.28" />
-        <path d="M12 16h24" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.35" />
-        <circle cx="52" cy="13" r="2" fill="#0f172a" />
+      <svg viewBox="0 0 96 42" aria-hidden="true" className="h-7 w-16">
+        <path d="M5 21c16-10 43-13 72-4l12-10-3 14 6 12-15-6C47 38 19 35 5 21Z" fill="currentColor" />
+        <path d="M63 14 78 20 63 27" fill="#0f172a" opacity="0.28" />
+        <path d="M12 21c15-4 32-4 50 0" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
+        <path d="M22 15h20M19 27h24" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.24" />
+        <circle cx="75" cy="17" r="2.5" fill="#0f172a" />
+        <path d="M78 24h8" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.45" />
       </svg>
     ),
   },
@@ -47,11 +51,12 @@ const fishOptions: { value: TargetFish; label: string; icon: React.ReactNode }[]
     value: 'barsch',
     label: 'Barsch',
     icon: (
-      <svg viewBox="0 0 60 34" aria-hidden="true" className="h-6 w-10">
-        <path d="M5 18c8-9 24-13 41-5l9-6-2 10 5 7-11-2C31 32 14 29 5 18Z" fill="currentColor" opacity="0.9" />
-        <path d="M21 8 16 1l12 5M31 8l4-7 4 9" fill="currentColor" opacity="0.75" />
-        <path d="M20 13v11M28 11v14M36 11v13" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.32" />
-        <circle cx="43" cy="14" r="2" fill="#0f172a" />
+      <svg viewBox="0 0 82 46" aria-hidden="true" className="h-7 w-14">
+        <path d="M6 25c9-14 28-20 55-9l13-8-3 13 7 10-15-3C40 43 15 38 6 25Z" fill="currentColor" />
+        <path d="M22 14 17 2l15 8M36 12l6-11 7 12M51 14l8-8 3 11" fill="currentColor" opacity="0.78" />
+        <path d="M23 17v18M33 14v23M43 13v24M53 15v19" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" opacity="0.32" />
+        <path d="M13 27c11 5 25 6 44 0" fill="none" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" opacity="0.28" />
+        <circle cx="61" cy="18" r="2.5" fill="#0f172a" />
       </svg>
     ),
   },
@@ -142,7 +147,7 @@ const App: React.FC = () => {
                   key={fish.value}
                   type="button"
                   onClick={() => setTargetFish(fish.value)}
-                  className={`flex h-11 min-w-16 items-center justify-center rounded-md px-2 transition-colors ${
+                  className={`flex min-h-[58px] min-w-16 flex-col items-center justify-center gap-0.5 rounded-md px-2 py-1.5 transition-colors ${
                     targetFish === fish.value
                       ? 'bg-blue-500 text-white shadow-sm shadow-blue-950/60'
                       : 'text-slate-400 hover:text-slate-100'
@@ -152,6 +157,7 @@ const App: React.FC = () => {
                   title={fish.label}
                 >
                   {fish.icon}
+                  <span className="text-[9px] font-black uppercase tracking-wide leading-none">{fish.label}</span>
                 </button>
               ))}
             </div>
