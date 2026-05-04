@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">ZanderHunter Hamburg</title>
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <path fill="#38bdf8" d="M74 294c47-77 120-116 218-116 57 0 105 17 146 50l38-32c7-6 18-1 18 9v104c0 10-11 15-18 9l-38-32c-41 33-89 50-146 50-98 0-171-39-218-116-6-10-6-22 0-32Z"/>
+  <path fill="#0f172a" d="M146 256c33-34 79-51 138-51 48 0 90 12 126 36-36 24-78 36-126 36-59 0-105-7-138-21Z" opacity=".42"/>
+  <circle cx="392" cy="244" r="15" fill="#f8fafc"/>
+  <circle cx="397" cy="240" r="6" fill="#0f172a"/>
+  <path fill="#f59e0b" d="M117 307c38 24 84 36 138 36 53 0 99-12 139-36-38 43-86 65-145 65-58 0-102-22-132-65Z"/>
+  <path fill="#f8fafc" d="M119 210c36-50 85-75 147-75 44 0 84 12 120 37-36-14-75-21-117-21-65 0-115 20-150 59Z" opacity=".9"/>
+</svg>
