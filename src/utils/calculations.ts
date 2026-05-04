@@ -344,8 +344,7 @@ function getHechtRating(score: number) {
   return 'SCHWACH';
 }
 
-function getPrimeWindow(input: HechtScoreInput, legalClosed: boolean) {
-  if (legalClosed) return 'Nach Schonzeit ab 01.06.';
+function getPrimeWindow(input: HechtScoreInput) {
   if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'jetzt bis Ende Daemmerung';
   if (input.stromPhase === 'ablauf') return 'erste 90 min der Ablaufphase';
   if (input.stromPhase === 'kenter') return 'Kenterpunkt plus 90 min';
@@ -373,16 +372,17 @@ export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
   if (hydrologyResult.tide.currentSpeed < 0.1 && (input.cloudCover ?? 100) < 30) multiplier *= 0.9;
 
   const uncappedTotal = raw * multiplier;
-  const total = rules.schonzeitAktiv ? 0 : Math.round(clamp(uncappedTotal));
+  const total = Math.round(clamp(uncappedTotal));
   const confidence = Math.round(clamp(8 - 0.05 * total, 4, 8));
+  const biologicalProbability = Math.round(clamp(18 + total * 0.67, 5, 85));
   const probability = rules.schonzeitAktiv
-    ? '0% waehrend Schonzeit'
-    : `${Math.round(clamp(18 + total * 0.67, 5, 85))}% fuer Hecht >60cm`;
+    ? `${biologicalProbability}% biologisch, Schonzeit beachten`
+    : `${biologicalProbability}% fuer Hecht >60cm`;
 
   return {
     total,
     confidence,
-    rating: rules.schonzeitAktiv ? 'SCHONZEIT' : getHechtRating(total),
+    rating: getHechtRating(total),
     subScores: {
       temperatur: Math.round(temperatur),
       barometer: Math.round(barometerResult.score),
@@ -391,7 +391,7 @@ export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
     },
     interactionBonus: Math.round((multiplier - 1) * 100),
     legal: rules,
-    primeWindow: getPrimeWindow(input, rules.schonzeitAktiv),
+    primeWindow: getPrimeWindow(input),
     topTactic: input.wasserTemp < 8
       ? 'Langsam gefuehrter Jerkbait oder grosser Softbait'
       : lightWindResult.twilight

@@ -121,14 +121,13 @@ function getHechtKoderEmpfehlung(conditions: any): KoderEmpfehlung[] {
 export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpfehlung[], targetFish: TargetFish = 'zander', scoreDetails?: HechtScoreDetails | null): string {
   if (targetFish === 'hecht') {
     const parts: string[] = [];
+    parts.push(`Hecht-Score ${scoreDetails?.total ?? '--'} mit ${scoreDetails?.rating ?? 'Live'}-Rating.`);
     if (scoreDetails?.legal.schonzeitAktiv) {
       parts.push(scoreDetails.legal.hinweis);
-    } else {
-      parts.push(`Hecht-Score ${scoreDetails?.total ?? '--'} mit ${scoreDetails?.rating ?? 'Live'}-Rating.`);
-      parts.push(`Prime Window: ${scoreDetails?.primeWindow ?? 'naechste Daemmerung'}.`);
-      parts.push(`Taktik: ${scoreDetails?.topTactic ?? koder[0]?.technik}.`);
-      parts.push(`Hotspot: ${scoreDetails?.hotspot ?? topSpot?.name ?? 'Krautkante oder Einlauf'}.`);
     }
+    parts.push(`Prime Window: ${scoreDetails?.primeWindow ?? 'naechste Daemmerung'}.`);
+    parts.push(`Taktik: ${scoreDetails?.topTactic ?? koder[0]?.technik}.`);
+    parts.push(`Hotspot: ${scoreDetails?.hotspot ?? topSpot?.name ?? 'Krautkante oder Einlauf'}.`);
     if (conditions?.luftdruckTrend === 'fallend') parts.push('Fallender Druck wirkt als Aktivitaets-Trigger.');
     if (conditions?.cloudCover > 60 && conditions?.windSpeed > 10) parts.push('Wolken plus Wind geben Deckung im Flachwasser.');
     return parts.join(' ');

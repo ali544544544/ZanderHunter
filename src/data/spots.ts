@@ -1,4 +1,4 @@
-import { getHamburgPredatorRules, getLocalConditions } from '../utils/calculations';
+import { getLocalConditions } from '../utils/calculations';
 import type { TargetFish } from '../utils/calculations';
 
 export interface Spot {
@@ -163,8 +163,6 @@ export function calculateSpotScore(spot: Spot, conditions: any, date: Date = new
 }
 
 export function calculateHechtSpotScore(spot: Spot, conditions: any, date: Date = new Date()) {
-  if (getHamburgPredatorRules('hecht', date).schonzeitAktiv) return 0;
-
   const local = getLocalConditions(spot, conditions, date);
   let score = 45;
   const structures = spot.struktur.join(' ').toLowerCase();
