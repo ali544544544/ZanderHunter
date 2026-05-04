@@ -18,6 +18,7 @@ import { useUserSpots } from './hooks/useUserSpots';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
+  const [targetFish, setTargetFish] = useState<'zander' | 'hecht'>('zander');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { userSpots } = useUserSpots();
   const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores, startHour } = useAngelIndex();
@@ -39,9 +40,23 @@ const App: React.FC = () => {
           <h1 className="text-3xl font-black text-white tracking-tighter">ZanderHunter</h1>
           <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Hamburg · {new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}</p>
         </div>
-        <div className="flex flex-col items-end">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mb-1"></div>
-          <span className="text-[10px] text-slate-500 font-mono">LIVE UPDATES</span>
+        <div className="flex flex-col items-end gap-2">
+          <label className="flex flex-col items-end gap-1">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Zielfisch</span>
+            <select
+              value={targetFish}
+              onChange={(event) => setTargetFish(event.target.value as 'zander' | 'hecht')}
+              className="bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-100 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+              aria-label="Zielfisch auswahlen"
+            >
+              <option value="zander">Zander</option>
+              <option value="hecht">Hecht</option>
+            </select>
+          </label>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-[10px] text-slate-500 font-mono">LIVE UPDATES</span>
+          </div>
         </div>
       </header>
 
