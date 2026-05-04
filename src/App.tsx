@@ -18,48 +18,10 @@ import type { TargetFish } from './utils/calculations';
 
 type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast';
 
-const fishOptions: { value: TargetFish; label: string; icon: React.ReactNode }[] = [
-  {
-    value: 'zander',
-    label: 'Zander',
-    icon: (
-      <svg viewBox="0 0 88 42" aria-hidden="true" className="h-7 w-14">
-        <path d="M6 23c12-13 33-17 57-7l15-9-4 15 8 11-17-5C43 41 18 36 6 23Z" fill="currentColor" />
-        <path d="M22 13 29 4l5 10M36 12l8-8 4 10M50 13l9-6 2 10" fill="currentColor" opacity="0.72" />
-        <path d="M17 23c14 5 31 5 48 0" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
-        <path d="M28 19c8-3 19-3 31 1" fill="none" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" opacity="0.45" />
-        <path d="M62 16 70 22 62 27" fill="#0f172a" opacity="0.22" />
-        <circle cx="66" cy="17" r="2.5" fill="#0f172a" />
-      </svg>
-    ),
-  },
-  {
-    value: 'hecht',
-    label: 'Hecht',
-    icon: (
-      <svg viewBox="0 0 96 42" aria-hidden="true" className="h-7 w-16">
-        <path d="M5 21c16-10 43-13 72-4l12-10-3 14 6 12-15-6C47 38 19 35 5 21Z" fill="currentColor" />
-        <path d="M63 14 78 20 63 27" fill="#0f172a" opacity="0.28" />
-        <path d="M12 21c15-4 32-4 50 0" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
-        <path d="M22 15h20M19 27h24" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.24" />
-        <circle cx="75" cy="17" r="2.5" fill="#0f172a" />
-        <path d="M78 24h8" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.45" />
-      </svg>
-    ),
-  },
-  {
-    value: 'barsch',
-    label: 'Barsch',
-    icon: (
-      <svg viewBox="0 0 82 46" aria-hidden="true" className="h-7 w-14">
-        <path d="M6 25c9-14 28-20 55-9l13-8-3 13 7 10-15-3C40 43 15 38 6 25Z" fill="currentColor" />
-        <path d="M22 14 17 2l15 8M36 12l6-11 7 12M51 14l8-8 3 11" fill="currentColor" opacity="0.78" />
-        <path d="M23 17v18M33 14v23M43 13v24M53 15v19" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" opacity="0.32" />
-        <path d="M13 27c11 5 25 6 44 0" fill="none" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" opacity="0.28" />
-        <circle cx="61" cy="18" r="2.5" fill="#0f172a" />
-      </svg>
-    ),
-  },
+const fishOptions: { value: TargetFish; label: string; iconSrc: string }[] = [
+  { value: 'zander', label: 'Zander', iconSrc: '/icons/zander.svg' },
+  { value: 'hecht', label: 'Hecht', iconSrc: '/icons/hecht.svg' },
+  { value: 'barsch', label: 'Barsch', iconSrc: '/icons/barsch.svg' },
 ];
 
 const navItems: { id: ActiveTab; label: string; icon: string }[] = [
@@ -152,7 +114,12 @@ const App: React.FC = () => {
                   aria-label={`${fish.label} auswaehlen`}
                   title={fish.label}
                 >
-                  {fish.icon}
+                  <img
+                    src={fish.iconSrc}
+                    alt=""
+                    className="h-8 w-16 object-contain invert"
+                    loading="eager"
+                  />
                   <span className="text-[9px] font-black uppercase tracking-wide leading-none">{fish.label}</span>
                 </button>
               ))}
