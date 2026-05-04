@@ -18,10 +18,12 @@ import type { TargetFish } from './utils/calculations';
 
 type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast';
 
+const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+
 const fishOptions: { value: TargetFish; label: string; iconSrc: string }[] = [
-  { value: 'zander', label: 'Zander', iconSrc: '/icons/zander.svg' },
-  { value: 'hecht', label: 'Hecht', iconSrc: '/icons/hecht.svg' },
-  { value: 'barsch', label: 'Barsch', iconSrc: '/icons/barsch.svg' },
+  { value: 'zander', label: 'Zander', iconSrc: assetPath('icons/zander.svg') },
+  { value: 'hecht', label: 'Hecht', iconSrc: assetPath('icons/hecht.svg') },
+  { value: 'barsch', label: 'Barsch', iconSrc: assetPath('icons/barsch.svg') },
 ];
 
 const navItems: { id: ActiveTab; label: string; icon: string }[] = [
