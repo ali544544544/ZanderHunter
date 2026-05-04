@@ -69,13 +69,6 @@ const navItems: { id: ActiveTab; label: string; icon: string }[] = [
   { id: 'forecast', label: 'Kalender', icon: '📅' },
 ];
 
-const getScoreTone = (score: number) => {
-  if (score >= 75) return 'text-angel-green';
-  if (score >= 55) return 'text-angel-light';
-  if (score >= 40) return 'text-angel-yellow';
-  return 'text-angel-red';
-};
-
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('jetzt');
   const [targetFish, setTargetFish] = useState<TargetFish>('zander');
@@ -118,6 +111,9 @@ const App: React.FC = () => {
     () => conditions ? generateBriefing(conditions, topSpot, koder, targetFish, scoreDetails) : 'Lade Daten...',
     [conditions, topSpot, koder, targetFish, scoreDetails]
   );
+  const primaryKoder = koder[0];
+  const quickTactic = scoreDetails?.topTactic || primaryKoder?.technik;
+  const quickHotspot = scoreDetails?.hotspot || topSpot?.name;
 
   return (
     <div className="min-h-screen pb-32 max-w-lg mx-auto px-4 pt-5">
@@ -165,18 +161,17 @@ const App: React.FC = () => {
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Score</p>
-              <p className={`text-xl font-black ${loading ? 'text-slate-500' : getScoreTone(score)}`}>
-                {loading ? '--' : score}
-              </p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Köder</p>
+              <p className="truncate text-xs font-bold text-slate-100">{primaryKoder?.name ?? '--'}</p>
+              <p className="truncate text-[10px] font-semibold text-slate-500">{primaryKoder?.farbe ?? 'Live-Daten'}</p>
             </div>
             <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Top Spot</p>
-              <p className="truncate text-xs font-bold text-slate-100">{topSpot?.name ?? '--'}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Führung</p>
+              <p className="line-clamp-2 text-xs font-bold leading-snug text-slate-100">{quickTactic ?? '--'}</p>
             </div>
             <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Fenster</p>
-              <p className="truncate text-xs font-bold text-slate-100">{scoreDetails?.primeWindow ?? '--'}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Standplatz</p>
+              <p className="line-clamp-2 text-xs font-bold leading-snug text-slate-100">{quickHotspot ?? '--'}</p>
             </div>
           </div>
         </section>
