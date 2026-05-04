@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAngelIndex } from './hooks/useAngelIndex';
 import { getKoderEmpfehlung, generateBriefing } from './data/koderLogik';
-import { SPOTS, calculateSpotScore } from './data/spots';
+import { SPOTS, calculateSpotScoreForFish } from './data/spots';
 
 // Components
 import AngelIndex from './components/AngelIndex';
@@ -11,9 +11,11 @@ import SpotList from './components/SpotList';
 import TaktikView from './components/TaktikView';
 import Briefing from './components/Briefing';
 import ZanderInfo from './components/ZanderInfo';
+import HechtInfo from './components/HechtInfo';
 import DataStatus from './components/DataStatus';
 import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
+import HechtTaktikView from './components/HechtTaktikView';
 import { useUserSpots } from './hooks/useUserSpots';
 
 const App: React.FC = () => {
@@ -21,7 +23,7 @@ const App: React.FC = () => {
   const [targetFish, setTargetFish] = useState<'zander' | 'hecht'>('zander');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { userSpots } = useUserSpots();
-  const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores, startHour } = useAngelIndex();
+  const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores, startHour, scoreDetails } = useAngelIndex(targetFish);
 
   useEffect(() => {
     if (!loading && (weather || pegel)) {
@@ -29,9 +31,10 @@ const App: React.FC = () => {
     }
   }, [loading, weather, pegel]);
 
-  const koder = conditions ? getKoderEmpfehlung(conditions) : [];
-  const topSpot = conditions ? SPOTS.map(s => ({...s, currentScore: calculateSpotScore(s, conditions)})).sort((a, b) => b.currentScore - a.currentScore)[0] : null;
-  const briefingText = conditions ? generateBriefing(conditions, topSpot, koder) : 'Lade Daten...';
+  const fishLabel = targetFish === 'hecht' ? 'Hecht' : 'Zander';
+  const koder = conditions ? getKoderEmpfehlung(conditions, targetFish) : [];
+  const topSpot = conditions ? SPOTS.map(s => ({...s, currentScore: calculateSpotScoreForFish(s, conditions, targetFish)})).sort((a, b) => b.currentScore - a.currentScore)[0] : null;
+  const briefingText = conditions ? generateBriefing(conditions, topSpot, koder, targetFish, scoreDetails) : 'Lade Daten...';
 
   return (
     <div className="min-h-screen pb-32 max-w-lg mx-auto px-4 pt-6">
@@ -63,8 +66,8 @@ const App: React.FC = () => {
       <main className="space-y-6">
         {activeTab === 'jetzt' && (
           <>
-            <AngelIndex score={score} loading={loading} />
-            {!loading && briefingText && <Briefing text={briefingText} />}
+            <AngelIndex score={score} loading={loading} fishLabel={fishLabel} scoreDetails={scoreDetails} />
+            {!loading && briefingText && <Briefing text={briefingText} fishLabel={fishLabel} />}
             {!loading && hourlyScores && hourlyScores.length > 0 && startHour !== undefined && (
               <DailyForecastChart
                 hourlyScores={hourlyScores}
@@ -75,26 +78,35 @@ const App: React.FC = () => {
               />
             )}
             {!loading && <TideTimeline events={tide || []} />}
-            {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} />}
-            <ZanderInfo />
+            {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} targetFish={targetFish} scoreDetails={scoreDetails} />}
+            {targetFish === 'hecht' ? <HechtInfo scoreDetails={scoreDetails} /> : <ZanderInfo />}
           </>
         )}
 
         {activeTab === 'spots' && (
-          <SpotList conditions={conditions} />
+          <SpotList conditions={conditions} targetFish={targetFish} />
         )}
 
         {activeTab === 'koder' && (
-          <TaktikView
-            conditions={conditions}
-            weather={weather}
-            koder={koder}
-            score={score}
-          />
+          targetFish === 'hecht' ? (
+            <HechtTaktikView
+              conditions={conditions}
+              weather={weather}
+              koder={koder}
+              scoreDetails={scoreDetails}
+            />
+          ) : (
+            <TaktikView
+              conditions={conditions}
+              weather={weather}
+              koder={koder}
+              score={score}
+            />
+          )
         )}
         
         {activeTab === 'forecast' && (
-          <ForecastView spots={[...SPOTS, ...userSpots]} initialSpot={topSpot} />
+          <ForecastView spots={[...SPOTS, ...userSpots]} initialSpot={topSpot} targetFish={targetFish} />
         )}
       </main>
 

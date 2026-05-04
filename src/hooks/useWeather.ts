@@ -6,6 +6,7 @@ export interface WeatherData {
   pressureTrend: 'fallend' | 'stabil' | 'steigend';
   windSpeed: number;
   windDirection: number;
+  cloudCover: number;
   weatherCode: number;
   precipitation: number;
   precipitation48h: number;
@@ -18,6 +19,7 @@ export interface WeatherData {
     temperature: number[];
     pressure: number[];
     windSpeed: number[];
+    cloudCover: number[];
     precipitation: number[];
   };
 }
@@ -32,7 +34,7 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
       try {
         const cb = `&_cb=${Date.now()}`;
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code,precipitation&hourly=temperature_2m,surface_pressure,wind_speed_10m,precipitation&daily=sunrise,sunset&forecast_days=2&past_days=1&timezone=Europe/Berlin${cb}`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover,weather_code,precipitation&hourly=temperature_2m,surface_pressure,wind_speed_10m,cloud_cover,precipitation&daily=sunrise,sunset&forecast_days=2&past_days=1&timezone=Europe/Berlin${cb}`
         );
         const json = await response.json();
 
@@ -53,6 +55,7 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
           pressureTrend: trend,
           windSpeed: json.current.wind_speed_10m,
           windDirection: json.current.wind_direction_10m,
+          cloudCover: json.current.cloud_cover ?? 50,
           weatherCode: json.current.weather_code,
           precipitation: json.current.precipitation,
           precipitation48h: precipSum,
@@ -65,6 +68,7 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
             temperature: json.hourly.temperature_2m,
             pressure: json.hourly.surface_pressure,
             windSpeed: json.hourly.wind_speed_10m,
+            cloudCover: json.hourly.cloud_cover,
             precipitation: json.hourly.precipitation
           }
         });

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Spot } from '../data/spots';
+import type { Spot } from '../data/spots';
 import { generateDynamicSpotAdvice } from '../data/koderLogik';
+import type { TargetFish } from '../utils/calculations';
 
 interface SpotCardProps {
   spot: Spot;
   score: number;
   conditions: any;
+  targetFish?: TargetFish;
 }
 
-const SpotCard: React.FC<SpotCardProps> = ({ spot, score, conditions }) => {
+const SpotCard: React.FC<SpotCardProps> = ({ spot, score, conditions, targetFish = 'zander' }) => {
   const [expanded, setExpanded] = useState(false);
-  const advice = generateDynamicSpotAdvice(spot, conditions);
+  const advice = generateDynamicSpotAdvice(spot, conditions, targetFish);
 
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
 

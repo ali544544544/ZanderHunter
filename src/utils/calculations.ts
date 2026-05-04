@@ -148,3 +148,258 @@ export function getLocalConditions(spot: { lat: number, lng: number }, global: A
     solarShift
   };
 }
+
+export type TargetFish = 'zander' | 'hecht';
+
+export interface HechtScoreInput extends AngelConditions {
+  pressure?: number;
+  pressure3hAgo?: number;
+  pressure6hAgo?: number;
+  pressureHistory?: number[];
+  cloudCover?: number;
+  windDirection?: number;
+  sunrise?: string;
+  sunset?: string;
+  date?: Date;
+  shoreDirection?: number;
+}
+
+export interface HechtScoreDetails {
+  total: number;
+  confidence: number;
+  rating: string;
+  subScores: {
+    temperatur: number;
+    barometer: number;
+    hydrologie: number;
+    lichtWind: number;
+  };
+  interactionBonus: number;
+  legal: {
+    schonzeitAktiv: boolean;
+    entnahmefenster: string;
+    baglimit: number;
+    hinweis: string;
+  };
+  primeWindow: string;
+  topTactic: string;
+  hotspot: string;
+  probability: string;
+}
+
+const clamp = (value: number, min: number = 0, max: number = 100) =>
+  Math.max(min, Math.min(max, value));
+
+const gaussian = (x: number, mean: number, sigma: number) =>
+  Math.exp(-0.5 * Math.pow((x - mean) / sigma, 2));
+
+const toRadians = (degrees: number) => degrees * Math.PI / 180;
+
+function isInDateWindow(date: Date, startMonth: number, startDay: number, endMonth: number, endDay: number) {
+  const year = date.getFullYear();
+  const start = new Date(year, startMonth, startDay);
+  const end = new Date(year, endMonth, endDay, 23, 59, 59);
+  return date >= start && date <= end;
+}
+
+export function getHamburgPredatorRules(fish: TargetFish, date: Date = new Date()) {
+  const isPredator = fish === 'zander' || fish === 'hecht';
+  const schonzeitAktiv = isPredator && isInDateWindow(date, 1, 1, 4, 31);
+
+  return {
+    schonzeitAktiv,
+    entnahmefenster: '45-75 cm',
+    baglimit: 2,
+    hinweis: schonzeitAktiv ? 'SCHONZEIT AKTIV: gezieltes Angeln aussetzen.' : 'Fischerei frei nach Hamburger Regeln.'
+  };
+}
+
+function getTideMetrics(date: Date, tideEvents: { time: Date, type: 'HW' | 'NW' }[] = []) {
+  if (tideEvents.length === 0) {
+    return {
+      minutesSinceHW: 180,
+      tideAngle: 174,
+      currentSpeed: 0.15,
+      minutesSinceLastEvent: 180,
+      lastType: 'HW' as 'HW' | 'NW'
+    };
+  }
+
+  const pastEvents = tideEvents.filter(event => event.time <= date);
+  const lastEvent = pastEvents[pastEvents.length - 1] || tideEvents[0];
+  const minutesSinceLastEvent = Math.max(0, (date.getTime() - lastEvent.time.getTime()) / 60000);
+  const halfCycleMinutes = 12.42 * 60 / 2;
+  const minutesSinceHW = lastEvent.type === 'HW'
+    ? minutesSinceLastEvent
+    : minutesSinceLastEvent + halfCycleMinutes;
+  const normalizedSinceHW = ((minutesSinceHW % (halfCycleMinutes * 2)) + halfCycleMinutes * 2) % (halfCycleMinutes * 2);
+  const tideAngle = (normalizedSinceHW / halfCycleMinutes) * 360;
+  const currentSpeed = 0.08 + 0.52 * Math.abs(Math.sin(toRadians(tideAngle)));
+
+  return {
+    minutesSinceHW: normalizedSinceHW,
+    tideAngle,
+    currentSpeed,
+    minutesSinceLastEvent,
+    lastType: lastEvent.type
+  };
+}
+
+function calculateHechtTemperatureScore(temp: number) {
+  let extremeFactor = 1;
+  if (temp < 4) extremeFactor = Math.exp(-0.3 * (4 - temp));
+  else if (temp > 25) extremeFactor = clamp(0.2 + 0.03 * (30 - temp), 0.05, 0.35);
+
+  return clamp(100 * (0.6 * gaussian(temp, 15, 3) + 0.4 * gaussian(temp, 10, 4)) * extremeFactor);
+}
+
+function calculateHechtBarometerScore(input: HechtScoreInput) {
+  const pressure = input.pressure ?? input.pressure3hAgo ?? 1013;
+  const pressure3hAgo = input.pressure3hAgo ?? pressure;
+  const pressure6hAgo = input.pressure6hAgo ?? pressure3hAgo;
+  const delta3h = (pressure - pressure3hAgo) / 3;
+  const delta6h = (pressure - pressure6hAgo) / 6;
+  const trend = 0.7 * delta3h + 0.3 * delta6h;
+
+  let score = trend < 0
+    ? 50 + 65 * Math.abs(trend) - 25 * Math.pow(Math.abs(trend), 2)
+    : 50 - 18 * trend - 2.5 * Math.pow(trend, 2);
+
+  if (Math.abs(trend) > 3) score -= 25;
+
+  const history = input.pressureHistory || [];
+  const rapidRise = history.some((value, index) => {
+    if (index < 3) return false;
+    return (value - history[index - 3]) / 3 > 2;
+  });
+
+  if (rapidRise || delta3h > 2) score -= 15;
+
+  return {
+    score: clamp(score),
+    delta3h,
+    trend
+  };
+}
+
+function calculateHechtHydroScore(input: HechtScoreInput) {
+  const tide = getTideMetrics(input.date || new Date(), input.tideEvents);
+  const oxygenBoost = input.stromPhase === 'ablauf' || input.stromPhase === 'auflauf' ? 8 : 2;
+  const base = 50 + 40 * Math.sin(toRadians(tide.tideAngle + 45));
+  const flow = 30 * Math.tanh(tide.currentSpeed / 0.5);
+
+  let windowBoost = 0;
+  if (tide.minutesSinceHW > 60 && tide.minutesSinceHW < 150) windowBoost = 25;
+  else if (tide.minutesSinceHW > 350 && tide.minutesSinceHW < 390) windowBoost = 20;
+
+  const structureBoost = tide.currentSpeed > 0.3 && input.stromPhase !== 'stagnation' ? 15 : 0;
+
+  return {
+    score: clamp(base + flow + oxygenBoost + windowBoost + structureBoost),
+    tide
+  };
+}
+
+function isTwilightWindow(date: Date, sunrise?: string, sunset?: string) {
+  const current = date.getTime();
+  const limit = 2 * 60 * 60000;
+  const sunriseTime = sunrise ? new Date(sunrise).getTime() : 0;
+  const sunsetTime = sunset ? new Date(sunset).getTime() : 0;
+  return Math.abs(current - sunriseTime) <= limit || Math.abs(current - sunsetTime) <= limit;
+}
+
+function calculateHechtLightWindScore(input: HechtScoreInput) {
+  const date = input.date || new Date();
+  const cloudCover = input.cloudCover ?? 50;
+  const solarRadiation = 100 - cloudCover;
+  const windSpeed = input.windSpeed || 0;
+  const windDirection = input.windDirection ?? 270;
+  const shoreDirection = input.shoreDirection ?? 90;
+  const opposingShoreDirection = (shoreDirection + 180) % 360;
+  const directDiff = Math.abs(windDirection - shoreDirection);
+  const oppositeDiff = Math.abs(windDirection - opposingShoreDirection);
+  const alpha = Math.min(directDiff, 360 - directDiff, oppositeDiff, 360 - oppositeDiff);
+  const shoreFactor = Math.max(0.3, Math.cos(toRadians(alpha)));
+  const windEffect = Math.min(1, windSpeed / 12);
+
+  let timeFactor = 1;
+  const month = date.getMonth();
+  const hour = date.getHours();
+  if (isTwilightWindow(date, input.sunrise, input.sunset)) timeFactor = 1.3;
+  else if (month >= 5 && month <= 7 && hour >= 11 && hour <= 14) timeFactor = 0.7;
+
+  return {
+    score: clamp((100 - 0.6 * solarRadiation) * windEffect * shoreFactor * timeFactor),
+    shoreFactor,
+    solarRadiation,
+    twilight: timeFactor > 1
+  };
+}
+
+function getHechtRating(score: number) {
+  if (score >= 85) return 'PERFEKT';
+  if (score >= 70) return 'SEHR GUT';
+  if (score >= 55) return 'GUT';
+  if (score >= 35) return 'ZAEH';
+  return 'SCHWACH';
+}
+
+function getPrimeWindow(input: HechtScoreInput, legalClosed: boolean) {
+  if (legalClosed) return 'Nach Schonzeit ab 01.06.';
+  if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'jetzt bis Ende Daemmerung';
+  if (input.stromPhase === 'ablauf') return 'erste 90 min der Ablaufphase';
+  if (input.stromPhase === 'kenter') return 'Kenterpunkt plus 90 min';
+  return 'naechste Daemmerung';
+}
+
+export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
+  const date = input.date || new Date();
+  const rules = getHamburgPredatorRules('hecht', date);
+  const temperatur = calculateHechtTemperatureScore(input.wasserTemp);
+  const barometerResult = calculateHechtBarometerScore(input);
+  const hydrologyResult = calculateHechtHydroScore(input);
+  const lightWindResult = calculateHechtLightWindScore(input);
+
+  const raw = 0.35 * temperatur
+    + 0.25 * barometerResult.score
+    + 0.25 * hydrologyResult.score
+    + 0.15 * lightWindResult.score;
+
+  let multiplier = 1;
+  if (barometerResult.delta3h < -0.5 && hydrologyResult.tide.minutesSinceHW > 60 && hydrologyResult.tide.minutesSinceHW < 150) multiplier *= 1.15;
+  if ((input.cloudCover ?? 0) > 60 && lightWindResult.shoreFactor > 0.7 && input.windSpeed > 10) multiplier *= 1.1;
+  if (input.wasserTemp > 12 && input.wasserTemp < 16 && lightWindResult.twilight) multiplier *= 1.12;
+  if (input.wasserTemp < 8 && lightWindResult.solarRadiation > 70) multiplier *= 0.85;
+  if (hydrologyResult.tide.currentSpeed < 0.1 && (input.cloudCover ?? 100) < 30) multiplier *= 0.9;
+
+  const uncappedTotal = raw * multiplier;
+  const total = rules.schonzeitAktiv ? 0 : Math.round(clamp(uncappedTotal));
+  const confidence = Math.round(clamp(8 - 0.05 * total, 4, 8));
+  const probability = rules.schonzeitAktiv
+    ? '0% waehrend Schonzeit'
+    : `${Math.round(clamp(18 + total * 0.67, 5, 85))}% fuer Hecht >60cm`;
+
+  return {
+    total,
+    confidence,
+    rating: rules.schonzeitAktiv ? 'SCHONZEIT' : getHechtRating(total),
+    subScores: {
+      temperatur: Math.round(temperatur),
+      barometer: Math.round(barometerResult.score),
+      hydrologie: Math.round(hydrologyResult.score),
+      lichtWind: Math.round(lightWindResult.score)
+    },
+    interactionBonus: Math.round((multiplier - 1) * 100),
+    legal: rules,
+    primeWindow: getPrimeWindow(input, rules.schonzeitAktiv),
+    topTactic: input.wasserTemp < 8
+      ? 'Langsam gefuehrter Jerkbait oder grosser Softbait'
+      : lightWindResult.twilight
+        ? 'Jerken oder flach laufender Wobbler am Ufer'
+        : 'Spinnerbait/Swimbait an Krautkante und Struktur',
+    hotspot: hydrologyResult.tide.currentSpeed > 0.3
+      ? 'Buhnenkopf, Einlauf oder windgedrueckte Uferkante'
+      : 'Krautkante, Hafenbecken oder ruhige Nebenzone',
+    probability
+  };
+}

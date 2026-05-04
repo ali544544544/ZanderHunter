@@ -1,4 +1,5 @@
 import { getLocalConditions } from '../utils/calculations';
+import type { TargetFish, HechtScoreDetails } from '../utils/calculations';
 
 export interface KoderEmpfehlung {
   priorität: number;
@@ -11,7 +12,11 @@ export interface KoderEmpfehlung {
   warum: string;
 }
 
-export function getKoderEmpfehlung(conditions: any): KoderEmpfehlung[] {
+export function getKoderEmpfehlung(conditions: any, targetFish: TargetFish = 'zander'): KoderEmpfehlung[] {
+  if (targetFish === 'hecht') {
+    return getHechtKoderEmpfehlung(conditions);
+  }
+
   const empfehlungen: KoderEmpfehlung[] = [];
   
   let shadFarbe = 'Weiß/Pearl';
@@ -73,7 +78,62 @@ export function getKoderEmpfehlung(conditions: any): KoderEmpfehlung[] {
   return empfehlungen.sort((a, b) => a.priorität - b.priorität);
 }
 
-export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpfehlung[]): string {
+function getHechtKoderEmpfehlung(conditions: any): KoderEmpfehlung[] {
+  const farbe = conditions?.cloudCover > 60 || conditions?.trübung === 'getrübt'
+    ? 'Firetiger / UV-Chartreuse'
+    : 'Barsch, Rotauge oder Hechtdekor';
+  const kalt = conditions?.wasserTemp < 8;
+
+  return [
+    {
+      priorität: 1,
+      name: kalt ? 'Suspending Jerkbait' : 'Grosser Swimbait',
+      größe: kalt ? '10-13 cm' : '15-20 cm',
+      farbe,
+      gewicht: '20-45g',
+      technik: kalt ? 'Lange Pausen, kurze Twitches, im Sichtfeld stehen lassen' : 'Langsam gleichmaessig ueber Krautkanten fuehren',
+      wann: kalt ? 'Kaltwasser und hoher Druck' : 'Aktive Suchkoeder-Phase',
+      warum: 'Hecht reagiert stark auf grosse Silhouette und Richtungswechsel'
+    },
+    {
+      priorität: 2,
+      name: 'Spinnerbait',
+      größe: '14-18 cm Trailer',
+      farbe: conditions?.cloudCover > 60 ? 'Chartreuse/Weiss' : 'Natural/Silber',
+      gewicht: '18-28g',
+      technik: 'An Krautkanten, Einlaeufen und windgedrueckten Ufern durchkurbeln',
+      wann: 'Wind, Wolken und flacheres Wasser',
+      warum: 'Vibration und Flash bleiben auch bei Truebung gut sichtbar'
+    },
+    {
+      priorität: 3,
+      name: 'Flach laufender Wobbler',
+      größe: '12-16 cm',
+      farbe,
+      gewicht: 'schwebend / slow floating',
+      technik: 'Stop-and-go in der Daemmerung, Pausen direkt an Struktur',
+      wann: 'Prime Window und Ufernaehe',
+      warum: 'Imitiert angeschlagenen Beutefisch in der Attackzone'
+    }
+  ];
+}
+
+export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpfehlung[], targetFish: TargetFish = 'zander', scoreDetails?: HechtScoreDetails | null): string {
+  if (targetFish === 'hecht') {
+    const parts: string[] = [];
+    if (scoreDetails?.legal.schonzeitAktiv) {
+      parts.push(scoreDetails.legal.hinweis);
+    } else {
+      parts.push(`Hecht-Score ${scoreDetails?.total ?? '--'} mit ${scoreDetails?.rating ?? 'Live'}-Rating.`);
+      parts.push(`Prime Window: ${scoreDetails?.primeWindow ?? 'naechste Daemmerung'}.`);
+      parts.push(`Taktik: ${scoreDetails?.topTactic ?? koder[0]?.technik}.`);
+      parts.push(`Hotspot: ${scoreDetails?.hotspot ?? topSpot?.name ?? 'Krautkante oder Einlauf'}.`);
+    }
+    if (conditions?.luftdruckTrend === 'fallend') parts.push('Fallender Druck wirkt als Aktivitaets-Trigger.');
+    if (conditions?.cloudCover > 60 && conditions?.windSpeed > 10) parts.push('Wolken plus Wind geben Deckung im Flachwasser.');
+    return parts.join(' ');
+  }
+
   const parts: string[] = [];
   
   if (conditions.stromPhase === 'ablauf')
@@ -98,9 +158,21 @@ export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpf
   return parts.join(' ');
 }
 
-export function generateDynamicSpotAdvice(spot: any, conditions: any) {
+export function generateDynamicSpotAdvice(spot: any, conditions: any, targetFish: TargetFish = 'zander') {
   const local = getLocalConditions(spot, conditions);
   const isUserSpot = spot.id.startsWith('user-');
+
+  if (targetFish === 'hecht') {
+    const hasStructure = spot.struktur.some((s: string) => /buhne|kraut|röhricht|einlauf|kante/i.test(s));
+    return {
+      taktik: hasStructure
+        ? 'Struktur eng abwerfen: grosse Koeder parallel zur Kante fuehren, an Hindernissen lange Pausen setzen.'
+        : 'Suchkoeder einsetzen und Strecke machen. Bei Kontakt sofort langsamer und groesser nachfischen.',
+      koderTipp: conditions?.cloudCover > 60 ? 'Spinnerbait oder Firetiger-Jerkbait' : 'Natuerlicher Swimbait in Barsch/Rotauge',
+      bestePhase: local.stromPhase === 'kenter' ? 'Kenter + 90 min' : 'Windkante / Daemmerung',
+      tideOffset: local.tideOffset
+    };
+  }
   
   // Logic for dynamic advice
   let taktik = '';

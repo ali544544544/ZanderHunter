@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import SpotCard from './SpotCard';
-import { SPOTS, calculateSpotScore } from '../data/spots';
+import { SPOTS, calculateSpotScoreForFish } from '../data/spots';
 import { useUserSpots } from '../hooks/useUserSpots';
 import AddSpotModal from './AddSpotModal';
+import type { TargetFish } from '../utils/calculations';
 
 interface SpotListProps {
   conditions: any;
+  targetFish?: TargetFish;
 }
 
-const SpotList: React.FC<SpotListProps> = ({ conditions }) => {
+const SpotList: React.FC<SpotListProps> = ({ conditions, targetFish = 'zander' }) => {
   const { userSpots, addUserSpot, deleteUserSpot } = useUserSpots();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'boot' | 'ufer'>('all');
 
   const allSpots = [...SPOTS, ...userSpots].map(spot => ({
     ...spot,
-    currentScore: conditions ? calculateSpotScore(spot, conditions) : 0,
+    currentScore: conditions ? calculateSpotScoreForFish(spot, conditions, targetFish) : 0,
     isUserSpot: spot.id.startsWith('user-')
   }));
 
@@ -58,7 +60,7 @@ const SpotList: React.FC<SpotListProps> = ({ conditions }) => {
         {filteredSpots.length > 0 ? (
           filteredSpots.map(spot => (
             <div key={spot.id} className="relative group">
-              <SpotCard spot={spot} score={spot.currentScore} conditions={conditions} />
+              <SpotCard spot={spot} score={spot.currentScore} conditions={conditions} targetFish={targetFish} />
               {spot.isUserSpot && (
                 <button 
                   onClick={() => deleteUserSpot(spot.id)}

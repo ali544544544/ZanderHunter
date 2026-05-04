@@ -2,14 +2,15 @@ import React from 'react';
 
 interface BriefingProps {
   text: string;
+  fishLabel?: string;
 }
 
-const Briefing: React.FC<BriefingProps> = ({ text }) => {
+const Briefing: React.FC<BriefingProps> = ({ text, fishLabel = 'Zander' }) => {
   return (
     <div className="card bg-blue-600/10 border-blue-500/30">
       <div className="flex items-center space-x-2 mb-3">
         <span className="text-xl">🎣</span>
-        <h3 className="text-blue-400 font-bold uppercase tracking-wider text-sm">Zander-Briefing</h3>
+        <h3 className="text-blue-400 font-bold uppercase tracking-wider text-sm">{fishLabel}-Briefing</h3>
       </div>
       
       <p className="text-slate-200 text-sm leading-relaxed font-medium">

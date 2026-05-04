@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useForecast } from '../hooks/useForecast';
-import { Spot } from '../data/spots';
+import type { Spot } from '../data/spots';
+import type { TargetFish } from '../utils/calculations';
 
 interface ForecastViewProps {
   spots: Spot[];
   initialSpot: Spot | null;
+  targetFish?: TargetFish;
 }
 
-const ForecastView: React.FC<ForecastViewProps> = ({ spots, initialSpot }) => {
+const ForecastView: React.FC<ForecastViewProps> = ({ spots, initialSpot, targetFish = 'zander' }) => {
   const selectedSpot = initialSpot || spots[0];
-  const { forecast, loading, error } = useForecast(selectedSpot.lat, selectedSpot.lng);
+  const { forecast, loading, error } = useForecast(selectedSpot.lat, selectedSpot.lng, targetFish);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
 
   if (loading) {
@@ -25,7 +27,7 @@ const ForecastView: React.FC<ForecastViewProps> = ({ spots, initialSpot }) => {
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex justify-between items-center px-1">
         <div>
-          <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm">7-Tage Vorhersage</h3>
+          <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm">7-Tage Vorhersage {targetFish === 'hecht' ? 'Hecht' : 'Zander'}</h3>
           <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Berechnet für: {selectedSpot.name}</p>
         </div>
         <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold uppercase">

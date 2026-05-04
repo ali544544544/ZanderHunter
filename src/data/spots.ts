@@ -1,4 +1,5 @@
-import { getLocalConditions } from '../utils/calculations';
+import { getHamburgPredatorRules, getLocalConditions } from '../utils/calculations';
+import type { TargetFish } from '../utils/calculations';
 
 export interface Spot {
   id: string;
@@ -159,4 +160,40 @@ export function calculateSpotScore(spot: Spot, conditions: any, date: Date = new
   score += (variance - 1.5); 
   
   return Math.round(Math.max(0, Math.min(100, score)));
+}
+
+export function calculateHechtSpotScore(spot: Spot, conditions: any, date: Date = new Date()) {
+  if (getHamburgPredatorRules('hecht', date).schonzeitAktiv) return 0;
+
+  const local = getLocalConditions(spot, conditions, date);
+  let score = 45;
+  const structures = spot.struktur.join(' ').toLowerCase();
+
+  if (structures.includes('buhnen') || structures.includes('kraut') || structures.includes('röhricht') || structures.includes('einlauf')) score += 18;
+  if (structures.includes('kante') || structures.includes('tiefloch') || structures.includes('brücken')) score += 10;
+  if (spot.type === 'hafen' || spot.type === 'kanal') score += 8;
+
+  if (local.stromPhase === 'kenter') score += 14;
+  else if (local.stromPhase === 'ablauf' || local.stromPhase === 'auflauf') score += 10;
+
+  if (conditions.wasserTemp >= 10 && conditions.wasserTemp <= 16) score += 16;
+  else if (conditions.wasserTemp < 4 || conditions.wasserTemp > 25) score -= 18;
+
+  if (conditions.windSpeed > 8 && conditions.windSpeed < 28) score += 10;
+  if (conditions.cloudCover > 60) score += 8;
+  if (spot.temperaturMin > 8 && conditions.wasserTemp < spot.temperaturMin) score -= 8;
+
+  const isProtected = spot.type === 'hafen' || spot.type === 'kanal' || !spot.isWindExposed;
+  if (!isProtected && conditions.windSpeed > spot.windtoleranz) score -= 20;
+
+  const season = getSeason(date);
+  score += Math.round(spot.jahreszeitBonus[season] * 0.6);
+
+  return Math.round(Math.max(0, Math.min(100, score)));
+}
+
+export function calculateSpotScoreForFish(spot: Spot, conditions: any, targetFish: TargetFish, date: Date = new Date()) {
+  return targetFish === 'hecht'
+    ? calculateHechtSpotScore(spot, conditions, date)
+    : calculateSpotScore(spot, conditions, date);
 }
