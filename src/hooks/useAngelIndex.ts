@@ -19,6 +19,14 @@ function getScoreDetails(targetFish: TargetFish, input: Parameters<typeof calcul
   return calculateZanderIndex(input);
 }
 
+function getSunEventForDate(events: string[], date: Date, fallback: string) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const key = `${year}-${month}-${day}`;
+  return events.find((event) => event.startsWith(key)) || fallback;
+}
+
 export function useAngelIndex(targetFish: TargetFish = 'zander') {
   const weather = useWeather();
   const pegel = usePegel();
@@ -106,13 +114,8 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
     hTime.setHours(startHour + i, 0, 0, 0);
 
     const hIdx = currentHourIndex + (startHour + i - now.getHours());
-    const hTimeStartOfDay = new Date(hTime.getFullYear(), hTime.getMonth(), hTime.getDate()).getTime();
-    const nowStartOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const dayDiff = Math.round((hTimeStartOfDay - nowStartOfDay) / 86400000);
-    const dayOffset = 1 + dayDiff;
-
-    const hSunrise = new Date(weather.data.sunrises[dayOffset] || weather.data.sunrise);
-    const hSunset = new Date(weather.data.sunsets[dayOffset] || weather.data.sunset);
+    const hSunrise = new Date(getSunEventForDate(weather.data.sunrises, hTime, weather.data.sunrise));
+    const hSunset = new Date(getSunEventForDate(weather.data.sunsets, hTime, weather.data.sunset));
 
     const sunriseMinutes = hSunrise.getHours() * 60 + hSunrise.getMinutes();
     const sunsetMinutes = hSunset.getHours() * 60 + hSunset.getMinutes();

@@ -11,15 +11,15 @@
 
 @layer components {
   .card {
-    @apply bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 backdrop-blur-sm shadow-xl;
+    @apply bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 backdrop-blur-sm shadow-lg shadow-slate-950/20;
   }
   
   .btn-tab {
-    @apply flex flex-col items-center justify-center py-2 px-4 transition-all duration-300;
+    @apply flex min-h-[54px] flex-col items-center justify-center rounded-lg py-2 px-2 transition-colors duration-200;
   }
   
   .btn-tab.active {
-    @apply text-blue-400 font-semibold scale-110;
+    @apply bg-blue-500/10 text-blue-400 font-semibold;
   }
 }
 

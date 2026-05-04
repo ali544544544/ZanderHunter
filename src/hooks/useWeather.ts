@@ -26,6 +26,13 @@ export interface WeatherData {
   };
 }
 
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function useWeather(lat: number = 53.55, lng: number = 9.99) {
   const [data, setData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +60,9 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
         else if (diff < -1) trend = 'fallend';
 
         const precipSum = json.hourly.precipitation.slice(currentHourIndex - 48, currentHourIndex).reduce((a: number, b: number) => a + b, 0);
+        const todayKey = localDateKey(new Date());
+        const todayDailyIndex = json.daily.time.findIndex((time: string) => time === todayKey);
+        const safeDailyIndex = todayDailyIndex >= 0 ? todayDailyIndex : 0;
 
         setData({
           temperature: json.current.temperature_2m,
@@ -65,8 +75,8 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
           weatherCode: json.current.weather_code,
           precipitation: json.current.precipitation,
           precipitation48h: precipSum,
-          sunrise: json.daily.sunrise[1],
-          sunset: json.daily.sunset[1],
+          sunrise: json.daily.sunrise[safeDailyIndex],
+          sunset: json.daily.sunset[safeDailyIndex],
           sunrises: json.daily.sunrise,
           sunsets: json.daily.sunset,
           hourly: {
