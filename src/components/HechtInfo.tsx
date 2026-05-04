@@ -8,72 +8,100 @@ interface HechtInfoProps {
   targetFish?: TargetFish;
 }
 
+const fishCopy = {
+  hecht: {
+    habitatTitle: 'Habitat-Tipp',
+    habitat:
+      'Hechte stehen gern an Krautkanten, Einlaeufen, Schilf, Buhnenkoepfen und windgedrueckten Ufern. Sie lauern oft an klaren Kanten zwischen Deckung und offenem Wasser.',
+    warning:
+      'In Hamburg ist waehrend der Schonzeit gezieltes Angeln auf Hecht zu vermeiden. Der Score zeigt nur die biologischen Bedingungen.',
+    entnahmeInfo:
+      'Kuechenfenster Hamburg fuer Hecht. Groessere und kleinere Fische muessen zurueckgesetzt werden.',
+    limitInfo: 'Maximale Entnahme pro Tag und Angler in Hamburger Gewaessern.',
+    legalTooltip:
+      'Rechtlicher Status fuer Hamburg. Der Score bleibt sichtbar, aber waehrend Schonzeit bitte nicht gezielt auf Hecht angeln.'
+  },
+  zander: {
+    habitatTitle: 'Habitat-Tipp',
+    habitat:
+      'Zander lieben harte Boeden, Steinpackungen und Stroemungskanten. Tagsueber stehen sie oft tiefer und dunkler, in der Daemmerung ziehen sie flacher zum Jagen.',
+    warning:
+      'In Hamburg ist waehrend der Schonzeit das gezielte Angeln auf Zander zu vermeiden. Der Score zeigt nur die biologischen Bedingungen.',
+    entnahmeInfo:
+      'Kuechenfenster Hamburg fuer Zander. Groessere und kleinere Fische muessen zurueckgesetzt werden.',
+    limitInfo: 'Maximale Entnahme pro Tag und Angler in Hamburger Gewaessern.',
+    legalTooltip:
+      'Rechtlicher Status fuer Hamburg. Der Score bleibt sichtbar, aber waehrend Schonzeit bitte nicht gezielt auf Zander angeln.'
+  }
+};
+
 const HechtInfo: React.FC<HechtInfoProps> = ({ scoreDetails, fishLabel = 'Hecht', targetFish = 'hecht' }) => {
-  const habitatText = targetFish === 'hecht'
-    ? 'Krautkanten, Einlaeufe, Buhnenkoepfe und windgedrueckte Uferseiten priorisieren.'
-    : 'Harte Boeden, Steinpackungen, Stroemungskanten und Spundwaende priorisieren.';
-  const legalText = `Rechtlicher Status fuer Hamburg. Der Score zeigt trotzdem die biologischen Bedingungen; waehrend Schonzeit bitte nicht gezielt auf ${fishLabel} angeln.`;
+  const copy = fishCopy[targetFish];
+  const isSchonzeit = Boolean(scoreDetails?.legal.schonzeitAktiv);
+  const entnahmefenster = scoreDetails?.legal.entnahmefenster || '45-75 cm';
+  const [minSize, maxSize] = entnahmefenster.replace(' cm', '').split('-');
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 pt-4">
       <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm px-1">{fishLabel}-Info Hamburg</h3>
 
-      <div className={`card ${scoreDetails?.legal.schonzeitAktiv ? 'border-red-500/30 bg-red-500/10' : 'border-green-500/30 bg-green-500/10'}`}>
+      <div className={`card border-l-4 ${isSchonzeit ? 'border-l-red-500 bg-red-500/5' : 'border-l-green-500 bg-green-500/5'}`}>
         <div className="flex justify-between items-start gap-4">
           <div>
-            <p className={`text-xs font-black uppercase tracking-widest flex items-center gap-1 ${scoreDetails?.legal.schonzeitAktiv ? 'text-red-400' : 'text-green-400'}`}>
-              {scoreDetails?.legal.schonzeitAktiv ? 'Schonzeit aktiv' : 'Fischerei frei'}
-              <InfoTooltip text={legalText} align="left" />
-            </p>
-            <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-              {scoreDetails?.legal.hinweis || 'Hamburger Regelwerk wird im Score beruecksichtigt.'}
-            </p>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+              Status Schonzeit
+              <InfoTooltip text={copy.legalTooltip} align="left" />
+            </span>
+            <h4 className={`text-lg font-black ${isSchonzeit ? 'text-red-400' : 'text-green-400'}`}>
+              {isSchonzeit ? 'AKTUELL SCHONZEIT' : 'FISCHEREI FREI'}
+            </h4>
           </div>
-          <div className="text-right text-xs text-slate-400">
-            <div className="font-black text-slate-100">{scoreDetails?.legal.entnahmefenster || '45-75 cm'}</div>
-            <div className="flex items-center justify-end gap-1">
-              Entnahmefenster
-              <InfoTooltip text={`Groessenbereich, in dem ein ${fishLabel} nach Hamburger Regelwerk entnommen werden darf. Kleinere oder groessere Fische muessen zurueckgesetzt werden.`} />
-            </div>
+          <div className="text-right">
+            <span className="text-[10px] text-slate-500 uppercase block">Zeitraum</span>
+            <span className="text-xs font-bold text-slate-300">01.02. - 31.05.</span>
           </div>
+        </div>
+
+        {isSchonzeit && (
+          <div className="mt-3 p-2 bg-red-900/20 rounded-lg border border-red-500/20 text-[11px] text-red-200/80 leading-relaxed">
+            <strong>Hinweis:</strong> {copy.warning}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card p-3">
+          <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1">
+            Entnahmefenster
+            <InfoTooltip text={copy.entnahmeInfo} align="left" />
+          </span>
+          <div className="flex items-baseline space-x-1">
+            <span className="text-2xl font-black text-slate-100">{minSize}-{maxSize}</span>
+            <span className="text-xs text-slate-500 font-bold uppercase">cm</span>
+          </div>
+          <p className="text-[9px] text-slate-500 mt-1">{copy.entnahmeInfo}</p>
+        </div>
+
+        <div className="card p-3">
+          <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1">
+            Fanglimit
+            <InfoTooltip text={copy.limitInfo} />
+          </span>
+          <div className="flex items-baseline space-x-1">
+            <span className="text-2xl font-black text-slate-100">{scoreDetails?.legal.baglimit || 2}</span>
+            <span className="text-xs text-slate-500 font-bold uppercase">Stueck</span>
+          </div>
+          <p className="text-[9px] text-slate-500 mt-1">{copy.limitInfo}</p>
         </div>
       </div>
 
-      {scoreDetails && (
-        <div className="card">
-          <h4 className="text-white font-black mb-3">Actionable Output</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-slate-500 flex items-center gap-1">
-                Prime Window
-                <InfoTooltip text="Das beste Zeitfenster aus Tide, Licht, Druck und Wind. Bei Kenterfenstern ist der Bereich um den Stroemungswechsel gemeint." align="left" />
-              </span>
-              <span className="text-slate-100 font-bold text-right">{scoreDetails.primeWindow}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-slate-500 flex items-center gap-1">
-                Top-Taktik
-                <InfoTooltip text={`Die Fuehrungsart, die am besten zu Temperatur, Licht, Wind und Aktivitaetsfenster fuer ${fishLabel} passt.`} align="left" />
-              </span>
-              <span className="text-slate-100 font-bold text-right">{scoreDetails.topTactic}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-slate-500 flex items-center gap-1">
-                Hotspot
-                <InfoTooltip text={`Empfohlener Spot-Typ, nicht zwingend ein einzelner Ort. ${habitatText}`} align="left" />
-              </span>
-              <span className="text-slate-100 font-bold text-right">{scoreDetails.hotspot}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-slate-500 flex items-center gap-1">
-                Wahrscheinlichkeit
-                <InfoTooltip text={`Eine grobe biologische Aktivitaets-Schaetzung aus dem ${fishLabel}-Score. Sie sagt nicht sicher voraus, ob ein Fisch beisst.`} align="left" />
-              </span>
-              <span className="text-blue-400 font-bold text-right">{scoreDetails.probability}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="card bg-slate-800/30 border-slate-700/30">
+        <h5 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1">
+          {copy.habitatTitle}
+          <InfoTooltip text={`Typische Standplaetze und Suchbereiche fuer ${fishLabel}.`} align="left" />
+        </h5>
+        <p className="text-xs text-slate-500 leading-relaxed">{copy.habitat}</p>
+      </div>
     </div>
   );
 };
