@@ -18,17 +18,50 @@ import type { TargetFish } from './utils/calculations';
 
 type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast';
 
-const fishOptions: { value: TargetFish; label: string; short: string }[] = [
-  { value: 'zander', label: 'Zander', short: 'Z' },
-  { value: 'hecht', label: 'Hecht', short: 'H' },
-  { value: 'barsch', label: 'Barsch', short: 'B' },
+const fishOptions: { value: TargetFish; label: string; icon: React.ReactNode }[] = [
+  {
+    value: 'zander',
+    label: 'Zander',
+    icon: (
+      <svg viewBox="0 0 64 32" aria-hidden="true" className="h-6 w-10">
+        <path d="M5 17c9-10 25-12 41-5l10-6-2 10 5 8-11-3C33 30 16 28 5 17Z" fill="currentColor" opacity="0.9" />
+        <path d="M18 14c6-3 15-4 25 0" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.45" />
+        <circle cx="44" cy="14" r="2" fill="#0f172a" />
+        <path d="M13 20c7 2 17 2 28-1" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
+      </svg>
+    ),
+  },
+  {
+    value: 'hecht',
+    label: 'Hecht',
+    icon: (
+      <svg viewBox="0 0 72 32" aria-hidden="true" className="h-6 w-11">
+        <path d="M4 16c11-9 31-12 52-5l10-7-3 11 5 9-12-4C35 29 15 27 4 16Z" fill="currentColor" opacity="0.9" />
+        <path d="M43 10 56 15 43 20" fill="#0f172a" opacity="0.28" />
+        <path d="M12 16h24" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.35" />
+        <circle cx="52" cy="13" r="2" fill="#0f172a" />
+      </svg>
+    ),
+  },
+  {
+    value: 'barsch',
+    label: 'Barsch',
+    icon: (
+      <svg viewBox="0 0 60 34" aria-hidden="true" className="h-6 w-10">
+        <path d="M5 18c8-9 24-13 41-5l9-6-2 10 5 7-11-2C31 32 14 29 5 18Z" fill="currentColor" opacity="0.9" />
+        <path d="M21 8 16 1l12 5M31 8l4-7 4 9" fill="currentColor" opacity="0.75" />
+        <path d="M20 13v11M28 11v14M36 11v13" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" opacity="0.32" />
+        <circle cx="43" cy="14" r="2" fill="#0f172a" />
+      </svg>
+    ),
+  },
 ];
 
 const navItems: { id: ActiveTab; label: string; icon: string }[] = [
-  { id: 'jetzt', label: 'Jetzt', icon: 'J' },
-  { id: 'spots', label: 'Spots', icon: 'S' },
-  { id: 'koder', label: 'Taktik', icon: 'T' },
-  { id: 'forecast', label: 'Kalender', icon: 'K' },
+  { id: 'jetzt', label: 'Jetzt', icon: '🏠' },
+  { id: 'spots', label: 'Spots', icon: '📍' },
+  { id: 'koder', label: 'Taktik', icon: '🐟' },
+  { id: 'forecast', label: 'Kalender', icon: '📅' },
 ];
 
 const getScoreTone = (score: number) => {
@@ -109,15 +142,16 @@ const App: React.FC = () => {
                   key={fish.value}
                   type="button"
                   onClick={() => setTargetFish(fish.value)}
-                  className={`h-9 min-w-14 rounded-md px-2 text-xs font-black transition-colors ${
+                  className={`flex h-11 min-w-16 items-center justify-center rounded-md px-2 transition-colors ${
                     targetFish === fish.value
                       ? 'bg-blue-500 text-white shadow-sm shadow-blue-950/60'
                       : 'text-slate-400 hover:text-slate-100'
                   }`}
                   aria-pressed={targetFish === fish.value}
                   aria-label={`${fish.label} auswaehlen`}
+                  title={fish.label}
                 >
-                  {fish.short}
+                  {fish.icon}
                 </button>
               ))}
             </div>
@@ -201,7 +235,7 @@ const App: React.FC = () => {
               className={`btn-tab ${activeTab === item.id ? 'active' : 'text-slate-500'}`}
               aria-current={activeTab === item.id ? 'page' : undefined}
             >
-              <span className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg border border-current/20 text-xs font-black">
+              <span className="mb-1 text-2xl leading-none">
                 {item.icon}
               </span>
               <span className="text-[10px] uppercase font-bold">{item.label}</span>
