@@ -1,4 +1,5 @@
 import React from 'react';
+import InfoTooltip from './InfoTooltip';
 import type { HechtScoreDetails } from '../utils/calculations';
 
 interface AngelIndexProps {
@@ -28,7 +29,7 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
   }
 
   return (
-    <div className="card flex flex-col items-center justify-center py-8 relative overflow-hidden">
+    <div className="card flex flex-col items-center justify-center py-8 relative overflow-visible">
       <div className={`absolute top-0 left-0 w-full h-1 ${status.bg.replace('/20', '')}`}></div>
       
       <h3 className="text-slate-400 font-medium mb-2 uppercase tracking-wider text-sm">{fishLabel}-Index Hamburg</h3>
@@ -45,19 +46,31 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
       {scoreDetails && (
         <div className="mt-5 w-full grid grid-cols-2 gap-2 text-xs">
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
-            <span className="block text-[9px] text-slate-500 uppercase font-bold">Konfidenz</span>
+            <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
+              Konfidenz
+              <InfoTooltip text="Der Unsicherheitsbereich des Scores. +/-6 bedeutet: Die realistische Spanne liegt ungefaehr 6 Punkte ueber oder unter dem angezeigten Wert." />
+            </span>
             <span className="font-black text-slate-100">+/-{scoreDetails.confidence}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
-            <span className="block text-[9px] text-slate-500 uppercase font-bold">Prime Window</span>
+            <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
+              Prime Window
+              <InfoTooltip text="Das beste Zeitfenster laut Score. Kenterpunkt plus 90 min bedeutet: ab dem Stroemungswechsel bis etwa 90 Minuten danach fischen, weil Beutefische und Raeuber neu positionieren." />
+            </span>
             <span className="font-black text-slate-100">{scoreDetails.primeWindow}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
-            <span className="block text-[9px] text-slate-500 uppercase font-bold">Chance</span>
+            <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
+              Chance
+              <InfoTooltip text="Eine grobe, aus dem Score abgeleitete biologische Aktivitaets-Schaetzung. Das ist kein Fangversprechen und ersetzt keine lokale Erfahrung." />
+            </span>
             <span className="font-black text-slate-100">{scoreDetails.probability}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
-            <span className="block text-[9px] text-slate-500 uppercase font-bold">Bonus</span>
+            <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
+              Bonus
+              <InfoTooltip text="Multiplikativer Synergie-Faktor. Positive Kombinationen wie fallender Druck plus passendes Tidefenster erhoehen den Gesamtscore." />
+            </span>
             <span className="font-black text-slate-100">{scoreDetails.interactionBonus > 0 ? '+' : ''}{scoreDetails.interactionBonus}%</span>
           </div>
         </div>
