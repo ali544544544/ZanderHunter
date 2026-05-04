@@ -13,6 +13,7 @@ import DataStatus from './components/DataStatus';
 import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
 import HechtTaktikView from './components/HechtTaktikView';
+import { useGeolocation } from './hooks/useGeolocation';
 import { useUserSpots } from './hooks/useUserSpots';
 import type { TargetFish } from './utils/calculations';
 
@@ -33,10 +34,18 @@ const navItems: { id: ActiveTab; label: string; icon: string }[] = [
   { id: 'forecast', label: 'Kalender', icon: '📅' },
 ];
 
+const defaultLocation = { lat: 53.55, lng: 9.99 };
+const normalizeCoordinate = (value: number) => Number(value.toFixed(4));
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('jetzt');
   const [targetFish, setTargetFish] = useState<TargetFish>('zander');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [gpsEnabled, setGpsEnabled] = useState(false);
+  const { position: gpsPosition, loading: gpsLoading, error: gpsError } = useGeolocation(gpsEnabled);
+  const activeLocation = gpsEnabled && gpsPosition
+    ? { lat: normalizeCoordinate(gpsPosition.lat), lng: normalizeCoordinate(gpsPosition.lng) }
+    : defaultLocation;
   const { userSpots } = useUserSpots();
   const {
     score,
@@ -49,7 +58,7 @@ const App: React.FC = () => {
     hourlyScores,
     startHour,
     scoreDetails,
-  } = useAngelIndex(targetFish);
+  } = useAngelIndex(targetFish, activeLocation.lat, activeLocation.lng);
 
   useEffect(() => {
     if (!loading && (weather || pegel)) {
@@ -89,6 +98,13 @@ const App: React.FC = () => {
   const primaryKoder = koder[0];
   const quickTactic = scoreDetails?.topTactic || primaryKoder?.technik;
   const quickHotspot = scoreDetails?.hotspot || topSpot?.name;
+  const locationLabel = gpsEnabled
+    ? gpsPosition
+      ? `GPS ±${Math.round(gpsPosition.accuracy)} m`
+      : gpsLoading
+        ? 'GPS sucht...'
+        : 'GPS aktiv'
+    : 'Hamburg';
 
   return (
     <div className="min-h-screen pb-32 max-w-lg mx-auto px-4 pt-5">
@@ -100,13 +116,34 @@ const App: React.FC = () => {
             </p>
             <h1 className="text-3xl font-black text-white tracking-tight">ZanderHunter</h1>
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/70 px-2.5 py-1.5">
-            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span className="text-[10px] text-slate-400 font-mono uppercase">Live</span>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/70 px-2.5 py-1.5">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-[10px] text-slate-400 font-mono uppercase">Live</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setGpsEnabled((enabled) => !enabled)}
+              className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors ${
+                gpsEnabled
+                  ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
+                  : 'border-slate-800 bg-slate-900/70 text-slate-500 hover:text-slate-200'
+              }`}
+              aria-pressed={gpsEnabled}
+            >
+              {gpsEnabled ? 'GPS aus' : 'GPS an'}
+            </button>
           </div>
         </div>
 
         <section className="card p-3">
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/35 px-2.5 py-2">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Standort</span>
+            <span className="text-right text-[10px] font-bold text-slate-300">
+              {locationLabel}
+              {gpsError && <span className="ml-1 text-red-400">Fehler</span>}
+            </span>
+          </div>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Zielfisch</p>

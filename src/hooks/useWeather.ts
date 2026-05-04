@@ -96,6 +96,9 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
       }
     }
 
+    setData(null);
+    setLoading(true);
+    setError(null);
     fetchWeather();
     const interval = setInterval(fetchWeather, 30 * 60 * 1000);
     return () => clearInterval(interval);

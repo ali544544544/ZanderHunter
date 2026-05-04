@@ -28,11 +28,11 @@ function getSunEventForDate(events: string[], date: Date, fallback: string) {
   return events.find((event) => event.startsWith(key)) || fallback;
 }
 
-export function useAngelIndex(targetFish: TargetFish = 'zander') {
-  const weather = useWeather();
+export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 53.55, lng: number = 9.99) {
+  const weather = useWeather(lat, lng);
   const pegel = usePegel();
   const tide = useTide();
-  const solunar = useSolunar();
+  const solunar = useSolunar(lat, lng);
   const moon = useMoon();
 
   return useMemo(() => {
@@ -142,7 +142,7 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
       luftdruckTrend: hPressureTrend,
       wasserTemp: pegel.data.waterTemp,
       tageszeit: hTageszeit,
-      solunar: getSolunarStatus(hTime, 53.55, 9.99),
+      solunar: getSolunarStatus(hTime, lat, lng),
       mondPhase: moon.name,
       windSpeed: weather.data.hourly.windSpeed[hIdx] || weather.data.windSpeed,
       niederschlag48h: weather.data.hourly.precipitation[hIdx] || 0,
@@ -186,6 +186,8 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
     pegel.loading,
     solunar.status,
     targetFish,
+    lat,
+    lng,
     tide.events,
     tide.loading,
     weather.data,
