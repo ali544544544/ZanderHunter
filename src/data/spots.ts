@@ -190,7 +190,36 @@ export function calculateHechtSpotScore(spot: Spot, conditions: any, date: Date 
   return Math.round(Math.max(0, Math.min(100, score)));
 }
 
+export function calculateBarschSpotScore(spot: Spot, conditions: any, date: Date = new Date()) {
+  const local = getLocalConditions(spot, conditions, date);
+  let score = 42;
+  const structures = spot.struktur.join(' ').toLowerCase();
+
+  if (structures.includes('spundwand') || structures.includes('kaimauer') || structures.includes('brücke')) score += 22;
+  if (structures.includes('stein') || structures.includes('buhne') || structures.includes('kante')) score += 16;
+  if (structures.includes('einlauf') || structures.includes('poller') || structures.includes('dalben')) score += 14;
+  if (spot.type === 'hafen' || spot.type === 'kanal') score += 10;
+
+  if (local.stromPhase === 'auflauf') score += 18;
+  else if (local.stromPhase === 'ablauf') score += 10;
+  else if (local.stromPhase === 'kenter') score += 4;
+
+  if (conditions.wasserTemp >= 15 && conditions.wasserTemp <= 22) score += 18;
+  else if (conditions.wasserTemp >= 8 && conditions.wasserTemp < 15) score += 8;
+  else if (conditions.wasserTemp < 4 || conditions.wasserTemp > 26) score -= 18;
+
+  if (conditions.cloudCover < 40) score += 8;
+  if (conditions.trübung === 'klar' || conditions.trübung === 'mittel') score += 8;
+
+  const season = getSeason(date);
+  if (season === 'sommer' || season === 'herbst') score += 8;
+  if (season === 'winter' && conditions.wasserTemp < 8) score -= 6;
+
+  return Math.round(Math.max(0, Math.min(100, score)));
+}
+
 export function calculateSpotScoreForFish(spot: Spot, conditions: any, targetFish: TargetFish, date: Date = new Date()) {
   if (targetFish === 'hecht') return calculateHechtSpotScore(spot, conditions, date);
+  if (targetFish === 'barsch') return calculateBarschSpotScore(spot, conditions, date);
   return calculateSpotScore(spot, conditions, date);
 }

@@ -18,10 +18,10 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
   const fishLabel = isHecht ? 'Hecht' : isBarsch ? 'Barsch' : 'Zander';
   const fishInfo = isBarsch
     ? {
-        temp: 'Barsch-Temperaturmodell folgt. Die aktuellen Werte werden bereits angezeigt.',
-        wind: 'Barsch-Windlogik folgt. Winddaten bleiben als Rohwert sichtbar.',
-        tide: 'Barsch-Hydromodell folgt. Tide und Pegel bleiben als Kontext sichtbar.',
-        turbidity: 'Barsch-Truebungslogik folgt.'
+        temp: 'Barsch ist waermeliebend: Peak um 18C, zweiter Winter-Peak um 6C mit Mittagsbonus.',
+        wind: 'Wind ist fuer Barsch vor allem ueber Licht, Sicht und Zirkulation relevant.',
+        tide: 'Auflaufendes Wasser und Stroemung an Struktur druecken Beute in Hafenbereiche.',
+        turbidity: 'Barsche sind Sichtjaeger: klar bis leicht trueb ist gut, extrem trueb kostet Punkte.'
       }
     : isHecht
     ? {
@@ -64,7 +64,7 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       value: `${weather?.cloudCover ?? '--'}%`,
       sub: isHecht ? 'Lichtmodul' : 'Wetter',
       icon: 'C',
-      info: isBarsch ? 'Barsch-Wolkenlogik folgt.' : isHecht ? 'Wolken reduzieren harte Sonneneinstrahlung und verbessern den Licht/Wind-Score.' : 'Bewoelkung hilft bei vorsichtigen Raeubern und stabilisiert das Licht.'
+      info: isBarsch ? 'Bewoelkung steuert den Lichtscore: diffuses Licht ist ideal, volle Sonne gut, sehr dunkle Bedingungen schlechter.' : isHecht ? 'Wolken reduzieren harte Sonneneinstrahlung und verbessern den Licht/Wind-Score.' : 'Bewoelkung hilft bei vorsichtigen Raeubern und stabilisiert das Licht.'
     },
     {
       label: 'Mondphase',
@@ -91,10 +91,10 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       {
         label: 'Temp-Modul',
         value: `${scoreDetails.subScores.temperatur}`,
-        sub: isBarsch ? 'folgt' : isHecht ? '35% Gewicht' : '25% Gewicht',
+        sub: isBarsch ? '30% Gewicht' : isHecht ? '35% Gewicht' : '25% Gewicht',
         icon: 'A',
         info: isBarsch
-          ? 'Barsch Modul A folgt mit der Scoring-Spezifikation.'
+          ? 'Barsch Modul B: Waermeliebend mit Peak um 18C und Winter-Mittagsbonus unter 8C.'
           : isHecht
           ? 'Hecht Modul A: Gausskurven bei 15C und 10C plus Extremwert-Daempfung.'
           : 'Zander Modul A: Komfortzone 10-18C, Kalt- und Warmwasser werden abgestuft gedaempft.'
@@ -102,17 +102,19 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       {
         label: 'Druck-Modul',
         value: `${scoreDetails.subScores.barometer}`,
-        sub: isBarsch ? 'folgt' : isHecht ? '25% Gewicht' : '20% Gewicht',
+        sub: isBarsch ? '40% Gewicht' : isHecht ? '25% Gewicht' : '20% Gewicht',
         icon: 'B',
-        info: `${fishLabel} Modul B: fallender Druck wird belohnt, stabile Lage ist neutral, steigender Druck kostet Punkte.`
+        info: isBarsch
+          ? 'Barsch Modul A: 72h-Druckstabilitaet, Drucklevel und kurzfristiger Trend. Stabiler Hochdruck ist sehr stark.'
+          : `${fishLabel} Modul B: fallender Druck wird belohnt, stabile Lage ist neutral, steigender Druck kostet Punkte.`
       },
       {
         label: 'Hydro-Modul',
         value: `${scoreDetails.subScores.hydrologie}`,
-        sub: isBarsch ? 'folgt' : isHecht ? '25% Gewicht' : '30% Gewicht',
+        sub: isBarsch ? '15% Gewicht' : isHecht ? '25% Gewicht' : '30% Gewicht',
         icon: 'C',
         info: isBarsch
-          ? 'Barsch Modul C folgt mit der Scoring-Spezifikation.'
+          ? 'Barsch Modul D: Tidenphase, Stroemung, Struktur und Prime-Window. Auflaufend frueh ist top.'
           : isHecht
           ? 'Hecht Modul C: Tidenwinkel, geschaetzte Stroemung und Kenter-/Ablauffenster.'
           : 'Zander Modul C: Ablaufwasser, Kenterfenster und Stroemungskanten werden stark gewichtet.'
@@ -120,10 +122,10 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       {
         label: 'Licht/Wind',
         value: `${scoreDetails.subScores.lichtWind}`,
-        sub: isBarsch ? 'folgt' : isHecht ? '15% Gewicht' : '25% Gewicht',
+        sub: isBarsch ? '15% Gewicht' : isHecht ? '15% Gewicht' : '25% Gewicht',
         icon: 'D',
         info: isBarsch
-          ? 'Barsch Modul D folgt mit der Scoring-Spezifikation.'
+          ? 'Barsch Modul C: Licht, UV und Sichttiefe. Barsche sind Sichtjaeger und profitieren von klarem, diffusem Licht.'
           : isHecht
           ? 'Hecht Modul D: Wolken, Windstaerke, Wind auf Ufer und Daemmerung werden kombiniert.'
           : 'Zander Modul D: Daemmerung, Nacht, Solunar, Mond, Wind und Regen werden zusammengefasst.'

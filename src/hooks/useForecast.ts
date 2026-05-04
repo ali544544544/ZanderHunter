@@ -15,6 +15,7 @@ export interface DailyForecast {
     sunset: string;
     pressure: number;
     cloudCover: number;
+    uvIndex: number;
   };
   tideEvents: TideEvent[];
   moonPhase: { name: string; icon: string; illumination: number };
@@ -35,7 +36,7 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
         
         // 1. Fetch 7-day weather from Open-Meteo
         const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,wind_speed_10m_max,precipitation_sum,weather_code,sunrise,sunset,surface_pressure_max,cloud_cover_mean&timezone=Europe/Berlin&forecast_days=7${cb}`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,wind_speed_10m_max,precipitation_sum,weather_code,sunrise,sunset,surface_pressure_max,cloud_cover_mean,uv_index_max&timezone=Europe/Berlin&forecast_days=7${cb}`
         );
         const weatherJson = await weatherRes.json();
 
@@ -75,7 +76,8 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
             sunrise: weatherJson.daily.sunrise[i],
             sunset: weatherJson.daily.sunset[i],
             pressure: weatherJson.daily.surface_pressure_max[i],
-            cloudCover: weatherJson.daily.cloud_cover_mean?.[i] ?? 50
+            cloudCover: weatherJson.daily.cloud_cover_mean?.[i] ?? 50,
+            uvIndex: weatherJson.daily.uv_index_max?.[i] ?? 0
           };
 
           const moonInfo = getMoonPhase(currentDate);
@@ -107,6 +109,7 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
             pressure6hAgo: i > 1 ? weatherJson.daily.surface_pressure_max[i - 2] : dayWeather.pressure,
             pressureHistory: weatherJson.daily.surface_pressure_max.slice(Math.max(0, i - 2), i + 1),
             cloudCover: dayWeather.cloudCover,
+            uvIndex: dayWeather.uvIndex,
             windDirection: 270,
             sunrise: dayWeather.sunrise,
             sunset: dayWeather.sunset,

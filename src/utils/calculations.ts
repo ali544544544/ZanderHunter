@@ -157,11 +157,16 @@ export interface HechtScoreInput extends AngelConditions {
   pressure6hAgo?: number;
   pressureHistory?: number[];
   cloudCover?: number;
+  uvIndex?: number;
   windDirection?: number;
   sunrise?: string;
   sunset?: string;
   date?: Date;
   shoreDirection?: number;
+  secchiCm?: number;
+  oxygen?: number;
+  structureType?: string;
+  depth?: number;
 }
 
 export interface HechtScoreDetails {
@@ -178,7 +183,7 @@ export interface HechtScoreDetails {
   legal: {
     schonzeitAktiv: boolean;
     entnahmefenster: string;
-    baglimit: number;
+    baglimit: number | null;
     hinweis: string;
   };
   primeWindow: string;
@@ -210,10 +215,10 @@ export function getHamburgPredatorRules(fish: TargetFish, date: Date = new Date(
 
   return {
     schonzeitAktiv,
-    entnahmefenster: fish === 'barsch' ? 'folgt' : '45-75 cm',
-    baglimit: fish === 'barsch' ? 0 : 2,
+    entnahmefenster: fish === 'barsch' ? '10-35 cm' : '45-75 cm',
+    baglimit: fish === 'barsch' ? null : 2,
     hinweis: fish === 'barsch'
-      ? 'Barsch-Regelwerk und Scoring folgen.'
+      ? 'Keine generelle Barsch-Schonzeit in ASV-Hamburg-Gewaessern. Lokale Kunstkoederverbote waehrend Raubfisch-Schonzeiten beachten.'
       : schonzeitAktiv ? 'SCHONZEIT AKTIV: gezieltes Angeln aussetzen.' : 'Fischerei frei nach Hamburger Regeln.'
   };
 }
@@ -450,23 +455,169 @@ export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetai
 }
 
 export function calculateBarschIndex(input: HechtScoreInput): PredatorScoreDetails {
-  const zanderBase = calculateZanderIndex(input);
+  const date = input.date || new Date();
+  const rules = getHamburgPredatorRules('barsch', date);
+  const pressureResult = calculateBarschPressureScore(input);
+  const temperature = calculateBarschTemperatureScore(input.wasserTemp, date);
+  const lightResult = calculateBarschLightScore(input);
+  const hydroResult = calculateBarschHydroScore(input);
+
+  const raw = 0.4 * pressureResult.score
+    + 0.3 * temperature
+    + 0.15 * lightResult.score
+    + 0.15 * hydroResult.score;
+
+  let multiplier = 1;
+  if (pressureResult.sigma < 1.5 && (input.pressure ?? 0) > 1015 && (input.cloudCover ?? 100) < 40 && lightResult.secchi > 60) multiplier *= 1.2;
+  if (pressureResult.trend > -1 && pressureResult.trend < -0.2 && hydroResult.minutesSinceNW > 30 && hydroResult.minutesSinceNW < 180) multiplier *= 1.12;
+  if (lightResult.twilight && input.wasserTemp > 15 && input.wasserTemp < 22) multiplier *= 1.15;
+  if (hydroResult.structureScore >= 20 && hydroResult.currentSpeed > 0.25) multiplier *= 1.08;
+  if (pressureResult.sigma > 3 && lightResult.secchi < 30) multiplier *= 0.75;
+  if (input.wasserTemp < 6 && (input.cloudCover ?? 0) > 70) multiplier *= 0.8;
+  if (input.wasserTemp > 24 && hydroResult.currentSpeed < 0.1 && (input.oxygen ?? 7) < 6) multiplier *= 0.7;
+  if (input.wasserTemp > 20 && date.getHours() > 11 && date.getHours() < 15 && (input.cloudCover ?? 100) < 30) multiplier *= 0.85;
+
+  const total = Math.round(clamp(raw * multiplier));
+  const confidence = Math.round(clamp(7 - 0.04 * total, 3, 7));
+  const probability = `${Math.round(clamp(10 + total * 0.75, 5, 85))}% fuer Barschkontakt`;
+  const activity = getBarschActivity(total);
 
   return {
-    ...zanderBase,
-    rating: 'FOLGT',
-    legal: getHamburgPredatorRules('barsch', input.date || new Date()),
-    primeWindow: 'Barsch-Scoring folgt',
-    topTactic: 'Barsch-Inhalte folgen',
-    hotspot: 'Barsch-Hotspots folgen',
-    probability: 'Barsch-Modell folgt',
+    total,
+    confidence,
+    rating: total >= 95 ? 'PERFEKT' : getHechtRating(total),
+    legal: rules,
+    primeWindow: getBarschPrimeWindow(input, hydroResult),
+    topTactic: getBarschTactic(input, total, lightResult.secchi),
+    hotspot: hydroResult.hotspot,
+    probability: `${probability} | ${activity}`,
+    interactionBonus: Math.round((multiplier - 1) * 100),
     subScores: {
-      temperatur: zanderBase.subScores.temperatur,
-      barometer: zanderBase.subScores.barometer,
-      hydrologie: zanderBase.subScores.hydrologie,
-      lichtWind: zanderBase.subScores.lichtWind
-    }
+      temperatur: Math.round(temperature),
+      barometer: Math.round(pressureResult.score),
+      hydrologie: Math.round(hydroResult.score),
+      lichtWind: Math.round(lightResult.score)
+    },
   };
+}
+
+function pressureAt(history: number[], hoursAgo: number, fallback: number) {
+  const value = history[history.length - 1 - hoursAgo];
+  return typeof value === 'number' ? value : fallback;
+}
+
+function calculateBarschPressureScore(input: HechtScoreInput) {
+  const pressure = input.pressure ?? input.pressure3hAgo ?? 1013;
+  const history = input.pressureHistory || [];
+  const p24 = pressureAt(history, 24, input.pressure6hAgo ?? pressure);
+  const p48 = pressureAt(history, 48, p24);
+  const p72 = pressureAt(history, 72, p48);
+  const sigma = Math.sqrt((Math.pow(pressure - p24, 2) + Math.pow(p24 - p48, 2) + Math.pow(p48 - p72, 2)) / 3);
+  const stability = Math.exp(-0.15 * sigma);
+  const pNorm = (pressure - 1000) / 30;
+  const pBonus = pressure > 1015 ? Math.min(1, pNorm) * 100 : pNorm * 60;
+  const delta3h = (pressure - (input.pressure3hAgo ?? pressure)) / 3;
+  const delta6h = (pressure - (input.pressure6hAgo ?? pressure)) / 6;
+  const trend = 0.6 * delta3h + 0.4 * delta6h;
+  let trendFactor = 1;
+  if (trend > -1 && trend < -0.2) trendFactor = 1.15;
+  else if (trend > 2) trendFactor = 0.25;
+
+  return {
+    score: clamp((40 * stability + 60 * clamp(pBonus, 0, 100) / 100) * trendFactor),
+    sigma,
+    trend
+  };
+}
+
+function calculateBarschTemperatureScore(temp: number, date: Date) {
+  const primary = gaussian(temp, 18, 3.5);
+  const winter = gaussian(temp, 6, 2.5);
+  const base = Math.max(96 * Math.pow(primary, 0.25), 55 * Math.pow(winter, 0.25));
+  let cold = 1;
+  if (temp < 2) cold = 0.05;
+  else if (temp < 4) cold = 0.3;
+
+  const hot = temp > 26 ? clamp(0.4 + 0.02 * (32 - temp), 0.2, 0.55) : 1;
+  let winterTime = 1;
+  if (temp < 8) winterTime = date.getHours() > 11 && date.getHours() < 15 ? 1.3 : 0.7;
+
+  return clamp(base * cold * hot * winterTime);
+}
+
+function calculateBarschLightScore(input: HechtScoreInput) {
+  const cloudCover = input.cloudCover ?? 50;
+  const solarRadiation = 100 - cloudCover;
+  const secchi = input.secchiCm ?? 60;
+  let lightScore = 60;
+  if (solarRadiation > 10 && solarRadiation < 60) lightScore = 100;
+  else if (solarRadiation > 80) lightScore = 85;
+
+  const uvBonus = (input.uvIndex ?? 0) > 5 && secchi > 50 ? 10 : 0;
+  const date = input.date || new Date();
+  const twilight = isTwilightWindow(date, input.sunrise, input.sunset);
+  const hour = date.getHours();
+  const twilightFactor = twilight ? 1.35 : hour >= 8 && hour <= 18 ? 1 : 0.95;
+  let sightFactor = 0.4;
+  if (secchi > 80) sightFactor = 1;
+  else if (secchi > 40) sightFactor = 0.85;
+  else if (secchi > 20) sightFactor = 0.6;
+
+  return {
+    score: clamp((lightScore + uvBonus) * twilightFactor * sightFactor),
+    secchi,
+    twilight
+  };
+}
+
+function calculateBarschHydroScore(input: HechtScoreInput) {
+  const tide = getTideMetrics(input.date || new Date(), input.tideEvents);
+  const halfCycle = 12.42 * 60 / 2;
+  const minutesSinceNW = tide.lastType === 'NW' ? tide.minutesSinceLastEvent : tide.minutesSinceLastEvent + halfCycle;
+  const normalizedNW = ((minutesSinceNW % (halfCycle * 2)) + halfCycle * 2) % (halfCycle * 2);
+  const tideAngle = (normalizedNW / halfCycle) * 360;
+  const currentSpeed = tide.currentSpeed;
+  const tideScore = 50 + 40 * Math.sin(toRadians(tideAngle + 30));
+  const flowScore = 30 * Math.tanh(currentSpeed / 0.4);
+  const structure = (input.structureType || 'Spundwand').toLowerCase();
+  let structureScore = 0;
+  if (/spundwand|brueckenpfeiler|brückenpfeiler|poller/.test(structure)) structureScore = 20;
+  else if (/buhne|hafeneinfahrt/.test(structure)) structureScore = 15;
+
+  let windowBonus = 0;
+  if (normalizedNW > 30 && normalizedNW < 180) windowBonus = 25;
+  else if (normalizedNW > 210 && normalizedNW < 330) windowBonus = 15;
+
+  return {
+    score: clamp(tideScore + flowScore + structureScore + windowBonus),
+    minutesSinceNW: normalizedNW,
+    currentSpeed,
+    structureScore,
+    hotspot: structureScore >= 20 ? 'Spundwand, Poller oder Brueckenpfeiler' : 'Kaimauer, Hafeneinfahrt oder Steinpackung'
+  };
+}
+
+function getBarschActivity(score: number) {
+  if (score > 85) return 'HOCHAKTIV - Futterneid nutzen';
+  if (score > 70) return 'AKTIV - systematisch absuchen';
+  if (score > 50) return 'MODERAT - Finesse-Methoden';
+  if (score > 30) return 'TRAEGE - ultra-slow';
+  return 'INAKTIV - Alternative erwaegen';
+}
+
+function getBarschPrimeWindow(input: HechtScoreInput, hydro: ReturnType<typeof calculateBarschHydroScore>) {
+  if (hydro.minutesSinceNW > 30 && hydro.minutesSinceNW < 180) return 'erste 3h auflaufend';
+  if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'Daemmerung - Topwater-Zeit';
+  if (hydro.minutesSinceNW > 210 && hydro.minutesSinceNW < 330) return 'Ablaufend: Kehrwasser-Spots';
+  return 'Struktur-Hopping bis zum naechsten Fenster';
+}
+
+function getBarschTactic(input: HechtScoreInput, score: number, secchi: number) {
+  if (input.wasserTemp < 8) return 'Dropshot oder Vertikalangeln ultra-slow';
+  if (secchi < 30) return 'Spinmad, Chatterbait oder UV-Shad mit Druckwelle';
+  if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'Topwater oder kleiner Twitchbait';
+  if (score > 70) return 'Vertikales Jiggen, danach Futterneid ausnutzen';
+  return 'Dropshot/Finesse und Struktur-Hopping';
 }
 
 function getPrimeWindow(input: HechtScoreInput) {

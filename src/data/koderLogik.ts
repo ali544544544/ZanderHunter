@@ -125,20 +125,46 @@ function getBarschKoderEmpfehlung(): KoderEmpfehlung[] {
   return [
     {
       priorität: 1,
-      name: 'Barsch-Setup folgt',
-      größe: 'folgt',
-      farbe: 'folgt',
-      gewicht: 'folgt',
-      technik: 'Barsch-spezifische Inhalte und Scoring folgen.',
-      wann: 'Nach Barsch-Spezifikation',
-      warum: 'Platzhalter, damit Barsch schon im Dashboard waehlbar ist.'
+      name: 'Twister / Gummifisch',
+      größe: '6-8 cm',
+      farbe: 'Motoroil, Firetiger oder UV-Chartreuse',
+      gewicht: '7-10g Jigkopf',
+      technik: 'Faulenzen: 5 Spruenge, 2 Sek. Pause, Grundkontakt halten',
+      wann: 'Sommer aktiv, Hafen/Spundwand, Score >70',
+      warum: 'Sucht aktive Trupps schnell ab und triggert Futterneid'
+    },
+    {
+      priorität: 2,
+      name: 'Dropshot-Wurm',
+      größe: '5-6 cm',
+      farbe: 'UV-Chartreuse, Braun/Rot oder Watermelon',
+      gewicht: '5-10g Blei',
+      technik: 'Minimal zittern lassen, 5-10 Sek. auf der Stelle halten',
+      wann: 'Wenn Jiggen nicht laeuft, Winter oder klare Kanaele',
+      warum: 'Finesse-Option fuer traege oder vorsichtige Barsche'
+    },
+    {
+      priorität: 3,
+      name: 'Spinmad / Jigspinner',
+      größe: '5-7g',
+      farbe: 'Silber/Firetiger',
+      gewicht: '5-7g',
+      technik: 'Zuegig kurbeln, kurze Stopps an Struktur',
+      wann: 'Truebe Elbe oder wenn Druckwellen gefragt sind',
+      warum: 'Kompakter Suchkoeder mit Flash und Vibration'
     }
   ];
 }
 
 export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpfehlung[], targetFish: TargetFish = 'zander', scoreDetails?: HechtScoreDetails | null): string {
   if (targetFish === 'barsch') {
-    return 'Barsch ist jetzt im Zielfisch-Dropdown verfuegbar. Scoring, Taktik, Koeder und Fachinfos folgen mit der naechsten Spezifikation.';
+    const parts: string[] = [];
+    parts.push(`Barsch-Score ${scoreDetails?.total ?? '--'} mit ${scoreDetails?.rating ?? 'Live'}-Rating.`);
+    parts.push(`Prime Window: ${scoreDetails?.primeWindow ?? 'Struktur-Hopping'}.`);
+    parts.push(`Taktik: ${scoreDetails?.topTactic ?? koder[0]?.technik}.`);
+    parts.push(`Hotspot: ${scoreDetails?.hotspot ?? topSpot?.name ?? 'Spundwand oder Steinpackung'}.`);
+    parts.push('Nach dem ersten Barsch sofort gleiche Stelle weiterbefischen: Futterneid nutzen.');
+    return parts.join(' ');
   }
 
   if (targetFish === 'hecht') {
@@ -192,9 +218,9 @@ export function generateDynamicSpotAdvice(spot: any, conditions: any, targetFish
 
   if (targetFish === 'barsch') {
     return {
-      taktik: 'Barsch-spezifische Spot-Taktik folgt.',
-      koderTipp: 'Barsch-Koeder folgen',
-      bestePhase: 'Barsch-Modell folgt',
+      taktik: 'Struktur-Hopping: Spundwand, Poller und Kanten alle 5-10m abwerfen. Nach Kontakt sofort nachlegen.',
+      koderTipp: conditions?.trübung === 'getrübt' ? 'Spinmad/Firetiger oder UV-Shad' : 'Motoroil-Twister oder Dropshot-Wurm',
+      bestePhase: local.stromPhase === 'auflauf' ? 'Auflaufend frueh' : 'Struktur + Daemmerung',
       tideOffset: local.tideOffset
     };
   }

@@ -7,6 +7,7 @@ export interface WeatherData {
   windSpeed: number;
   windDirection: number;
   cloudCover: number;
+  uvIndex: number;
   weatherCode: number;
   precipitation: number;
   precipitation48h: number;
@@ -20,6 +21,7 @@ export interface WeatherData {
     pressure: number[];
     windSpeed: number[];
     cloudCover: number[];
+    uvIndex: number[];
     precipitation: number[];
   };
 }
@@ -34,11 +36,14 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
       try {
         const cb = `&_cb=${Date.now()}`;
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover,weather_code,precipitation&hourly=temperature_2m,surface_pressure,wind_speed_10m,cloud_cover,precipitation&daily=sunrise,sunset&forecast_days=2&past_days=1&timezone=Europe/Berlin${cb}`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover,weather_code,precipitation&hourly=temperature_2m,surface_pressure,wind_speed_10m,cloud_cover,uv_index,precipitation&daily=sunrise,sunset&forecast_days=2&past_days=3&timezone=Europe/Berlin${cb}`
         );
         const json = await response.json();
 
-        const currentHourIndex = 24 + new Date().getHours();
+        const nowHour = new Date();
+        nowHour.setMinutes(0, 0, 0);
+        const matchedHourIndex = json.hourly.time.findIndex((time: string) => new Date(time).getTime() === nowHour.getTime());
+        const currentHourIndex = matchedHourIndex >= 0 ? matchedHourIndex : 72 + new Date().getHours();
         const currentPressure = json.current.surface_pressure;
         const pastPressure = json.hourly.surface_pressure[currentHourIndex - 3] || currentPressure;
         
@@ -56,6 +61,7 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
           windSpeed: json.current.wind_speed_10m,
           windDirection: json.current.wind_direction_10m,
           cloudCover: json.current.cloud_cover ?? 50,
+          uvIndex: json.hourly.uv_index?.[currentHourIndex] ?? 0,
           weatherCode: json.current.weather_code,
           precipitation: json.current.precipitation,
           precipitation48h: precipSum,
@@ -69,6 +75,7 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
             pressure: json.hourly.surface_pressure,
             windSpeed: json.hourly.wind_speed_10m,
             cloudCover: json.hourly.cloud_cover,
+            uvIndex: json.hourly.uv_index || [],
             precipitation: json.hourly.precipitation
           }
         });

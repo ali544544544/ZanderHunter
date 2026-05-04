@@ -36,14 +36,14 @@ const fishCopy = {
   barsch: {
     habitatTitle: 'Habitat-Tipp',
     habitat:
-      'Barsch-Habitatinfos folgen. Der Zielfisch ist schon waehlbar, damit das kommende Scoring direkt angeschlossen werden kann.',
+      'Barsche sammeln sich gern an Spundwaenden, Pollern, Steinpackungen, Hafeneinfahrten und Kleinfisch-Schwaermen. Nach dem ersten Kontakt unbedingt weiterwerfen: Futterneid nutzen.',
     warning:
-      'Barsch-Regelwerk folgt. Bis dahin bitte lokale Vorschriften separat pruefen.',
+      'Flussbarsch hat in ASV-Hamburg-Gewaessern keine generelle Schonzeit. Lokale Kunstkoederverbote waehrend Raubfisch-Schonzeiten bitte beachten.',
     entnahmeInfo:
-      'Entnahmefenster fuer Barsch folgt mit den Fachinfos.',
-    limitInfo: 'Fanglimit fuer Barsch folgt mit den Fachinfos.',
+      'Entnahmefenster Hamburg/ASV fuer Flussbarsch: 10-35 cm. Barsche ueber 35 cm moeglichst schonen.',
+    limitInfo: 'Kein Tageslimit hinterlegt. Lokale Vereinsregeln bitte beachten.',
     legalTooltip:
-      'Barsch-Regelwerk und Scoring sind noch Platzhalter und folgen in der naechsten Spezifikation.'
+      'Flussbarsch: keine generelle Schonzeit im hinterlegten Hamburger/ASV-Regelwerk. Kunstkoederverbote waehrend Raubfisch-Schonzeiten lokal pruefen.'
   }
 };
 
@@ -68,12 +68,12 @@ const HechtInfo: React.FC<HechtInfoProps> = ({ scoreDetails, fishLabel = 'Hecht'
               <InfoTooltip text={copy.legalTooltip} align="left" />
             </span>
             <h4 className={`text-lg font-black ${isSchonzeit ? 'text-red-400' : 'text-green-400'}`}>
-              {isBarsch ? 'REGELWERK FOLGT' : isSchonzeit ? 'AKTUELL SCHONZEIT' : 'FISCHEREI FREI'}
+              {isBarsch ? 'KEINE SCHONZEIT' : isSchonzeit ? 'AKTUELL SCHONZEIT' : 'FISCHEREI FREI'}
             </h4>
           </div>
           <div className="text-right">
             <span className="text-[10px] text-slate-500 uppercase block">Zeitraum</span>
-            <span className="text-xs font-bold text-slate-300">{targetFish === 'barsch' ? 'folgt' : '01.02. - 31.05.'}</span>
+            <span className="text-xs font-bold text-slate-300">{targetFish === 'barsch' ? 'keine' : '01.02. - 31.05.'}</span>
           </div>
         </div>
 
@@ -103,7 +103,7 @@ const HechtInfo: React.FC<HechtInfoProps> = ({ scoreDetails, fishLabel = 'Hecht'
             <InfoTooltip text={copy.limitInfo} />
           </span>
           <div className="flex items-baseline space-x-1">
-            <span className="text-2xl font-black text-slate-100">{targetFish === 'barsch' ? 'folgt' : scoreDetails?.legal.baglimit || 2}</span>
+            <span className="text-2xl font-black text-slate-100">{targetFish === 'barsch' ? '-' : scoreDetails?.legal.baglimit || 2}</span>
             {targetFish !== 'barsch' && <span className="text-xs text-slate-500 font-bold uppercase">Stueck</span>}
           </div>
           <p className="text-[9px] text-slate-500 mt-1">{copy.limitInfo}</p>

@@ -6,6 +6,19 @@ import { useMoon } from './useMoon';
 import { calculateBarschIndex, calculateHechtIndex, calculateZanderIndex, getStromPhase, getSolunarStatus } from '../utils/calculations';
 import type { AngelConditions, TargetFish } from '../utils/calculations';
 
+function findCurrentHourIndex(times: string[], date: Date) {
+  const hour = new Date(date);
+  hour.setMinutes(0, 0, 0);
+  const matched = times.findIndex(time => new Date(time).getTime() === hour.getTime());
+  return matched >= 0 ? matched : Math.max(0, times.length - 48 + date.getHours());
+}
+
+function getScoreDetails(targetFish: TargetFish, input: Parameters<typeof calculateBarschIndex>[0]) {
+  if (targetFish === 'hecht') return calculateHechtIndex(input);
+  if (targetFish === 'barsch') return calculateBarschIndex(input);
+  return calculateZanderIndex(input);
+}
+
 export function useAngelIndex(targetFish: TargetFish = 'zander') {
   const weather = useWeather();
   const pegel = usePegel();
@@ -58,32 +71,32 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
     tideEvents: tide.events
   };
 
-  const currentHourIndex = 24 + now.getHours();
+  let trübung: 'getrübt' | 'mittel' | 'klar' = 'mittel';
+  if (weather.data.precipitation48h > 20 && pegel.data.waterLevel > 500) trübung = 'getrübt';
+  else if (weather.data.precipitation48h < 5 && pegel.data.waterLevel < 450) trübung = 'klar';
+
+  const secchiCm = trübung === 'klar' ? 90 : trübung === 'getrübt' ? 25 : 60;
+  const currentHourIndex = findCurrentHourIndex(weather.data.hourly.time, now);
 
   const baseScoreInput = {
     ...conditions,
     pressure: weather.data.pressure,
     pressure3hAgo: weather.data.hourly.pressure[currentHourIndex - 3],
     pressure6hAgo: weather.data.hourly.pressure[currentHourIndex - 6],
-    pressureHistory: weather.data.hourly.pressure.slice(Math.max(0, currentHourIndex - 48), currentHourIndex + 1),
+    pressureHistory: weather.data.hourly.pressure.slice(Math.max(0, currentHourIndex - 72), currentHourIndex + 1),
     cloudCover: weather.data.cloudCover,
+    uvIndex: weather.data.uvIndex,
     windDirection: weather.data.windDirection,
     sunrise: weather.data.sunrise,
     sunset: weather.data.sunset,
     date: now,
-    shoreDirection: 90
+    shoreDirection: 90,
+    secchiCm,
+    structureType: 'Spundwand'
   };
 
-  const scoreDetails = targetFish === 'hecht'
-    ? calculateHechtIndex(baseScoreInput)
-    : targetFish === 'barsch'
-      ? calculateBarschIndex(baseScoreInput)
-      : calculateZanderIndex(baseScoreInput);
+  const scoreDetails = getScoreDetails(targetFish, baseScoreInput);
   const score = scoreDetails.total;
-
-  let trübung: 'getrübt' | 'mittel' | 'klar' = 'mittel';
-  if (weather.data.precipitation48h > 20 && pegel.data.waterLevel > 500) trübung = 'getrübt';
-  else if (weather.data.precipitation48h < 5 && pegel.data.waterLevel < 450) trübung = 'klar';
 
   const hourlyScores: number[] = [];
   const startHour = now.getHours() - 4;
@@ -92,7 +105,7 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
     const hTime = new Date(now);
     hTime.setHours(startHour + i, 0, 0, 0);
 
-    const hIdx = 24 + startHour + i;
+    const hIdx = currentHourIndex + (startHour + i - now.getHours());
     const hTimeStartOfDay = new Date(hTime.getFullYear(), hTime.getMonth(), hTime.getDate()).getTime();
     const nowStartOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const dayDiff = Math.round((hTimeStartOfDay - nowStartOfDay) / 86400000);
@@ -136,20 +149,18 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
       pressure: weather.data.hourly.pressure[hIdx] || weather.data.pressure,
       pressure3hAgo: weather.data.hourly.pressure[hIdx - 3],
       pressure6hAgo: weather.data.hourly.pressure[hIdx - 6],
-      pressureHistory: weather.data.hourly.pressure.slice(Math.max(0, hIdx - 48), hIdx + 1),
+      pressureHistory: weather.data.hourly.pressure.slice(Math.max(0, hIdx - 72), hIdx + 1),
       cloudCover: weather.data.hourly.cloudCover[hIdx] ?? weather.data.cloudCover,
+      uvIndex: weather.data.hourly.uvIndex[hIdx] ?? weather.data.uvIndex,
       windDirection: weather.data.windDirection,
       sunrise: hSunrise.toISOString(),
       sunset: hSunset.toISOString(),
       date: hTime,
-      shoreDirection: 90
+      shoreDirection: 90,
+      secchiCm,
+      structureType: 'Spundwand'
     };
-    const hDetails = targetFish === 'hecht'
-      ? calculateHechtIndex(hScoreInput)
-      : targetFish === 'barsch'
-        ? calculateBarschIndex(hScoreInput)
-        : calculateZanderIndex(hScoreInput);
-    hourlyScores.push(hDetails.total);
+    hourlyScores.push(getScoreDetails(targetFish, hScoreInput).total);
   }
 
   return {
