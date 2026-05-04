@@ -57,7 +57,14 @@ const App: React.FC = () => {
     }
   }, [loading, weather, pegel]);
 
-  const fishLabel = fishOptions.find((fish) => fish.value === targetFish)?.label ?? 'Zander';
+  const headerDate = useMemo(
+    () => new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }),
+    []
+  );
+  const fishLabel = useMemo(
+    () => fishOptions.find((fish) => fish.value === targetFish)?.label ?? 'Zander',
+    [targetFish]
+  );
   const allSpots = useMemo(() => [...SPOTS, ...userSpots], [userSpots]);
   const koder = useMemo(
     () => conditions ? getKoderEmpfehlung(conditions, targetFish) : [],
@@ -65,9 +72,13 @@ const App: React.FC = () => {
   );
   const topSpot = useMemo(
     () => conditions
-      ? allSpots
-          .map((spot) => ({ ...spot, currentScore: calculateSpotScoreForFish(spot, conditions, targetFish) }))
-          .sort((a, b) => b.currentScore - a.currentScore)[0]
+      ? allSpots.reduce<((typeof allSpots)[number] & { currentScore: number }) | null>((best, spot) => {
+          const currentScore = calculateSpotScoreForFish(spot, conditions, targetFish);
+          if (!best || currentScore > best.currentScore) {
+            return { ...spot, currentScore };
+          }
+          return best;
+        }, null)
       : null,
     [allSpots, conditions, targetFish]
   );
@@ -85,7 +96,7 @@ const App: React.FC = () => {
         <div className="flex items-start justify-between gap-4 px-1">
           <div>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-              Hamburg - {new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}
+              Hamburg - {headerDate}
             </p>
             <h1 className="text-3xl font-black text-white tracking-tight">ZanderHunter</h1>
           </div>

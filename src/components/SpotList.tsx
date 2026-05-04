@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import SpotCard from './SpotCard';
 import { SPOTS, calculateSpotScoreForFish } from '../data/spots';
 import { useUserSpots } from '../hooks/useUserSpots';
@@ -15,17 +15,20 @@ const SpotList: React.FC<SpotListProps> = ({ conditions, targetFish = 'zander' }
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'boot' | 'ufer'>('all');
 
-  const allSpots = [...SPOTS, ...userSpots].map(spot => ({
-    ...spot,
-    currentScore: conditions ? calculateSpotScoreForFish(spot, conditions, targetFish) : 0,
-    isUserSpot: spot.id.startsWith('user-')
-  }));
+  const allSpots = useMemo(
+    () => [...SPOTS, ...userSpots].map(spot => ({
+      ...spot,
+      currentScore: conditions ? calculateSpotScoreForFish(spot, conditions, targetFish) : 0,
+      isUserSpot: spot.id.startsWith('user-')
+    })),
+    [conditions, targetFish, userSpots]
+  );
 
-  const filteredSpots = allSpots.filter(spot => {
+  const filteredSpots = useMemo(() => allSpots.filter(spot => {
     if (filter === 'boot') return spot.bootNötig;
     if (filter === 'ufer') return spot.uferAngling;
     return true;
-  }).sort((a, b) => b.currentScore - a.currentScore);
+  }).sort((a, b) => b.currentScore - a.currentScore), [allSpots, filter]);
 
   return (
     <div className="space-y-4">

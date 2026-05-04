@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useWeather } from './useWeather';
 import { usePegel } from './usePegel';
 import { useTide } from './useTide';
@@ -34,6 +35,7 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
   const solunar = useSolunar();
   const moon = useMoon();
 
+  return useMemo(() => {
   const isLoading = weather.loading || pegel.loading || tide.loading;
 
   if (isLoading || !weather.data || !pegel.data) {
@@ -178,4 +180,15 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
     startHour,
     scoreDetails
   };
+  }, [
+    moon,
+    pegel.data,
+    pegel.loading,
+    solunar.status,
+    targetFish,
+    tide.events,
+    tide.loading,
+    weather.data,
+    weather.loading
+  ]);
 }

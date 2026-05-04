@@ -8,6 +8,50 @@ interface DailyForecastChartProps {
   sunsets?: string[];
 }
 
+const W = 360;
+const H = 180;
+const padX = 28;
+const padTop = 16;
+const padBot = 28;
+const chartW = W - padX * 2;
+const chartH = H - padTop - padBot;
+
+const x = (hour: number) => padX + (hour / 23) * chartW;
+const y = (score: number) => padTop + chartH - (score / 100) * chartH;
+const xToHour = (xPos: number) => Math.max(0, Math.min(23, Math.round(((xPos - padX) / chartW) * 23)));
+
+const scoreColor = (s: number) => {
+  if (s >= 75) return '#22c55e';
+  if (s >= 55) return '#84cc16';
+  if (s >= 40) return '#f59e0b';
+  return '#ef4444';
+};
+
+const scoreLabel = (s: number) => {
+  if (s >= 75) return 'Sehr gut';
+  if (s >= 55) return 'Gut';
+  if (s >= 40) return 'Mittel';
+  return 'Schlecht';
+};
+
+const buildSmoothPath = (pts: { x: number; y: number }[]) => {
+  if (pts.length < 2) return '';
+  const tension = 0.3;
+  let d = `M ${pts[0].x},${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) * tension;
+    const cp1y = p1.y + (p2.y - p0.y) * tension;
+    const cp2x = p2.x - (p3.x - p1.x) * tension;
+    const cp2y = p2.y - (p3.y - p1.y) * tension;
+    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+  return d;
+};
+
 const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, startHour, liveScore, sunrises, sunsets }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [activeHourIndex, setActiveHourIndex] = useState<number | null>(null);
@@ -38,78 +82,40 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
     return 20;
   }, [sunsets, chartStart]);
 
-  // Chart dimensions
-  const W = 360;
-  const H = 180;
-  const padX = 28;
-  const padTop = 16;
-  const padBot = 28;
-  const chartW = W - padX * 2;
-  const chartH = H - padTop - padBot;
-
-  // Map hour index to x
-  const x = (hour: number) => padX + (hour / 23) * chartW;
-  // Map score to y (inverted)
-  const y = (score: number) => padTop + chartH - (score / 100) * chartH;
-  // Map x back to hour
-  const xToHour = (xPos: number) => Math.max(0, Math.min(23, Math.round(((xPos - padX) / chartW) * 23)));
-
-  // Build smooth path using cardinal spline interpolation
-  const points = hourlyScores.map((s, i) => ({ x: x(i), y: y(s) }));
-
-  const buildSmoothPath = (pts: { x: number; y: number }[]) => {
-    if (pts.length < 2) return '';
-    const tension = 0.3;
-    let d = `M ${pts[0].x},${pts[0].y}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[Math.max(0, i - 1)];
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      const p3 = pts[Math.min(pts.length - 1, i + 2)];
-      const cp1x = p1.x + (p2.x - p0.x) * tension;
-      const cp1y = p1.y + (p2.y - p0.y) * tension;
-      const cp2x = p2.x - (p3.x - p1.x) * tension;
-      const cp2y = p2.y - (p3.y - p1.y) * tension;
-      d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
-    }
-    return d;
-  };
-
-  const linePath = buildSmoothPath(points);
-  const areaPath = linePath + ` L ${points[points.length - 1].x},${padTop + chartH} L ${points[0].x},${padTop + chartH} Z`;
+  const points = useMemo(
+    () => hourlyScores.map((s, i) => ({ x: x(i), y: y(s) })),
+    [hourlyScores]
+  );
+  const linePath = useMemo(() => buildSmoothPath(points), [points]);
+  const areaPath = useMemo(
+    () => linePath && points.length > 0
+      ? `${linePath} L ${points[points.length - 1].x},${padTop + chartH} L ${points[0].x},${padTop + chartH} Z`
+      : '',
+    [linePath, points]
+  );
 
   // Use the actual live score for the current position on the chart
   const currentOffset = (now.getTime() - chartStart.getTime()) / (1000 * 60 * 60);
   const curX = x(currentOffset);
   const curY = y(liveScore);
 
-  // Color for score
-  const scoreColor = (s: number) => {
-    if (s >= 75) return '#22c55e';
-    if (s >= 55) return '#84cc16';
-    if (s >= 40) return '#f59e0b';
-    return '#ef4444';
-  };
-
-  // Score label
-  const scoreLabel = (s: number) => {
-    if (s >= 75) return 'Sehr gut';
-    if (s >= 55) return 'Gut';
-    if (s >= 40) return 'Mittel';
-    return 'Schlecht';
-  };
-
   // Best hour index
-  const bestHourIndex = hourlyScores.indexOf(Math.max(...hourlyScores));
+  const bestHourIndex = useMemo(
+    () => hourlyScores.indexOf(Math.max(...hourlyScores)),
+    [hourlyScores]
+  );
   const bestScore = hourlyScores[bestHourIndex];
   const bestRealHour = (((startHour + bestHourIndex) % 24) + 24) % 24;
 
   // X-axis labels
-  const xTickOffsets: number[] = [];
-  const firstTickOffset = (((3 - (startHour % 3)) % 3) + 3) % 3;
-  for (let i = firstTickOffset; i < 24; i += 3) {
-    xTickOffsets.push(i);
-  }
+  const xTickOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    const firstTickOffset = (((3 - (startHour % 3)) % 3) + 3) % 3;
+    for (let i = firstTickOffset; i < 24; i += 3) {
+      offsets.push(i);
+    }
+    return offsets;
+  }, [startHour]);
 
   // Score zone thresholds
   const zones = [
