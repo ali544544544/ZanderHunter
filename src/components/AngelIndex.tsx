@@ -55,21 +55,21 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
             <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
               Prime Window
-              <InfoTooltip text="Das beste Zeitfenster laut Score. Kenterpunkt plus 90 min bedeutet: ab dem Stroemungswechsel bis etwa 90 Minuten danach fischen, weil Beutefische und Raeuber neu positionieren." />
+              <InfoTooltip text="Das beste Zeitfenster laut Score. Bei Kenterfenstern ist die Phase um den Stroemungswechsel gemeint, weil Beutefische und Raeuber neu positionieren." />
             </span>
             <span className="font-black text-slate-100">{scoreDetails.primeWindow}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
             <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
               Chance
-              <InfoTooltip text="Eine grobe, aus dem Score abgeleitete biologische Aktivitaets-Schaetzung. Das ist kein Fangversprechen und ersetzt keine lokale Erfahrung." />
+              <InfoTooltip text={`Eine grobe, aus dem ${fishLabel}-Score abgeleitete biologische Aktivitaets-Schaetzung. Das ist kein Fangversprechen und ersetzt keine lokale Erfahrung.`} />
             </span>
             <span className="font-black text-slate-100">{scoreDetails.probability}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
             <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
               Bonus
-              <InfoTooltip text="Multiplikativer Synergie-Faktor. Positive Kombinationen wie fallender Druck plus passendes Tidefenster erhoehen den Gesamtscore." />
+              <InfoTooltip text="Multiplikativer Synergie-Faktor. Positive Kombinationen wie fallender Druck plus passendes Zeit- oder Tidefenster erhoehen den Gesamtscore." />
             </span>
             <span className="font-black text-slate-100">{scoreDetails.interactionBonus > 0 ? '+' : ''}{scoreDetails.interactionBonus}%</span>
           </div>
@@ -77,7 +77,7 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
       )}
       
       <p className="mt-4 text-slate-400 text-sm italic text-center px-4">
-        {scoreDetails ? 'Bimodales Hecht-Scoring aus Temperatur, Drucktrend, Tide, Licht und Wind.' : 'Basierend auf Tide, Luftdruck, Temperatur, Wind und Mond.'}
+        {scoreDetails ? `${fishLabel}-Scoring aus Temperatur, Drucktrend, Tide, Licht, Wind und Synergien.` : 'Basierend auf Tide, Luftdruck, Temperatur, Wind und Mond.'}
       </p>
     </div>
   );

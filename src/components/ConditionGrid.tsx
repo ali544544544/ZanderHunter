@@ -14,6 +14,7 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
   const [activeInfo, setActiveInfo] = useState<string | null>(null);
 
   const isHecht = targetFish === 'hecht';
+  const fishLabel = isHecht ? 'Hecht' : 'Zander';
   const fishInfo = isHecht
     ? {
         temp: 'Hecht nutzt eine bimodale Temperaturkurve: Hauptpeak um 15C, zweiter Aktivitaetspuls um 10C. Unter 4C und ueber 25C wird stark gedaempft.',
@@ -82,30 +83,36 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       {
         label: 'Temp-Modul',
         value: `${scoreDetails.subScores.temperatur}`,
-        sub: '35% Gewicht',
+        sub: isHecht ? '35% Gewicht' : '25% Gewicht',
         icon: 'A',
-        info: 'Hecht Modul A: Gausskurven bei 15C und 10C plus Extremwert-Daempfung.'
+        info: isHecht
+          ? 'Hecht Modul A: Gausskurven bei 15C und 10C plus Extremwert-Daempfung.'
+          : 'Zander Modul A: Komfortzone 10-18C, Kalt- und Warmwasser werden abgestuft gedaempft.'
       },
       {
         label: 'Druck-Modul',
         value: `${scoreDetails.subScores.barometer}`,
-        sub: '25% Gewicht',
+        sub: isHecht ? '25% Gewicht' : '20% Gewicht',
         icon: 'B',
-        info: 'Hecht Modul B: Drucktrend ueber 3h/6h, fallender Druck wird belohnt, schnelle Anstiege bekommen Hysterese-Malus.'
+        info: `${fishLabel} Modul B: fallender Druck wird belohnt, stabile Lage ist neutral, steigender Druck kostet Punkte.`
       },
       {
         label: 'Hydro-Modul',
         value: `${scoreDetails.subScores.hydrologie}`,
-        sub: '25% Gewicht',
+        sub: isHecht ? '25% Gewicht' : '30% Gewicht',
         icon: 'C',
-        info: 'Hecht Modul C: Tidenwinkel, geschaetzte Stroemung und Kenter-/Ablauffenster.'
+        info: isHecht
+          ? 'Hecht Modul C: Tidenwinkel, geschaetzte Stroemung und Kenter-/Ablauffenster.'
+          : 'Zander Modul C: Ablaufwasser, Kenterfenster und Stroemungskanten werden stark gewichtet.'
       },
       {
         label: 'Licht/Wind',
         value: `${scoreDetails.subScores.lichtWind}`,
-        sub: '15% Gewicht',
+        sub: isHecht ? '15% Gewicht' : '25% Gewicht',
         icon: 'D',
-        info: 'Hecht Modul D: Wolken, Windstaerke, Wind auf Ufer und Daemmerung werden kombiniert.'
+        info: isHecht
+          ? 'Hecht Modul D: Wolken, Windstaerke, Wind auf Ufer und Daemmerung werden kombiniert.'
+          : 'Zander Modul D: Daemmerung, Nacht, Solunar, Mond, Wind und Regen werden zusammengefasst.'
       }
     ] : [])
   ];

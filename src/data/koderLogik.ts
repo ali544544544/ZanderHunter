@@ -134,6 +134,13 @@ export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpf
   }
 
   const parts: string[] = [];
+  if (scoreDetails) {
+    parts.push(`Zander-Score ${scoreDetails.total} mit ${scoreDetails.rating}-Rating.`);
+    if (scoreDetails.legal.schonzeitAktiv) parts.push(scoreDetails.legal.hinweis);
+    parts.push(`Prime Window: ${scoreDetails.primeWindow}.`);
+    parts.push(`Taktik: ${scoreDetails.topTactic}.`);
+    parts.push(`Hotspot: ${scoreDetails.hotspot}.`);
+  }
   
   if (conditions.stromPhase === 'ablauf')
     parts.push('Ablaufwasser läuft — Zander stehen aktiv im Strömungsschatten.');

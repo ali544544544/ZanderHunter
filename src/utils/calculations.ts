@@ -187,6 +187,8 @@ export interface HechtScoreDetails {
   probability: string;
 }
 
+export type PredatorScoreDetails = HechtScoreDetails;
+
 const clamp = (value: number, min: number = 0, max: number = 100) =>
   Math.max(min, Math.min(max, value));
 
@@ -342,6 +344,107 @@ function getHechtRating(score: number) {
   if (score >= 55) return 'GUT';
   if (score >= 35) return 'ZAEH';
   return 'SCHWACH';
+}
+
+function calculateZanderTemperatureScore(temp: number) {
+  if (temp >= 10 && temp <= 18) return 95;
+  if (temp >= 6 && temp < 10) return 70;
+  if (temp > 18 && temp <= 22) return 55;
+  if (temp < 4 || temp > 25) return 15;
+  return 35;
+}
+
+function calculateZanderBarometerScore(input: HechtScoreInput) {
+  const pressure = input.pressure ?? input.pressure3hAgo ?? 1013;
+  const pressure3hAgo = input.pressure3hAgo ?? pressure;
+  const delta3h = (pressure - pressure3hAgo) / 3;
+
+  if (delta3h < -0.5 || input.luftdruckTrend === 'fallend') return { score: 88, delta3h };
+  if (delta3h > 0.5 || input.luftdruckTrend === 'steigend') return { score: 30, delta3h };
+  return { score: 62, delta3h };
+}
+
+function calculateZanderHydroScore(input: HechtScoreInput) {
+  if (input.stromPhase === 'ablauf') return 92;
+  if (input.stromPhase === 'kenter') return 82;
+  if (input.stromPhase === 'auflauf') return 55;
+  return 28;
+}
+
+function calculateZanderLightWindScore(input: HechtScoreInput) {
+  let score = 42;
+  if (input.tageszeit === 'dämmerung') score += 35;
+  else if (input.tageszeit === 'nacht') score += 22;
+
+  if (input.solunar === 'major') score += 10;
+  else if (input.solunar === 'minor') score += 5;
+
+  const moon = input.mondPhase.toLowerCase();
+  if (moon.includes('neumond') || moon.includes('abnehmend')) score += 8;
+  else if (moon.includes('vollmond')) score -= 10;
+
+  if (input.windSpeed < 15) score += 8;
+  else if (input.windSpeed <= 25) score += 3;
+  else score -= 14;
+
+  if (input.niederschlag48h >= 5 && input.niederschlag48h <= 20) score += 5;
+  else if (input.niederschlag48h > 30) score -= 8;
+
+  return clamp(score);
+}
+
+function getZanderPrimeWindow(input: HechtScoreInput) {
+  if (input.tageszeit === 'dämmerung') return 'jetzt: Daemmerung nutzen';
+  if (input.stromPhase === 'ablauf') return 'laufende Ablaufphase';
+  if (input.stromPhase === 'kenter') return 'Kenterfenster sofort nutzen';
+  return 'naechste Daemmerung oder Ablaufphase';
+}
+
+export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetails {
+  const date = input.date || new Date();
+  const rules = getHamburgPredatorRules('zander', date);
+  const temperatur = calculateZanderTemperatureScore(input.wasserTemp);
+  const barometerResult = calculateZanderBarometerScore(input);
+  const hydrologie = calculateZanderHydroScore(input);
+  const lichtWind = calculateZanderLightWindScore(input);
+
+  let multiplier = 1;
+  if (barometerResult.delta3h < -0.5 && (input.stromPhase === 'ablauf' || input.stromPhase === 'kenter')) multiplier *= 1.12;
+  if (input.wasserTemp >= 10 && input.wasserTemp <= 18 && input.tageszeit === 'dämmerung') multiplier *= 1.1;
+  if (input.windSpeed > 28 && input.stromPhase !== 'stagnation') multiplier *= 0.92;
+  if (input.wasserTemp < 6 && input.tageszeit === 'tag') multiplier *= 0.88;
+
+  const raw = 0.25 * temperatur + 0.2 * barometerResult.score + 0.3 * hydrologie + 0.25 * lichtWind;
+  const total = Math.round(clamp(raw * multiplier));
+  const confidence = Math.round(clamp(9 - 0.05 * total, 5, 9));
+  const biologicalProbability = Math.round(clamp(14 + total * 0.62, 5, 78));
+  const probability = rules.schonzeitAktiv
+    ? `${biologicalProbability}% biologisch, Schonzeit beachten`
+    : `${biologicalProbability}% fuer Zanderkontakt`;
+
+  return {
+    total,
+    confidence,
+    rating: getHechtRating(total),
+    subScores: {
+      temperatur: Math.round(temperatur),
+      barometer: Math.round(barometerResult.score),
+      hydrologie: Math.round(hydrologie),
+      lichtWind: Math.round(lichtWind)
+    },
+    interactionBonus: Math.round((multiplier - 1) * 100),
+    legal: rules,
+    primeWindow: getZanderPrimeWindow(input),
+    topTactic: input.wasserTemp < 8
+      ? 'Langsame Grundnaehe mit kleinen Shads'
+      : input.tageszeit === 'dämmerung'
+        ? 'Ufernahe Kanten mit Shad oder Wobbler'
+        : 'Tiefere Kanten und Stroemungsschatten jiggen',
+    hotspot: input.stromPhase === 'ablauf' || input.stromPhase === 'kenter'
+      ? 'Stroemungskante, Buhnenkopf oder Spundwand'
+      : 'Tiefe Kante, Hafenbecken oder Schattenbereich',
+    probability
+  };
 }
 
 function getPrimeWindow(input: HechtScoreInput) {

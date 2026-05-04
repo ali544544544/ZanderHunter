@@ -8,9 +8,7 @@ import AngelIndex from './components/AngelIndex';
 import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
-import TaktikView from './components/TaktikView';
 import Briefing from './components/Briefing';
-import ZanderInfo from './components/ZanderInfo';
 import HechtInfo from './components/HechtInfo';
 import DataStatus from './components/DataStatus';
 import ForecastView from './components/ForecastView';
@@ -79,7 +77,7 @@ const App: React.FC = () => {
             )}
             {!loading && <TideTimeline events={tide || []} />}
             {!loading && <ConditionGrid conditions={conditions} pegel={pegel} weather={weather} moon={moon} targetFish={targetFish} scoreDetails={scoreDetails} />}
-            {targetFish === 'hecht' ? <HechtInfo scoreDetails={scoreDetails} /> : <ZanderInfo />}
+            <HechtInfo scoreDetails={scoreDetails} fishLabel={fishLabel} targetFish={targetFish} />
           </>
         )}
 
@@ -88,21 +86,14 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'koder' && (
-          targetFish === 'hecht' ? (
-            <HechtTaktikView
-              conditions={conditions}
-              weather={weather}
-              koder={koder}
-              scoreDetails={scoreDetails}
-            />
-          ) : (
-            <TaktikView
-              conditions={conditions}
-              weather={weather}
-              koder={koder}
-              score={score}
-            />
-          )
+          <HechtTaktikView
+            conditions={conditions}
+            weather={weather}
+            koder={koder}
+            scoreDetails={scoreDetails}
+            fishLabel={fishLabel}
+            targetFish={targetFish}
+          />
         )}
         
         {activeTab === 'forecast' && (

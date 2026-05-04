@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { calculateAngelIndex, calculateHechtIndex, getMoonPhase, getSolunarStatus, getStromPhase, getTideOffset } from '../utils/calculations';
+import { calculateHechtIndex, calculateZanderIndex, getMoonPhase, getSolunarStatus, getStromPhase, getTideOffset } from '../utils/calculations';
 import type { AngelConditions, TargetFish } from '../utils/calculations';
 import type { TideEvent } from './useTide';
 
@@ -100,7 +100,7 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
             tideEvents: tideEvents
           };
 
-          const hechtDetails = calculateHechtIndex({
+          const scoreInput = {
             ...forecastConditions,
             pressure: dayWeather.pressure,
             pressure3hAgo: i > 0 ? weatherJson.daily.surface_pressure_max[i - 1] : dayWeather.pressure,
@@ -112,11 +112,12 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
             sunset: dayWeather.sunset,
             date: currentDate,
             shoreDirection: 90
-          });
+          };
+          const scoreDetails = targetFish === 'hecht' ? calculateHechtIndex(scoreInput) : calculateZanderIndex(scoreInput);
 
           dailyData.push({
             date: currentDate,
-            score: targetFish === 'hecht' ? hechtDetails.total : calculateAngelIndex(forecastConditions),
+            score: scoreDetails.total,
             weather: dayWeather,
             tideEvents: localTideEvents.sort((a, b) => a.time.getTime() - b.time.getTime()),
             moonPhase: moonInfo,

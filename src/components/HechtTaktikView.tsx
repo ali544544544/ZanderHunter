@@ -1,28 +1,39 @@
 import React from 'react';
 import InfoTooltip from './InfoTooltip';
 import type { KoderEmpfehlung } from '../data/koderLogik';
-import type { HechtScoreDetails } from '../utils/calculations';
+import type { HechtScoreDetails, TargetFish } from '../utils/calculations';
 
 interface HechtTaktikViewProps {
   conditions: any;
   weather: any;
   koder: KoderEmpfehlung[];
   scoreDetails?: HechtScoreDetails | null;
+  fishLabel?: string;
+  targetFish?: TargetFish;
 }
 
-const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, koder, scoreDetails }) => {
+const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, koder, scoreDetails, fishLabel = 'Hecht', targetFish = 'hecht' }) => {
   const legalClosed = scoreDetails?.legal.schonzeitAktiv;
+  const isHecht = targetFish === 'hecht';
 
   const rules = [
     {
       title: 'Temperatur',
       value: `${conditions?.wasserTemp ?? '--'}C`,
-      text: conditions?.wasserTemp < 8
-        ? 'Kaltwasser: langsam, lange Pausen, Koeder im Sichtfeld halten.'
-        : conditions?.wasserTemp <= 16
-          ? 'Aktivfenster: grosse Silhouette, Jerks und Swimbaits funktionieren gut.'
-          : 'Warmwasser: frueh/spaet fischen, Sauerstoff und Schatten suchen.',
-      info: 'Temperatur bewertet den Stoffwechsel. Beim Hecht sind etwa 15C sehr stark, um 10C gibt es einen zweiten Aktivitaets-Peak.'
+      text: isHecht
+        ? conditions?.wasserTemp < 8
+          ? 'Kaltwasser: langsam, lange Pausen, Koeder im Sichtfeld halten.'
+          : conditions?.wasserTemp <= 16
+            ? 'Aktivfenster: grosse Silhouette, Jerks und Swimbaits funktionieren gut.'
+            : 'Warmwasser: frueh/spaet fischen, Sauerstoff und Schatten suchen.'
+        : conditions?.wasserTemp < 8
+          ? 'Kaltwasser: kleine Shads langsam und grundnah fuehren.'
+          : conditions?.wasserTemp <= 18
+            ? 'Komfortzone: Kanten aktiv abjiggen, auch Wobbler in der Daemmerung.'
+            : 'Warmwasser: Sauerstoff, Stroemung und Schatten priorisieren.',
+      info: isHecht
+        ? 'Temperatur bewertet den Stoffwechsel. Beim Hecht sind etwa 15C sehr stark, um 10C gibt es einen zweiten Aktivitaets-Peak.'
+        : 'Temperatur bewertet die Zander-Komfortzone. 10-18C ist stark, darunter und darueber wird vorsichtiger gefischt.'
     },
     {
       title: 'Drucktrend',
@@ -35,10 +46,16 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
     {
       title: 'Licht & Wind',
       value: `${weather?.cloudCover ?? '--'}% Wolken`,
-      text: weather?.cloudCover > 60 && weather?.windSpeed > 10
-        ? 'Wolken plus Wind auf Ufer: flache Kanten, Kraut und Einlaeufe priorisieren.'
-        : 'Bei Sonne und wenig Wind tiefer, schattiger und natuerlicher fischen.',
-      info: 'Licht und Wind werden kombiniert. Wolken und Wind auf die Uferkante geben Hechten Deckung und druecken Beutefische in Reichweite.'
+      text: isHecht
+        ? weather?.cloudCover > 60 && weather?.windSpeed > 10
+          ? 'Wolken plus Wind auf Ufer: flache Kanten, Kraut und Einlaeufe priorisieren.'
+          : 'Bei Sonne und wenig Wind tiefer, schattiger und natuerlicher fischen.'
+        : conditions?.tageszeit === 'dämmerung' || conditions?.tageszeit === 'nacht'
+          ? 'Restlicht nutzen: Uferkanten, Spundwaende und flachere Jagdzonen abwerfen.'
+          : 'Tagsueber tiefer, schattiger und langsamer am Grund arbeiten.',
+      info: isHecht
+        ? 'Licht und Wind werden kombiniert. Wolken und Wind auf die Uferkante geben Hechten Deckung und druecken Beutefische in Reichweite.'
+        : 'Beim Zander zaehlen Restlicht, Nachtfenster, Mond/Solunar und kontrollierbarer Wind besonders stark.'
     }
   ];
 
@@ -56,7 +73,7 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
       <div className="card">
         <div className="flex justify-between items-start gap-4 mb-4">
           <div>
-            <h3 className="text-white font-black text-xl">Hecht-Taktik</h3>
+            <h3 className="text-white font-black text-xl">{fishLabel}-Taktik</h3>
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
               Score {scoreDetails?.total ?? '--'} / Rating {scoreDetails?.rating ?? '--'}
               <InfoTooltip text="Score ist die Gesamtbewertung von 0 bis 100. Rating ist die kurze Einordnung des Scores, zum Beispiel Gut oder Sehr Gut." align="left" />
@@ -81,7 +98,7 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
               Hotspot
               <InfoTooltip text="Empfohlener Bereichstyp fuer die aktuellen Bedingungen, zum Beispiel Krautkante, Einlauf, Buhnenkopf oder windgedruecktes Ufer." />
             </span>
-            <span className="text-slate-100 font-black">{scoreDetails?.hotspot ?? 'Krautkante'}</span>
+            <span className="text-slate-100 font-black">{scoreDetails?.hotspot ?? (isHecht ? 'Krautkante' : 'Stroemungskante')}</span>
           </div>
         </div>
       </div>
