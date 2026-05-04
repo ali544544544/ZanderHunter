@@ -3,7 +3,7 @@ import { usePegel } from './usePegel';
 import { useTide } from './useTide';
 import { useSolunar } from './useSolunar';
 import { useMoon } from './useMoon';
-import { calculateHechtIndex, calculateZanderIndex, getStromPhase, getSolunarStatus } from '../utils/calculations';
+import { calculateBarschIndex, calculateHechtIndex, calculateZanderIndex, getStromPhase, getSolunarStatus } from '../utils/calculations';
 import type { AngelConditions, TargetFish } from '../utils/calculations';
 
 export function useAngelIndex(targetFish: TargetFish = 'zander') {
@@ -76,7 +76,9 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
 
   const scoreDetails = targetFish === 'hecht'
     ? calculateHechtIndex(baseScoreInput)
-    : calculateZanderIndex(baseScoreInput);
+    : targetFish === 'barsch'
+      ? calculateBarschIndex(baseScoreInput)
+      : calculateZanderIndex(baseScoreInput);
   const score = scoreDetails.total;
 
   let trübung: 'getrübt' | 'mittel' | 'klar' = 'mittel';
@@ -142,7 +144,11 @@ export function useAngelIndex(targetFish: TargetFish = 'zander') {
       date: hTime,
       shoreDirection: 90
     };
-    const hDetails = targetFish === 'hecht' ? calculateHechtIndex(hScoreInput) : calculateZanderIndex(hScoreInput);
+    const hDetails = targetFish === 'hecht'
+      ? calculateHechtIndex(hScoreInput)
+      : targetFish === 'barsch'
+        ? calculateBarschIndex(hScoreInput)
+        : calculateZanderIndex(hScoreInput);
     hourlyScores.push(hDetails.total);
   }
 

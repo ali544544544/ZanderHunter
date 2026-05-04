@@ -14,8 +14,16 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
   const [activeInfo, setActiveInfo] = useState<string | null>(null);
 
   const isHecht = targetFish === 'hecht';
-  const fishLabel = isHecht ? 'Hecht' : 'Zander';
-  const fishInfo = isHecht
+  const isBarsch = targetFish === 'barsch';
+  const fishLabel = isHecht ? 'Hecht' : isBarsch ? 'Barsch' : 'Zander';
+  const fishInfo = isBarsch
+    ? {
+        temp: 'Barsch-Temperaturmodell folgt. Die aktuellen Werte werden bereits angezeigt.',
+        wind: 'Barsch-Windlogik folgt. Winddaten bleiben als Rohwert sichtbar.',
+        tide: 'Barsch-Hydromodell folgt. Tide und Pegel bleiben als Kontext sichtbar.',
+        turbidity: 'Barsch-Truebungslogik folgt.'
+      }
+    : isHecht
     ? {
         temp: 'Hecht nutzt eine bimodale Temperaturkurve: Hauptpeak um 15C, zweiter Aktivitaetspuls um 10C. Unter 4C und ueber 25C wird stark gedaempft.',
         wind: 'Wind plus Wolken kann Hechte ans Ufer druecken. Entscheidend ist, ob der Wind auf die Uferkante steht.',
@@ -56,7 +64,7 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       value: `${weather?.cloudCover ?? '--'}%`,
       sub: isHecht ? 'Lichtmodul' : 'Wetter',
       icon: 'C',
-      info: isHecht ? 'Wolken reduzieren harte Sonneneinstrahlung und verbessern den Licht/Wind-Score.' : 'Bewoelkung hilft bei vorsichtigen Raeubern und stabilisiert das Licht.'
+      info: isBarsch ? 'Barsch-Wolkenlogik folgt.' : isHecht ? 'Wolken reduzieren harte Sonneneinstrahlung und verbessern den Licht/Wind-Score.' : 'Bewoelkung hilft bei vorsichtigen Raeubern und stabilisiert das Licht.'
     },
     {
       label: 'Mondphase',
@@ -83,34 +91,40 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       {
         label: 'Temp-Modul',
         value: `${scoreDetails.subScores.temperatur}`,
-        sub: isHecht ? '35% Gewicht' : '25% Gewicht',
+        sub: isBarsch ? 'folgt' : isHecht ? '35% Gewicht' : '25% Gewicht',
         icon: 'A',
-        info: isHecht
+        info: isBarsch
+          ? 'Barsch Modul A folgt mit der Scoring-Spezifikation.'
+          : isHecht
           ? 'Hecht Modul A: Gausskurven bei 15C und 10C plus Extremwert-Daempfung.'
           : 'Zander Modul A: Komfortzone 10-18C, Kalt- und Warmwasser werden abgestuft gedaempft.'
       },
       {
         label: 'Druck-Modul',
         value: `${scoreDetails.subScores.barometer}`,
-        sub: isHecht ? '25% Gewicht' : '20% Gewicht',
+        sub: isBarsch ? 'folgt' : isHecht ? '25% Gewicht' : '20% Gewicht',
         icon: 'B',
         info: `${fishLabel} Modul B: fallender Druck wird belohnt, stabile Lage ist neutral, steigender Druck kostet Punkte.`
       },
       {
         label: 'Hydro-Modul',
         value: `${scoreDetails.subScores.hydrologie}`,
-        sub: isHecht ? '25% Gewicht' : '30% Gewicht',
+        sub: isBarsch ? 'folgt' : isHecht ? '25% Gewicht' : '30% Gewicht',
         icon: 'C',
-        info: isHecht
+        info: isBarsch
+          ? 'Barsch Modul C folgt mit der Scoring-Spezifikation.'
+          : isHecht
           ? 'Hecht Modul C: Tidenwinkel, geschaetzte Stroemung und Kenter-/Ablauffenster.'
           : 'Zander Modul C: Ablaufwasser, Kenterfenster und Stroemungskanten werden stark gewichtet.'
       },
       {
         label: 'Licht/Wind',
         value: `${scoreDetails.subScores.lichtWind}`,
-        sub: isHecht ? '15% Gewicht' : '25% Gewicht',
+        sub: isBarsch ? 'folgt' : isHecht ? '15% Gewicht' : '25% Gewicht',
         icon: 'D',
-        info: isHecht
+        info: isBarsch
+          ? 'Barsch Modul D folgt mit der Scoring-Spezifikation.'
+          : isHecht
           ? 'Hecht Modul D: Wolken, Windstaerke, Wind auf Ufer und Daemmerung werden kombiniert.'
           : 'Zander Modul D: Daemmerung, Nacht, Solunar, Mond, Wind und Regen werden zusammengefasst.'
       }

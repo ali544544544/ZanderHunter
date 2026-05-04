@@ -15,10 +15,11 @@ import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
 import HechtTaktikView from './components/HechtTaktikView';
 import { useUserSpots } from './hooks/useUserSpots';
+import type { TargetFish } from './utils/calculations';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jetzt' | 'spots' | 'koder' | 'forecast'>('jetzt');
-  const [targetFish, setTargetFish] = useState<'zander' | 'hecht'>('zander');
+  const [targetFish, setTargetFish] = useState<TargetFish>('zander');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { userSpots } = useUserSpots();
   const { score, loading, conditions, weather, pegel, tide, moon, hourlyScores, startHour, scoreDetails } = useAngelIndex(targetFish);
@@ -29,7 +30,7 @@ const App: React.FC = () => {
     }
   }, [loading, weather, pegel]);
 
-  const fishLabel = targetFish === 'hecht' ? 'Hecht' : 'Zander';
+  const fishLabel = targetFish === 'hecht' ? 'Hecht' : targetFish === 'barsch' ? 'Barsch' : 'Zander';
   const koder = conditions ? getKoderEmpfehlung(conditions, targetFish) : [];
   const topSpot = conditions ? SPOTS.map(s => ({...s, currentScore: calculateSpotScoreForFish(s, conditions, targetFish)})).sort((a, b) => b.currentScore - a.currentScore)[0] : null;
   const briefingText = conditions ? generateBriefing(conditions, topSpot, koder, targetFish, scoreDetails) : 'Lade Daten...';
@@ -46,12 +47,13 @@ const App: React.FC = () => {
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Zielfisch</span>
             <select
               value={targetFish}
-              onChange={(event) => setTargetFish(event.target.value as 'zander' | 'hecht')}
+              onChange={(event) => setTargetFish(event.target.value as TargetFish)}
               className="bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-100 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
               aria-label="Zielfisch auswahlen"
             >
               <option value="zander">Zander</option>
               <option value="hecht">Hecht</option>
+              <option value="barsch">Barsch</option>
             </select>
           </label>
           <div className="flex items-center gap-2">

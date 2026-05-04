@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { calculateHechtIndex, calculateZanderIndex, getMoonPhase, getSolunarStatus, getStromPhase, getTideOffset } from '../utils/calculations';
+import { calculateBarschIndex, calculateHechtIndex, calculateZanderIndex, getMoonPhase, getSolunarStatus, getStromPhase, getTideOffset } from '../utils/calculations';
 import type { AngelConditions, TargetFish } from '../utils/calculations';
 import type { TideEvent } from './useTide';
 
@@ -113,7 +113,11 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
             date: currentDate,
             shoreDirection: 90
           };
-          const scoreDetails = targetFish === 'hecht' ? calculateHechtIndex(scoreInput) : calculateZanderIndex(scoreInput);
+          const scoreDetails = targetFish === 'hecht'
+            ? calculateHechtIndex(scoreInput)
+            : targetFish === 'barsch'
+              ? calculateBarschIndex(scoreInput)
+              : calculateZanderIndex(scoreInput);
 
           dailyData.push({
             date: currentDate,

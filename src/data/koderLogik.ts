@@ -16,6 +16,9 @@ export function getKoderEmpfehlung(conditions: any, targetFish: TargetFish = 'za
   if (targetFish === 'hecht') {
     return getHechtKoderEmpfehlung(conditions);
   }
+  if (targetFish === 'barsch') {
+    return getBarschKoderEmpfehlung();
+  }
 
   const empfehlungen: KoderEmpfehlung[] = [];
   
@@ -118,7 +121,26 @@ function getHechtKoderEmpfehlung(conditions: any): KoderEmpfehlung[] {
   ];
 }
 
+function getBarschKoderEmpfehlung(): KoderEmpfehlung[] {
+  return [
+    {
+      priorität: 1,
+      name: 'Barsch-Setup folgt',
+      größe: 'folgt',
+      farbe: 'folgt',
+      gewicht: 'folgt',
+      technik: 'Barsch-spezifische Inhalte und Scoring folgen.',
+      wann: 'Nach Barsch-Spezifikation',
+      warum: 'Platzhalter, damit Barsch schon im Dashboard waehlbar ist.'
+    }
+  ];
+}
+
 export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpfehlung[], targetFish: TargetFish = 'zander', scoreDetails?: HechtScoreDetails | null): string {
+  if (targetFish === 'barsch') {
+    return 'Barsch ist jetzt im Zielfisch-Dropdown verfuegbar. Scoring, Taktik, Koeder und Fachinfos folgen mit der naechsten Spezifikation.';
+  }
+
   if (targetFish === 'hecht') {
     const parts: string[] = [];
     parts.push(`Hecht-Score ${scoreDetails?.total ?? '--'} mit ${scoreDetails?.rating ?? 'Live'}-Rating.`);
@@ -167,6 +189,15 @@ export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpf
 export function generateDynamicSpotAdvice(spot: any, conditions: any, targetFish: TargetFish = 'zander') {
   const local = getLocalConditions(spot, conditions);
   const isUserSpot = spot.id.startsWith('user-');
+
+  if (targetFish === 'barsch') {
+    return {
+      taktik: 'Barsch-spezifische Spot-Taktik folgt.',
+      koderTipp: 'Barsch-Koeder folgen',
+      bestePhase: 'Barsch-Modell folgt',
+      tideOffset: local.tideOffset
+    };
+  }
 
   if (targetFish === 'hecht') {
     const hasStructure = spot.struktur.some((s: string) => /buhne|kraut|röhricht|einlauf|kante/i.test(s));

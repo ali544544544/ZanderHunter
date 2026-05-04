@@ -149,7 +149,7 @@ export function getLocalConditions(spot: { lat: number, lng: number }, global: A
   };
 }
 
-export type TargetFish = 'zander' | 'hecht';
+export type TargetFish = 'zander' | 'hecht' | 'barsch';
 
 export interface HechtScoreInput extends AngelConditions {
   pressure?: number;
@@ -210,9 +210,11 @@ export function getHamburgPredatorRules(fish: TargetFish, date: Date = new Date(
 
   return {
     schonzeitAktiv,
-    entnahmefenster: '45-75 cm',
-    baglimit: 2,
-    hinweis: schonzeitAktiv ? 'SCHONZEIT AKTIV: gezieltes Angeln aussetzen.' : 'Fischerei frei nach Hamburger Regeln.'
+    entnahmefenster: fish === 'barsch' ? 'folgt' : '45-75 cm',
+    baglimit: fish === 'barsch' ? 0 : 2,
+    hinweis: fish === 'barsch'
+      ? 'Barsch-Regelwerk und Scoring folgen.'
+      : schonzeitAktiv ? 'SCHONZEIT AKTIV: gezieltes Angeln aussetzen.' : 'Fischerei frei nach Hamburger Regeln.'
   };
 }
 
@@ -444,6 +446,26 @@ export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetai
       ? 'Stroemungskante, Buhnenkopf oder Spundwand'
       : 'Tiefe Kante, Hafenbecken oder Schattenbereich',
     probability
+  };
+}
+
+export function calculateBarschIndex(input: HechtScoreInput): PredatorScoreDetails {
+  const zanderBase = calculateZanderIndex(input);
+
+  return {
+    ...zanderBase,
+    rating: 'FOLGT',
+    legal: getHamburgPredatorRules('barsch', input.date || new Date()),
+    primeWindow: 'Barsch-Scoring folgt',
+    topTactic: 'Barsch-Inhalte folgen',
+    hotspot: 'Barsch-Hotspots folgen',
+    probability: 'Barsch-Modell folgt',
+    subScores: {
+      temperatur: zanderBase.subScores.temperatur,
+      barometer: zanderBase.subScores.barometer,
+      hydrologie: zanderBase.subScores.hydrologie,
+      lichtWind: zanderBase.subScores.lichtWind
+    }
   };
 }
 

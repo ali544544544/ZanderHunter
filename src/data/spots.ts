@@ -191,7 +191,6 @@ export function calculateHechtSpotScore(spot: Spot, conditions: any, date: Date 
 }
 
 export function calculateSpotScoreForFish(spot: Spot, conditions: any, targetFish: TargetFish, date: Date = new Date()) {
-  return targetFish === 'hecht'
-    ? calculateHechtSpotScore(spot, conditions, date)
-    : calculateSpotScore(spot, conditions, date);
+  if (targetFish === 'hecht') return calculateHechtSpotScore(spot, conditions, date);
+  return calculateSpotScore(spot, conditions, date);
 }

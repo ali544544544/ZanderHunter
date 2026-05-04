@@ -15,12 +15,15 @@ interface HechtTaktikViewProps {
 const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, koder, scoreDetails, fishLabel = 'Hecht', targetFish = 'hecht' }) => {
   const legalClosed = scoreDetails?.legal.schonzeitAktiv;
   const isHecht = targetFish === 'hecht';
+  const isBarsch = targetFish === 'barsch';
 
   const rules = [
     {
       title: 'Temperatur',
       value: `${conditions?.wasserTemp ?? '--'}C`,
-      text: isHecht
+      text: isBarsch
+        ? 'Barsch-spezifische Temperaturstrategie folgt.'
+        : isHecht
         ? conditions?.wasserTemp < 8
           ? 'Kaltwasser: langsam, lange Pausen, Koeder im Sichtfeld halten.'
           : conditions?.wasserTemp <= 16
@@ -31,29 +34,37 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
           : conditions?.wasserTemp <= 18
             ? 'Komfortzone: Kanten aktiv abjiggen, auch Wobbler in der Daemmerung.'
             : 'Warmwasser: Sauerstoff, Stroemung und Schatten priorisieren.',
-      info: isHecht
+      info: isBarsch
+        ? 'Das finale Barsch-Temperaturmodul folgt mit der Fachspezifikation.'
+        : isHecht
         ? 'Temperatur bewertet den Stoffwechsel. Beim Hecht sind etwa 15C sehr stark, um 10C gibt es einen zweiten Aktivitaets-Peak.'
         : 'Temperatur bewertet die Zander-Komfortzone. 10-18C ist stark, darunter und darueber wird vorsichtiger gefischt.'
     },
     {
       title: 'Drucktrend',
       value: conditions?.luftdruckTrend || '--',
-      text: conditions?.luftdruckTrend === 'fallend'
+      text: isBarsch
+        ? 'Barsch-spezifische Drucklogik folgt.'
+        : conditions?.luftdruckTrend === 'fallend'
         ? 'Sanft fallender Druck triggert Such- und Fressphasen.'
         : 'Bei stabilem oder steigendem Druck langsamer fuehren und Struktur enger abfischen.',
-      info: 'Drucktrend vergleicht aktuellen Luftdruck mit der Historie. Sanft fallender Druck ist gut, schnelle Anstiege oder extreme Wechsel sind schlechter.'
+      info: isBarsch ? 'Das finale Barsch-Druckmodul folgt mit der Fachspezifikation.' : 'Drucktrend vergleicht aktuellen Luftdruck mit der Historie. Sanft fallender Druck ist gut, schnelle Anstiege oder extreme Wechsel sind schlechter.'
     },
     {
       title: 'Licht & Wind',
       value: `${weather?.cloudCover ?? '--'}% Wolken`,
-      text: isHecht
+      text: isBarsch
+        ? 'Barsch-spezifische Licht/Wind-Logik folgt.'
+        : isHecht
         ? weather?.cloudCover > 60 && weather?.windSpeed > 10
           ? 'Wolken plus Wind auf Ufer: flache Kanten, Kraut und Einlaeufe priorisieren.'
           : 'Bei Sonne und wenig Wind tiefer, schattiger und natuerlicher fischen.'
         : conditions?.tageszeit === 'dämmerung' || conditions?.tageszeit === 'nacht'
           ? 'Restlicht nutzen: Uferkanten, Spundwaende und flachere Jagdzonen abwerfen.'
           : 'Tagsueber tiefer, schattiger und langsamer am Grund arbeiten.',
-      info: isHecht
+      info: isBarsch
+        ? 'Das finale Barsch-Modul fuer Licht, Wind und Tageszeit folgt mit der Fachspezifikation.'
+        : isHecht
         ? 'Licht und Wind werden kombiniert. Wolken und Wind auf die Uferkante geben Hechten Deckung und druecken Beutefische in Reichweite.'
         : 'Beim Zander zaehlen Restlicht, Nachtfenster, Mond/Solunar und kontrollierbarer Wind besonders stark.'
     }
