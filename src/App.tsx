@@ -128,19 +128,19 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2">
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2.5">
               <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Köder</p>
-              <p className="truncate text-xs font-bold text-slate-100">{primaryKoder?.name ?? '--'}</p>
-              <p className="truncate text-[10px] font-semibold text-slate-500">{primaryKoder?.farbe ?? 'Live-Daten'}</p>
+              <p className="text-sm font-black leading-snug text-slate-100">{primaryKoder?.name ?? '--'}</p>
+              <p className="text-xs font-semibold leading-snug text-slate-500">{primaryKoder?.farbe ?? 'Live-Daten'}</p>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2.5">
               <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Führung</p>
-              <p className="line-clamp-2 text-xs font-bold leading-snug text-slate-100">{quickTactic ?? '--'}</p>
+              <p className="text-sm font-bold leading-snug text-slate-100">{quickTactic ?? '--'}</p>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2.5">
               <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Standplatz</p>
-              <p className="line-clamp-2 text-xs font-bold leading-snug text-slate-100">{quickHotspot ?? '--'}</p>
+              <p className="text-sm font-bold leading-snug text-slate-100">{quickHotspot ?? '--'}</p>
             </div>
           </div>
         </section>
