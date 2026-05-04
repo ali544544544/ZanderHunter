@@ -130,13 +130,12 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
     const rect = svgRef.current.getBoundingClientRect();
     const svgX = ((clientX - rect.left) / rect.width) * W;
     return svgX;
-  }, [W]);
+  }, []);
 
   const handleInteraction = useCallback((clientX: number) => {
     const svgX = getSvgX(clientX);
     const hourIdx = xToHour(svgX);
     setActiveHourIndex(hourIdx);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getSvgX]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
