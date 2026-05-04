@@ -13,7 +13,7 @@ const DailyForecastChart: React.FC<DailyForecastChartProps> = ({ hourlyScores, s
   const [activeHourIndex, setActiveHourIndex] = useState<number | null>(null);
   const [touchActive, setTouchActive] = useState(false);
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
   const chartStart = useMemo(() => new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0), [now, startHour]);
 
   const sunriseHour = useMemo(() => {
