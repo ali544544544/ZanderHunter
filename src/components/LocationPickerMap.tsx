@@ -18,8 +18,9 @@ interface DragState {
 }
 
 const tileSize = 256;
-const zoomLevels = [11, 12, 13, 14, 15, 16];
-const mapHeight = 224;
+const minZoom = 5;
+const maxZoom = 17;
+const mapHeight = 280;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -56,8 +57,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const [mapWidth, setMapWidth] = useState(360);
-  const [zoomIndex, setZoomIndex] = useState(2);
-  const zoom = zoomLevels[zoomIndex];
+  const [zoom, setZoom] = useState(12);
   const [mapCenter, setMapCenter] = useState(center);
   const [selectedPoint, setSelectedPoint] = useState(center);
 
@@ -131,8 +131,13 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     setMapCenter({ lat, lng });
   };
 
+  const selectCenter = () => {
+    setSelectedPoint(mapCenter);
+    onSelect({ ...mapCenter, label: locationLabel(mapCenter.lat, mapCenter.lng) });
+  };
+
   const changeZoom = (direction: number) => {
-    setZoomIndex((value) => clamp(value + direction, 0, zoomLevels.length - 1));
+    setZoom((value) => clamp(value + direction, minZoom, maxZoom));
   };
 
   useEffect(() => {
@@ -145,7 +150,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       const direction = event.deltaY > 0 ? -1 : 1;
-      setZoomIndex((value) => clamp(value + direction, 0, zoomLevels.length - 1));
+      setZoom((value) => clamp(value + direction, minZoom, maxZoom));
     };
 
     updateWidth();
@@ -162,7 +167,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     <div className="space-y-2">
       <div
         ref={mapRef}
-        className="relative h-56 touch-none overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
+        className="relative h-[280px] touch-none overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
         onPointerDown={(event) => {
           if (event.button !== 0) {
             return;
@@ -233,45 +238,52 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           />
         ))}
         <div className="pointer-events-none absolute inset-0 bg-slate-950/5"></div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 bg-slate-950/20 shadow-lg shadow-slate-950/60"></div>
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/85 bg-slate-950/20 shadow-lg shadow-slate-950/60">
+          <span className="absolute left-1/2 top-1/2 h-0.5 w-10 -translate-x-1/2 -translate-y-1/2 bg-white/85"></span>
+          <span className="absolute left-1/2 top-1/2 h-10 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-white/85"></span>
+        </div>
         <div
           className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-400 bg-blue-400/25 shadow-lg shadow-blue-950"
           style={selectedMarkerStyle}
         ></div>
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-slate-950/85 px-2 py-1 text-[9px] font-bold text-slate-300">
-          Ziehen, Mausrad, Doppelklick
-        </div>
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[9px] font-semibold text-slate-500">
-          Karte: OpenStreetMap - Zoom {zoom}
-        </p>
-        <div className="flex gap-1">
+        <div className="absolute right-2 top-2 flex flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950/90 shadow-lg shadow-slate-950/40">
           <button
             type="button"
-            onClick={() => {
-              setSelectedPoint(mapCenter);
-              onSelect({ ...mapCenter, label: locationLabel(mapCenter.lat, mapCenter.lng) });
-            }}
-            className="rounded border border-blue-500/40 bg-blue-500/15 px-2 py-1 text-[10px] font-black text-blue-300"
+            onClick={() => changeZoom(1)}
+            className="h-10 w-10 border-b border-slate-700 text-lg font-black text-slate-100 transition-colors hover:bg-slate-800"
+            aria-label="Karte reinzoomen"
           >
-            Mitte
+            +
           </button>
           <button
             type="button"
             onClick={() => changeZoom(-1)}
-            className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] font-black text-slate-200"
+            className="h-10 w-10 text-lg font-black text-slate-100 transition-colors hover:bg-slate-800"
+            aria-label="Karte rauszoomen"
           >
             -
           </button>
+        </div>
+        <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
+          <div className="pointer-events-none rounded bg-slate-950/85 px-2 py-1 text-[9px] font-bold text-slate-300">
+            Ziehen, Mausrad, Doppelklick
+          </div>
           <button
             type="button"
-            onClick={() => changeZoom(1)}
-            className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] font-black text-slate-200"
+            onClick={selectCenter}
+            className="rounded-lg border border-blue-500/40 bg-blue-500/90 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-blue-950/40"
           >
-            +
+            Punkt setzen
           </button>
         </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-2 py-1.5">
+        <p className="text-[9px] font-semibold text-slate-500">
+          OpenStreetMap - Zoom {zoom}
+        </p>
+        <p className="text-[9px] font-semibold text-slate-500">
+          {mapCenter.lat.toFixed(4)}, {mapCenter.lng.toFixed(4)}
+        </p>
       </div>
     </div>
   );
