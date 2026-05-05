@@ -44,6 +44,7 @@ const App: React.FC = () => {
   const [gpsEnabled, setGpsEnabled] = useState(false);
   const [manualLocation, setManualLocation] = useState<SearchLocation | null>(null);
   const [locationQuery, setLocationQuery] = useState('');
+  const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const { position: gpsPosition, loading: gpsLoading, error: gpsError } = useGeolocation(gpsEnabled);
   const {
     results: locationResults,
@@ -123,6 +124,7 @@ const App: React.FC = () => {
   const clearManualLocation = () => {
     setManualLocation(null);
     setLocationQuery('');
+    setLocationSearchOpen(false);
     clearLocationSearch();
   };
 
@@ -136,33 +138,6 @@ const App: React.FC = () => {
             </p>
             <h1 className="text-3xl font-black text-white tracking-tight">ZanderHunter</h1>
           </div>
-          <div className="flex items-start gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                setGpsEnabled((enabled) => !enabled);
-                setManualLocation(null);
-                clearLocationSearch();
-              }}
-              className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors ${
-                gpsEnabled
-                  ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
-                  : 'border-slate-800 bg-slate-900/70 text-slate-500 hover:text-slate-200'
-              }`}
-              aria-pressed={gpsEnabled}
-            >
-              {gpsEnabled ? 'GPS aus' : 'GPS an'}
-            </button>
-            {manualLocation && (
-              <button
-                type="button"
-                onClick={clearManualLocation}
-                className="rounded-lg border border-blue-500/40 bg-blue-500/15 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-blue-300 transition-colors"
-              >
-                Ort aus
-              </button>
-            )}
-          </div>
         </div>
 
         <section className="card p-3">
@@ -174,38 +149,79 @@ const App: React.FC = () => {
                 {gpsError && <span className="ml-1 text-red-400">Fehler</span>}
               </span>
             </div>
-            <form onSubmit={handleLocationSearch} className="flex gap-2">
-              <input
-                value={locationQuery}
-                onChange={(event) => setLocationQuery(event.target.value)}
-                placeholder="Ort oder Gewaesser suchen"
-                className="min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-900/80 px-2.5 py-2 text-xs font-semibold text-slate-100 outline-none placeholder:text-slate-600 focus:border-blue-500/60"
-              />
+            <div className="grid grid-cols-2 gap-2">
               <button
-                type="submit"
-                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-200 transition-colors hover:bg-slate-700"
+                type="button"
+                onClick={() => {
+                  setGpsEnabled((enabled) => !enabled);
+                  setManualLocation(null);
+                  setLocationSearchOpen(false);
+                  clearLocationSearch();
+                }}
+                className={`rounded-lg border px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors ${
+                  gpsEnabled
+                    ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
+                    : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
+                }`}
+                aria-pressed={gpsEnabled}
               >
-                {locationLoading ? '...' : 'Suchen'}
+                {gpsEnabled ? 'GPS aus' : 'GPS an'}
               </button>
-            </form>
-            {(locationError || locationResults.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setLocationSearchOpen((open) => !open)}
+                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-200 transition-colors hover:bg-slate-700"
+                aria-expanded={locationSearchOpen}
+              >
+                {locationSearchOpen ? 'Suche zu' : 'Ort suchen'}
+              </button>
+            </div>
+            {manualLocation && (
+              <button
+                type="button"
+                onClick={clearManualLocation}
+                className="w-full rounded-lg border border-blue-500/40 bg-blue-500/15 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-blue-300 transition-colors"
+              >
+                Ort aus
+              </button>
+            )}
+            {locationSearchOpen && (
               <div className="space-y-1">
-                {locationError && <p className="text-[10px] font-bold text-red-400">{locationError}</p>}
-                {locationResults.map((result) => (
+                <form onSubmit={handleLocationSearch} className="flex gap-2">
+                  <input
+                    value={locationQuery}
+                    onChange={(event) => setLocationQuery(event.target.value)}
+                    placeholder="Ort oder Gewaesser suchen"
+                    className="min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-900/80 px-2.5 py-2 text-xs font-semibold text-slate-100 outline-none placeholder:text-slate-600 focus:border-blue-500/60"
+                  />
                   <button
-                    key={result.id}
-                    type="button"
-                    onClick={() => {
-                      setManualLocation(result);
-                      setGpsEnabled(false);
-                      setLocationQuery(result.label.split(',')[0]);
-                      clearLocationSearch();
-                    }}
-                    className="block w-full rounded-md border border-slate-800 bg-slate-900/70 px-2 py-1.5 text-left text-[10px] font-semibold leading-snug text-slate-300 transition-colors hover:border-blue-500/50 hover:text-slate-100"
+                    type="submit"
+                    className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-200 transition-colors hover:bg-slate-700"
                   >
-                    {result.label}
+                    {locationLoading ? '...' : 'Suchen'}
                   </button>
-                ))}
+                </form>
+                {(locationError || locationResults.length > 0) && (
+                  <div className="space-y-1">
+                    {locationError && <p className="text-[10px] font-bold text-red-400">{locationError}</p>}
+                    {locationResults.map((result) => (
+                      <button
+                        key={result.id}
+                        type="button"
+                        onClick={() => {
+                          setManualLocation(result);
+                          setGpsEnabled(false);
+                          setLocationQuery(result.label.split(',')[0]);
+                          setLocationSearchOpen(false);
+                          clearLocationSearch();
+                        }}
+                        className="block w-full rounded-md border border-slate-800 bg-slate-900/70 px-2 py-1.5 text-left text-[10px] font-semibold leading-snug text-slate-300 transition-colors hover:border-blue-500/50 hover:text-slate-100"
+                      >
+                        {result.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
