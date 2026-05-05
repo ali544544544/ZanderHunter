@@ -4,6 +4,7 @@ import { usePegel } from './usePegel';
 import { useTide } from './useTide';
 import { useSolunar } from './useSolunar';
 import { useMoon } from './useMoon';
+import { useWaterProfile } from './useWaterProfile';
 import { calculateBarschIndex, calculateHechtIndex, calculateZanderIndex, getStromPhase, getSolunarStatus } from '../utils/calculations';
 import type { AngelConditions, TargetFish } from '../utils/calculations';
 
@@ -34,6 +35,7 @@ export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 5
   const tide = useTide();
   const solunar = useSolunar(lat, lng);
   const moon = useMoon();
+  const waterProfile = useWaterProfile(lat, lng);
 
   return useMemo(() => {
   const isLoading = weather.loading || pegel.loading || tide.loading;
@@ -49,7 +51,11 @@ export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 5
       moon: null,
       hourlyScores: [],
       startHour: undefined,
-      scoreDetails: null
+      scoreDetails: null,
+      waterProfile: waterProfile.profile,
+      waterProfileLoading: waterProfile.loading,
+      waterProfileError: waterProfile.error,
+      refreshWaterProfile: waterProfile.refresh
     };
   }
 
@@ -102,7 +108,9 @@ export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 5
     date: now,
     shoreDirection: 90,
     secchiCm,
-    structureType: 'Spundwand'
+    structureType: 'Spundwand',
+    waterProfile: waterProfile.profile,
+    targetFish
   };
 
   const scoreDetails = getScoreDetails(targetFish, baseScoreInput);
@@ -163,7 +171,9 @@ export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 5
       date: hTime,
       shoreDirection: 90,
       secchiCm,
-      structureType: 'Spundwand'
+      structureType: 'Spundwand',
+      waterProfile: waterProfile.profile,
+      targetFish
     };
     hourlyScores.push(getScoreDetails(targetFish, hScoreInput).total);
   }
@@ -178,7 +188,11 @@ export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 5
     moon,
     hourlyScores,
     startHour,
-    scoreDetails
+    scoreDetails,
+    waterProfile: waterProfile.profile,
+    waterProfileLoading: waterProfile.loading,
+    waterProfileError: waterProfile.error,
+    refreshWaterProfile: waterProfile.refresh
   };
   }, [
     moon,
@@ -191,6 +205,10 @@ export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 5
     tide.events,
     tide.loading,
     weather.data,
-    weather.loading
+    weather.loading,
+    waterProfile.error,
+    waterProfile.loading,
+    waterProfile.profile,
+    waterProfile.refresh
   ]);
 }

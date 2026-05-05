@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { calculateBarschIndex, calculateHechtIndex, calculateZanderIndex, getMoonPhase, getSolunarStatus, getStromPhase, getTideOffset } from '../utils/calculations';
 import type { AngelConditions, TargetFish } from '../utils/calculations';
 import type { TideEvent } from './useTide';
+import { useWaterProfile } from './useWaterProfile';
 
 export interface DailyForecast {
   date: Date;
@@ -27,6 +28,7 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
   const [forecast, setForecast] = useState<DailyForecast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const waterProfile = useWaterProfile(lat, lng);
 
   useEffect(() => {
     async function fetchForecast() {
@@ -114,7 +116,9 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
             sunrise: dayWeather.sunrise,
             sunset: dayWeather.sunset,
             date: currentDate,
-            shoreDirection: 90
+            shoreDirection: 90,
+            waterProfile: waterProfile.profile,
+            targetFish
           };
           const scoreDetails = targetFish === 'hecht'
             ? calculateHechtIndex(scoreInput)
@@ -142,7 +146,7 @@ export function useForecast(lat: number = 53.55, lng: number = 9.99, targetFish:
     }
 
     fetchForecast();
-  }, [lat, lng, targetFish]);
+  }, [lat, lng, targetFish, waterProfile.profile]);
 
   return { forecast, loading, error };
 }

@@ -13,6 +13,7 @@ import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
 import HechtTaktikView from './components/HechtTaktikView';
 import LocationPickerMap from './components/LocationPickerMap';
+import { WaterProfileCard } from './components/WaterProfileCard';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useLocationSearch } from './hooks/useLocationSearch';
 import { useUserSpots } from './hooks/useUserSpots';
@@ -74,6 +75,10 @@ const App: React.FC = () => {
     hourlyScores,
     startHour,
     scoreDetails,
+    waterProfile,
+    waterProfileLoading,
+    waterProfileError,
+    refreshWaterProfile,
   } = useAngelIndex(targetFish, activeLocation.lat, activeLocation.lng);
 
   const headerDate = useMemo(
@@ -314,6 +319,12 @@ const App: React.FC = () => {
         {activeTab === 'jetzt' && (
           <>
             <AngelIndex score={score} loading={loading} fishLabel={fishLabel} scoreDetails={scoreDetails} />
+            <WaterProfileCard
+              profile={waterProfile}
+              loading={waterProfileLoading}
+              error={waterProfileError}
+              onRefresh={refreshWaterProfile}
+            />
             {!loading && briefingText && <Briefing text={briefingText} fishLabel={fishLabel} />}
             {!loading && hourlyScores && hourlyScores.length > 0 && startHour !== undefined && (
               <DailyForecastChart

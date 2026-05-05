@@ -1,4 +1,5 @@
 import SunCalc from 'suncalc';
+import type { DataQuality, FishSpecies, WaterBodyProfile } from '../types/waterData';
 
 export interface AngelConditions {
   stromPhase: 'ablauf' | 'auflauf' | 'kenter' | 'stagnation';
@@ -167,6 +168,8 @@ export interface HechtScoreInput extends AngelConditions {
   oxygen?: number;
   structureType?: string;
   depth?: number;
+  waterProfile?: WaterBodyProfile | null;
+  targetFish?: TargetFish;
 }
 
 export interface HechtScoreDetails {
@@ -185,6 +188,12 @@ export interface HechtScoreDetails {
     entnahmefenster: string;
     baglimit: number | null;
     hinweis: string;
+  };
+  waterProfile?: {
+    name: string;
+    dataQuality: DataQuality;
+    populationConfidence: number | null;
+    sources: string[];
   };
   primeWindow: string;
   topTactic: string;
@@ -220,6 +229,109 @@ export function getHamburgPredatorRules(fish: TargetFish, date: Date = new Date(
     hinweis: fish === 'barsch'
       ? 'Keine generelle Barsch-Schonzeit in ASV-Hamburg-Gewaessern. Lokale Kunstkoederverbote waehrend Raubfisch-Schonzeiten beachten.'
       : schonzeitAktiv ? 'SCHONZEIT AKTIV: gezieltes Angeln aussetzen.' : 'Fischerei frei nach Hamburger Regeln.'
+  };
+}
+
+function isMonthDayInWindow(date: Date, start: string, end: string) {
+  const [startMonth, startDay] = start.split('-').map(Number);
+  const [endMonth, endDay] = end.split('-').map(Number);
+  const currentValue = (date.getMonth() + 1) * 100 + date.getDate();
+  const startValue = startMonth * 100 + startDay;
+  const endValue = endMonth * 100 + endDay;
+
+  if (startValue <= endValue) {
+    return currentValue >= startValue && currentValue <= endValue;
+  }
+
+  return currentValue >= startValue || currentValue <= endValue;
+}
+
+function getPopulationConfidence(profile: WaterBodyProfile | null | undefined, fish: TargetFish) {
+  return profile?.species.find((entry) => entry.species === fish)?.confidence ?? null;
+}
+
+function adjustScoreForWaterProfile(total: number, profile: WaterBodyProfile | null | undefined, fish: TargetFish) {
+  if (!profile) return total;
+
+  const confidence = getPopulationConfidence(profile, fish);
+  if (confidence === null) {
+    if (profile.dataQuality === 'high' || profile.dataQuality === 'medium') {
+      return Math.round(clamp(total * 0.82));
+    }
+    return total;
+  }
+
+  const multiplier = 0.86 + confidence * 0.28;
+  const directBonus = (confidence - 0.5) * 10;
+  return Math.round(clamp(total * multiplier + directBonus));
+}
+
+function getProfileLegalOverride(profile: WaterBodyProfile | null | undefined, fish: TargetFish, date: Date) {
+  if (!profile?.regulations) return null;
+
+  const species = fish as FishSpecies;
+  const closedSeason = profile.regulations.closed_seasons?.find((season) => (
+    season.species === species && isMonthDayInWindow(date, season.start, season.end)
+  ));
+  const sizeLimit = profile.regulations.size_limits?.find((limit) => limit.species === species);
+  const bagLimit = profile.regulations.bag_limits?.find((limit) => limit.species === species);
+
+  return {
+    closedSeason,
+    sizeLimit,
+    bagLimit,
+    permitRequired: profile.regulations.permit_required,
+  };
+}
+
+function applyWaterProfileContext(
+  input: HechtScoreInput,
+  fish: TargetFish,
+  total: number,
+  confidence: number,
+  rules: ReturnType<typeof getHamburgPredatorRules>
+) {
+  const profile = input.waterProfile;
+  if (!profile) {
+    return {
+      total,
+      confidence,
+      legal: rules,
+      waterProfile: undefined,
+      populationConfidence: null as number | null,
+    };
+  }
+
+  const adjustedTotal = adjustScoreForWaterProfile(total, profile, fish);
+  const populationConfidence = getPopulationConfidence(profile, fish);
+  const legalOverride = getProfileLegalOverride(profile, fish, input.date || new Date());
+  const qualityAdjustment = profile.dataQuality === 'high' ? -1 : profile.dataQuality === 'unknown' ? 1 : 0;
+  const confidenceMargin = Math.round(clamp(confidence + qualityAdjustment, 3, 10));
+  const profileLegal = {
+    ...rules,
+    schonzeitAktiv: rules.schonzeitAktiv || Boolean(legalOverride?.closedSeason),
+    entnahmefenster: legalOverride?.sizeLimit
+      ? `ab ${legalOverride.sizeLimit.min_cm} cm`
+      : rules.entnahmefenster,
+    baglimit: legalOverride?.bagLimit?.daily_limit ?? rules.baglimit,
+    hinweis: legalOverride?.closedSeason
+      ? `SCHONZEIT AKTIV: ${fish} im Gewaesserprofil gesperrt.`
+      : legalOverride?.permitRequired
+        ? `${rules.hinweis} Erlaubniskarte fuer dieses Gewaesser pruefen.`
+        : rules.hinweis,
+  };
+
+  return {
+    total: adjustedTotal,
+    confidence: confidenceMargin,
+    legal: profileLegal,
+    waterProfile: {
+      name: profile.name,
+      dataQuality: profile.dataQuality,
+      populationConfidence,
+      sources: profile.sources,
+    },
+    populationConfidence,
   };
 }
 
@@ -424,15 +536,19 @@ export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetai
   const raw = 0.25 * temperatur + 0.2 * barometerResult.score + 0.3 * hydrologie + 0.25 * lichtWind;
   const total = Math.round(clamp(raw * multiplier));
   const confidence = Math.round(clamp(9 - 0.05 * total, 5, 9));
-  const biologicalProbability = Math.round(clamp(14 + total * 0.62, 5, 78));
-  const probability = rules.schonzeitAktiv
+  const waterContext = applyWaterProfileContext(input, 'zander', total, confidence, rules);
+  const biologicalProbability = Math.round(clamp(14 + waterContext.total * 0.62, 5, 78));
+  const populationSuffix = waterContext.populationConfidence !== null
+    ? `, Bestand ${Math.round(waterContext.populationConfidence * 100)}%`
+    : '';
+  const probability = waterContext.legal.schonzeitAktiv
     ? `${biologicalProbability}% biologisch, Schonzeit beachten`
-    : `${biologicalProbability}% fuer Zanderkontakt`;
+    : `${biologicalProbability}% fuer Zanderkontakt${populationSuffix}`;
 
   return {
-    total,
-    confidence,
-    rating: getHechtRating(total),
+    total: waterContext.total,
+    confidence: waterContext.confidence,
+    rating: getHechtRating(waterContext.total),
     subScores: {
       temperatur: Math.round(temperatur),
       barometer: Math.round(barometerResult.score),
@@ -440,7 +556,8 @@ export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetai
       lichtWind: Math.round(lichtWind)
     },
     interactionBonus: Math.round((multiplier - 1) * 100),
-    legal: rules,
+    legal: waterContext.legal,
+    waterProfile: waterContext.waterProfile,
     primeWindow: getZanderPrimeWindow(input),
     topTactic: input.wasserTemp < 8
       ? 'Langsame Grundnaehe mit kleinen Shads'
@@ -479,16 +596,21 @@ export function calculateBarschIndex(input: HechtScoreInput): PredatorScoreDetai
 
   const total = Math.round(clamp(raw * multiplier));
   const confidence = Math.round(clamp(7 - 0.04 * total, 3, 7));
-  const probability = `${Math.round(clamp(10 + total * 0.75, 5, 85))}% fuer Barschkontakt`;
-  const activity = getBarschActivity(total);
+  const waterContext = applyWaterProfileContext(input, 'barsch', total, confidence, rules);
+  const populationSuffix = waterContext.populationConfidence !== null
+    ? `, Bestand ${Math.round(waterContext.populationConfidence * 100)}%`
+    : '';
+  const probability = `${Math.round(clamp(10 + waterContext.total * 0.75, 5, 85))}% fuer Barschkontakt${populationSuffix}`;
+  const activity = getBarschActivity(waterContext.total);
 
   return {
-    total,
-    confidence,
-    rating: total >= 95 ? 'PERFEKT' : getHechtRating(total),
-    legal: rules,
+    total: waterContext.total,
+    confidence: waterContext.confidence,
+    rating: waterContext.total >= 95 ? 'PERFEKT' : getHechtRating(waterContext.total),
+    legal: waterContext.legal,
+    waterProfile: waterContext.waterProfile,
     primeWindow: getBarschPrimeWindow(input, hydroResult),
-    topTactic: getBarschTactic(input, total, lightResult.secchi),
+    topTactic: getBarschTactic(input, waterContext.total, lightResult.secchi),
     hotspot: hydroResult.hotspot,
     probability: `${probability} | ${activity}`,
     interactionBonus: Math.round((multiplier - 1) * 100),
@@ -650,15 +772,19 @@ export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
   const uncappedTotal = raw * multiplier;
   const total = Math.round(clamp(uncappedTotal));
   const confidence = Math.round(clamp(8 - 0.05 * total, 4, 8));
-  const biologicalProbability = Math.round(clamp(18 + total * 0.67, 5, 85));
-  const probability = rules.schonzeitAktiv
+  const waterContext = applyWaterProfileContext(input, 'hecht', total, confidence, rules);
+  const biologicalProbability = Math.round(clamp(18 + waterContext.total * 0.67, 5, 85));
+  const populationSuffix = waterContext.populationConfidence !== null
+    ? `, Bestand ${Math.round(waterContext.populationConfidence * 100)}%`
+    : '';
+  const probability = waterContext.legal.schonzeitAktiv
     ? `${biologicalProbability}% biologisch, Schonzeit beachten`
-    : `${biologicalProbability}% fuer Hecht >60cm`;
+    : `${biologicalProbability}% fuer Hecht >60cm${populationSuffix}`;
 
   return {
-    total,
-    confidence,
-    rating: getHechtRating(total),
+    total: waterContext.total,
+    confidence: waterContext.confidence,
+    rating: getHechtRating(waterContext.total),
     subScores: {
       temperatur: Math.round(temperatur),
       barometer: Math.round(barometerResult.score),
@@ -666,7 +792,8 @@ export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
       lichtWind: Math.round(lightWindResult.score)
     },
     interactionBonus: Math.round((multiplier - 1) * 100),
-    legal: rules,
+    legal: waterContext.legal,
+    waterProfile: waterContext.waterProfile,
     primeWindow: getPrimeWindow(input),
     topTactic: input.wasserTemp < 8
       ? 'Langsam gefuehrter Jerkbait oder grosser Softbait'

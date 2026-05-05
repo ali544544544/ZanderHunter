@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { calculateAngelIndex, getMoonPhase, getStromPhase } from '../utils/calculations';
+import { calculateAngelIndex, calculateZanderIndex, getMoonPhase, getStromPhase } from '../utils/calculations';
+import type { HechtScoreInput } from '../utils/calculations';
+import type { WaterBodyProfile } from '../types/waterData';
 
 describe('calculateAngelIndex', () => {
   it('gibt hohen Score bei optimalen Bedingungen', () => {
@@ -78,5 +80,64 @@ describe('getStromPhase', () => {
       { time: new Date('2025-04-10T18:30:00'), type: 'NW' },
     ];
     expect(getStromPhase(now, tides)).toBe('kenter');
+  });
+});
+
+describe('water profile score context', () => {
+  const baseInput: HechtScoreInput = {
+    stromPhase: 'ablauf',
+    luftdruckTrend: 'fallend',
+    wasserTemp: 14,
+    tageszeit: 'dÃ¤mmerung',
+    solunar: 'major',
+    mondPhase: 'neumond',
+    windSpeed: 10,
+    niederschlag48h: 8,
+    pressure: 1010,
+    pressure3hAgo: 1014,
+    date: new Date('2026-06-15T20:00:00'),
+  };
+
+  function createProfile(confidence: number): WaterBodyProfile {
+    return {
+      id: `test-${confidence}`,
+      name: 'Testsee',
+      type: 'lake',
+      latitude: 53.5,
+      longitude: 9.9,
+      region: 'Hamburg',
+      dataQuality: 'high',
+      sources: ['user_report'],
+      lastUpdated: new Date('2026-06-01'),
+      species: [
+        {
+          species: 'zander',
+          confidence,
+          source: 'user_report',
+          lastUpdated: new Date('2026-06-01'),
+        },
+      ],
+    };
+  }
+
+  it('bewertet guten Bestand hoeher als schwachen Bestand', () => {
+    const strong = calculateZanderIndex({ ...baseInput, waterProfile: createProfile(0.9) });
+    const weak = calculateZanderIndex({ ...baseInput, waterProfile: createProfile(0.1) });
+
+    expect(strong.total).toBeGreaterThan(weak.total);
+    expect(strong.probability).toContain('Bestand 90%');
+  });
+
+  it('uebernimmt Schonzeit aus dem Gewaesserprofil', () => {
+    const profile = createProfile(0.9);
+    profile.regulations = {
+      permit_required: true,
+      closed_seasons: [{ species: 'zander', start: '06-01', end: '06-30' }],
+    };
+
+    const result = calculateZanderIndex({ ...baseInput, waterProfile: profile });
+
+    expect(result.legal.schonzeitAktiv).toBe(true);
+    expect(result.legal.hinweis).toContain('SCHONZEIT AKTIV');
   });
 });
