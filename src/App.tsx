@@ -13,8 +13,10 @@ import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
 import HechtTaktikView from './components/HechtTaktikView';
 import { useGeolocation } from './hooks/useGeolocation';
+import { useLocationSearch } from './hooks/useLocationSearch';
 import { useUserSpots } from './hooks/useUserSpots';
 import type { TargetFish } from './utils/calculations';
+import type { SearchLocation } from './hooks/useLocationSearch';
 
 type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast';
 
@@ -40,10 +42,23 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('jetzt');
   const [targetFish, setTargetFish] = useState<TargetFish>('zander');
   const [gpsEnabled, setGpsEnabled] = useState(false);
+  const [manualLocation, setManualLocation] = useState<SearchLocation | null>(null);
+  const [locationQuery, setLocationQuery] = useState('');
   const { position: gpsPosition, loading: gpsLoading, error: gpsError } = useGeolocation(gpsEnabled);
-  const activeLocation = gpsEnabled && gpsPosition
-    ? { lat: normalizeCoordinate(gpsPosition.lat), lng: normalizeCoordinate(gpsPosition.lng) }
-    : defaultLocation;
+  const {
+    results: locationResults,
+    loading: locationLoading,
+    error: locationError,
+    search: searchLocation,
+    clear: clearLocationSearch,
+  } = useLocationSearch();
+
+  const activeLocation = manualLocation
+    ? { lat: normalizeCoordinate(manualLocation.lat), lng: normalizeCoordinate(manualLocation.lng) }
+    : gpsEnabled && gpsPosition
+      ? { lat: normalizeCoordinate(gpsPosition.lat), lng: normalizeCoordinate(gpsPosition.lng) }
+      : defaultLocation;
+
   const { userSpots } = useUserSpots();
   const {
     score,
@@ -90,13 +105,26 @@ const App: React.FC = () => {
   const primaryKoder = koder[0];
   const quickTactic = scoreDetails?.topTactic || primaryKoder?.technik;
   const quickHotspot = scoreDetails?.hotspot || topSpot?.name;
-  const locationLabel = gpsEnabled
-    ? gpsPosition
-      ? `GPS ±${Math.round(gpsPosition.accuracy)} m`
-      : gpsLoading
-        ? 'GPS sucht...'
-        : 'GPS aktiv'
-    : 'Hamburg';
+  const locationLabel = manualLocation
+    ? manualLocation.label.split(',').slice(0, 2).join(', ')
+    : gpsEnabled
+      ? gpsPosition
+        ? `GPS +/-${Math.round(gpsPosition.accuracy)} m`
+        : gpsLoading
+          ? 'GPS sucht...'
+          : 'GPS aktiv'
+      : 'Hamburg';
+
+  const handleLocationSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    searchLocation(locationQuery);
+  };
+
+  const clearManualLocation = () => {
+    setManualLocation(null);
+    setLocationQuery('');
+    clearLocationSearch();
+  };
 
   return (
     <div className="min-h-screen pb-32 max-w-lg mx-auto px-4 pt-5">
@@ -108,10 +136,14 @@ const App: React.FC = () => {
             </p>
             <h1 className="text-3xl font-black text-white tracking-tight">ZanderHunter</h1>
           </div>
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex items-start gap-1">
             <button
               type="button"
-              onClick={() => setGpsEnabled((enabled) => !enabled)}
+              onClick={() => {
+                setGpsEnabled((enabled) => !enabled);
+                setManualLocation(null);
+                clearLocationSearch();
+              }}
               className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors ${
                 gpsEnabled
                   ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
@@ -121,16 +153,61 @@ const App: React.FC = () => {
             >
               {gpsEnabled ? 'GPS aus' : 'GPS an'}
             </button>
+            {manualLocation && (
+              <button
+                type="button"
+                onClick={clearManualLocation}
+                className="rounded-lg border border-blue-500/40 bg-blue-500/15 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-blue-300 transition-colors"
+              >
+                Ort aus
+              </button>
+            )}
           </div>
         </div>
 
         <section className="card p-3">
-          <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/35 px-2.5 py-2">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Standort</span>
-            <span className="text-right text-[10px] font-bold text-slate-300">
-              {locationLabel}
-              {gpsError && <span className="ml-1 text-red-400">Fehler</span>}
-            </span>
+          <div className="mb-3 space-y-2 rounded-lg border border-slate-800 bg-slate-950/35 p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Standort</span>
+              <span className="text-right text-[10px] font-bold text-slate-300">
+                {locationLabel}
+                {gpsError && <span className="ml-1 text-red-400">Fehler</span>}
+              </span>
+            </div>
+            <form onSubmit={handleLocationSearch} className="flex gap-2">
+              <input
+                value={locationQuery}
+                onChange={(event) => setLocationQuery(event.target.value)}
+                placeholder="Ort oder Gewaesser suchen"
+                className="min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-900/80 px-2.5 py-2 text-xs font-semibold text-slate-100 outline-none placeholder:text-slate-600 focus:border-blue-500/60"
+              />
+              <button
+                type="submit"
+                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-200 transition-colors hover:bg-slate-700"
+              >
+                {locationLoading ? '...' : 'Suchen'}
+              </button>
+            </form>
+            {(locationError || locationResults.length > 0) && (
+              <div className="space-y-1">
+                {locationError && <p className="text-[10px] font-bold text-red-400">{locationError}</p>}
+                {locationResults.map((result) => (
+                  <button
+                    key={result.id}
+                    type="button"
+                    onClick={() => {
+                      setManualLocation(result);
+                      setGpsEnabled(false);
+                      setLocationQuery(result.label.split(',')[0]);
+                      clearLocationSearch();
+                    }}
+                    className="block w-full rounded-md border border-slate-800 bg-slate-900/70 px-2 py-1.5 text-left text-[10px] font-semibold leading-snug text-slate-300 transition-colors hover:border-blue-500/50 hover:text-slate-100"
+                  >
+                    {result.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between gap-3">
             <div>
