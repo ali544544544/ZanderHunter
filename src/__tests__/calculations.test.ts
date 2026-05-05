@@ -88,7 +88,7 @@ describe('water profile score context', () => {
     stromPhase: 'ablauf',
     luftdruckTrend: 'fallend',
     wasserTemp: 14,
-    tageszeit: 'dÃ¤mmerung',
+    tageszeit: 'dämmerung',
     solunar: 'major',
     mondPhase: 'neumond',
     windSpeed: 10,
