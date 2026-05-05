@@ -27,6 +27,7 @@ const sourceLabels: Record<DataSource, string> = {
   waterapi: 'WaterAPI',
   fischinfo_nrw: 'FischInfo NRW',
   anglermap: 'Anglermap',
+  hejfish: 'hejfish',
   user_report: 'Lokales Gewaesserprofil',
   unknown: 'Schaetzung',
 };
@@ -85,6 +86,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
   const species = [...profile.species].sort((a, b) => b.confidence - a.confidence);
   const quality = qualityCopy[profile.dataQuality];
   const sources = profile.sources.map((source) => sourceLabels[source]).join(', ');
+  const details = profile.areaDetails;
 
   return (
     <section className="card p-4">
@@ -127,6 +129,46 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
           </div>
         ))}
       </div>
+
+      {(profile.description || details) && (
+        <div className="mt-4 space-y-2 rounded-lg border border-slate-800 bg-slate-950/35 p-3">
+          {profile.description && (
+          <p className="text-xs font-semibold leading-relaxed text-slate-300">{profile.description}</p>
+          )}
+          <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+            {typeof details?.waterSizeHa === 'number' && <span>{details.waterSizeHa} ha</span>}
+            {details?.season && <span>Saison {details.season}</span>}
+            {details?.mobileTicket && <span className="text-emerald-300">Mobile Karte</span>}
+            {details?.printRequired && <span className="text-yellow-300">Ausdruck noetig</span>}
+          </div>
+          {details?.techniques && details.techniques.length > 0 && (
+            <p className="text-[11px] font-semibold text-slate-400">
+              Methoden: {details.techniques.join(', ')}
+            </p>
+          )}
+          {details?.properties && details.properties.length > 0 && (
+            <p className="text-[11px] font-semibold text-slate-400">
+              Hinweise: {details.properties.join(', ')}
+            </p>
+          )}
+          {details?.tickets && details.tickets.length > 0 && (
+            <div className="grid gap-1">
+              {details.tickets.map((ticket) => (
+                <div key={`${ticket.name}-${ticket.price}`} className="flex justify-between gap-3 text-xs font-bold text-slate-300">
+                  <span>{ticket.name}</span>
+                  {ticket.price && <span className="text-slate-100">{ticket.price}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {details?.rulesText && (
+            <p className="text-[11px] font-semibold leading-relaxed text-slate-500">{details.rulesText}</p>
+          )}
+          {details?.manager?.name && (
+            <p className="text-[11px] font-bold text-slate-400">Betreiber: {details.manager.name}</p>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3 text-[10px] font-bold uppercase tracking-wide text-slate-500">
         {profile.depth && (

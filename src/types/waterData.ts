@@ -1,4 +1,4 @@
-export type DataSource = 'waterapi' | 'fischinfo_nrw' | 'anglermap' | 'user_report' | 'unknown';
+export type DataSource = 'waterapi' | 'fischinfo_nrw' | 'anglermap' | 'hejfish' | 'user_report' | 'unknown';
 
 export type FishSpecies =
   | 'zander'
@@ -30,6 +30,8 @@ export interface WaterBodyProfile {
   longitude: number;
   region: string;
   species: SpeciesConfidence[];
+  description?: string;
+  imageUrl?: string;
   depth?: {
     average?: number;
     max?: number;
@@ -48,6 +50,22 @@ export interface WaterBodyProfile {
     url: string;
     kind: 'permit' | 'info' | 'community';
   }>;
+  areaDetails?: {
+    waterSizeHa?: number;
+    season?: string;
+    techniques?: string[];
+    properties?: string[];
+    rulesText?: string;
+    mobileTicket?: boolean;
+    printRequired?: boolean;
+    tickets?: Array<{ name: string; price?: string }>;
+    manager?: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      website?: string;
+    };
+  };
   lastUpdated: Date;
 }
 

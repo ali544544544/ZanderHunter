@@ -1,5 +1,6 @@
 import { FallbackProvider } from '../providers/FallbackProvider';
 import { FischInfoNRWProvider } from '../providers/FischInfoNRWProvider';
+import { HejfishAreasProvider } from '../providers/HejfishAreasProvider';
 import { WaterAPIProvider } from '../providers/WaterAPIProvider';
 import type { DataQuality, FishSpecies, SpeciesConfidence, WaterBodyProfile, WaterDataProvider } from '../types/waterData';
 import { WaterDataCache } from './waterDataCache';
@@ -19,6 +20,7 @@ export class WaterDataService {
   constructor(providers?: WaterDataProvider[]) {
     this.cache = new WaterDataCache();
     this.providers = (providers || [
+      new HejfishAreasProvider(),
       new WaterAPIProvider(),
       new FischInfoNRWProvider(),
       new FallbackProvider(),
