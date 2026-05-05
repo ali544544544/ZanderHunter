@@ -11,5 +11,15 @@ describe('FallbackProvider local water detection', () => {
     expect(profile.dataQuality).toBe('medium');
     expect(profile.sources).toContain('user_report');
     expect(profile.species.some((entry) => entry.species === 'zander')).toBe(true);
+    expect(profile.species.some((entry) => entry.species === 'aal')).toBe(true);
+  });
+
+  it('recognizes a map point on the Elbe as a river', async () => {
+    const provider = new FallbackProvider();
+    const profile = await provider.getWaterBodyProfile(53.545, 9.89);
+
+    expect(profile.name).toBe('Elbe');
+    expect(profile.type).toBe('river');
+    expect(profile.species.length).toBeGreaterThanOrEqual(8);
   });
 });

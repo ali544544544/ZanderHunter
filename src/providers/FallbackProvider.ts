@@ -18,6 +18,30 @@ interface LocalWaterBody {
 
 const localWaterBodies: LocalWaterBody[] = [
   {
+    id: 'elbe-hamburg',
+    name: 'Elbe',
+    type: 'river',
+    lat: 53.535,
+    lng: 9.94,
+    radiusMeters: 3500,
+    bounds: {
+      minLat: 53.43,
+      maxLat: 53.6,
+      minLng: 9.65,
+      maxLng: 10.16,
+    },
+    species: [
+      { species: 'zander', confidence: 0.76 },
+      { species: 'barsch', confidence: 0.68 },
+      { species: 'hecht', confidence: 0.42 },
+      { species: 'aal', confidence: 0.58 },
+      { species: 'brasse', confidence: 0.72 },
+      { species: 'rotauge', confidence: 0.7 },
+      { species: 'karpfen', confidence: 0.36 },
+      { species: 'wels', confidence: 0.28 },
+    ],
+  },
+  {
     id: 'dove-elbe',
     name: 'Dove-Elbe',
     type: 'river',
@@ -34,8 +58,11 @@ const localWaterBodies: LocalWaterBody[] = [
       { species: 'zander', confidence: 0.72, notes: 'Lokales App-Profil: Kanten und Schleusenbereich' },
       { species: 'barsch', confidence: 0.68 },
       { species: 'hecht', confidence: 0.55 },
+      { species: 'aal', confidence: 0.45 },
       { species: 'brasse', confidence: 0.62 },
       { species: 'rotauge', confidence: 0.7 },
+      { species: 'karpfen', confidence: 0.42 },
+      { species: 'wels', confidence: 0.22 },
     ],
   },
   {
@@ -49,8 +76,10 @@ const localWaterBodies: LocalWaterBody[] = [
       { species: 'zander', confidence: 0.66 },
       { species: 'barsch', confidence: 0.62 },
       { species: 'hecht', confidence: 0.48 },
+      { species: 'aal', confidence: 0.4 },
       { species: 'brasse', confidence: 0.7 },
       { species: 'rotauge', confidence: 0.72 },
+      { species: 'karpfen', confidence: 0.45 },
     ],
   },
   {
@@ -63,8 +92,10 @@ const localWaterBodies: LocalWaterBody[] = [
     species: [
       { species: 'zander', confidence: 0.7 },
       { species: 'barsch', confidence: 0.65 },
+      { species: 'aal', confidence: 0.38 },
       { species: 'rotauge', confidence: 0.62 },
       { species: 'brasse', confidence: 0.55 },
+      { species: 'karpfen', confidence: 0.32 },
     ],
   },
   {
@@ -78,8 +109,11 @@ const localWaterBodies: LocalWaterBody[] = [
       { species: 'zander', confidence: 0.74 },
       { species: 'barsch', confidence: 0.58 },
       { species: 'hecht', confidence: 0.38 },
+      { species: 'aal', confidence: 0.55 },
       { species: 'brasse', confidence: 0.64 },
       { species: 'rotauge', confidence: 0.66 },
+      { species: 'karpfen', confidence: 0.34 },
+      { species: 'wels', confidence: 0.24 },
     ],
   },
   {
@@ -93,8 +127,10 @@ const localWaterBodies: LocalWaterBody[] = [
       { species: 'zander', confidence: 0.62 },
       { species: 'barsch', confidence: 0.72 },
       { species: 'hecht', confidence: 0.5 },
+      { species: 'aal', confidence: 0.34 },
       { species: 'brasse', confidence: 0.75 },
       { species: 'rotauge', confidence: 0.78 },
+      { species: 'karpfen', confidence: 0.48 },
     ],
   },
 ];
@@ -149,9 +185,17 @@ export class FallbackProvider implements WaterDataProvider {
       .filter((match) => (
         match.distance <= match.waterBody.radiusMeters || this.isInsideBounds(lat, lng, match.waterBody)
       ))
-      .sort((a, b) => a.distance - b.distance);
+      .sort((a, b) => this.getMatchSpecificity(a.waterBody) - this.getMatchSpecificity(b.waterBody));
 
     return matches[0]?.waterBody ?? null;
+  }
+
+  private getMatchSpecificity(waterBody: LocalWaterBody): number {
+    if (!waterBody.bounds) return waterBody.radiusMeters;
+
+    const latSpan = waterBody.bounds.maxLat - waterBody.bounds.minLat;
+    const lngSpan = waterBody.bounds.maxLng - waterBody.bounds.minLng;
+    return latSpan * lngSpan * 100000;
   }
 
   private isInsideBounds(lat: number, lng: number, waterBody: LocalWaterBody): boolean {

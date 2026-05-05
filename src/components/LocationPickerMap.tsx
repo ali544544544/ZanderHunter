@@ -53,7 +53,13 @@ function locationLabel(lat: number, lng: number) {
   return `Kartenpunkt ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
 
+function isControlTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest('button'));
+}
+
 const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect }) => {
+  const centerLat = center.lat;
+  const centerLng = center.lng;
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const [mapWidth, setMapWidth] = useState(360);
@@ -62,9 +68,10 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   const [selectedPoint, setSelectedPoint] = useState(center);
 
   useEffect(() => {
-    setMapCenter(center);
-    setSelectedPoint(center);
-  }, [center]);
+    const nextCenter = { lat: centerLat, lng: centerLng };
+    setMapCenter(nextCenter);
+    setSelectedPoint(nextCenter);
+  }, [centerLat, centerLng]);
 
   const centerWorld = useMemo(
     () => ({
@@ -174,6 +181,10 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
         ref={mapRef}
         className="relative h-[280px] touch-none overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
         onPointerDown={(event) => {
+          if (isControlTarget(event.target)) {
+            return;
+          }
+
           if (event.button !== 0) {
             return;
           }
@@ -200,6 +211,10 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           moveCenterByPixels(drag.centerX - deltaX, drag.centerY - deltaY);
         }}
         onPointerUp={(event) => {
+          if (isControlTarget(event.target)) {
+            return;
+          }
+
           const drag = dragRef.current;
           if (!drag || drag.pointerId !== event.pointerId) {
             return;
@@ -254,7 +269,11 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
         <div className="absolute right-2 top-2 flex flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950/90 shadow-lg shadow-slate-950/40">
           <button
             type="button"
-            onClick={() => changeZoom(1)}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              changeZoom(1);
+            }}
             className="h-10 w-10 border-b border-slate-700 text-lg font-black text-slate-100 transition-colors hover:bg-slate-800"
             aria-label="Karte reinzoomen"
           >
@@ -262,7 +281,11 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           </button>
           <button
             type="button"
-            onClick={() => changeZoom(-1)}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              changeZoom(-1);
+            }}
             className="h-10 w-10 text-lg font-black text-slate-100 transition-colors hover:bg-slate-800"
             aria-label="Karte rauszoomen"
           >
@@ -275,7 +298,11 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           </div>
           <button
             type="button"
-            onClick={selectCenter}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              selectCenter();
+            }}
             className="rounded-lg border border-blue-500/40 bg-blue-500/90 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-blue-950/40"
           >
             Punkt setzen

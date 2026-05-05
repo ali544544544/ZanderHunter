@@ -1,6 +1,5 @@
 import React from 'react';
-import { waterDataService } from '../services/WaterDataService';
-import type { WaterBodyProfile } from '../types/waterData';
+import type { DataSource, FishSpecies, WaterBodyProfile } from '../types/waterData';
 
 interface WaterProfileCardProps {
   profile: WaterBodyProfile | null;
@@ -22,6 +21,26 @@ const typeLabels: Record<WaterBodyProfile['type'], string> = {
   canal: 'Kanal',
   pond: 'Teich',
   sea: 'Meer',
+};
+
+const sourceLabels: Record<DataSource, string> = {
+  waterapi: 'WaterAPI',
+  fischinfo_nrw: 'FischInfo NRW',
+  anglermap: 'Anglermap',
+  user_report: 'Lokales Gewaesserprofil',
+  unknown: 'Schaetzung',
+};
+
+const speciesLabels: Record<FishSpecies, string> = {
+  zander: 'Zander',
+  hecht: 'Hecht',
+  barsch: 'Barsch',
+  karpfen: 'Karpfen',
+  aal: 'Aal',
+  brasse: 'Brasse',
+  rotauge: 'Rotauge',
+  forelle: 'Forelle',
+  wels: 'Wels',
 };
 
 export function WaterProfileCard({ profile, loading = false, error = null, onRefresh }: WaterProfileCardProps) {
@@ -57,8 +76,9 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
     );
   }
 
-  const topSpecies = waterDataService.getTopSpecies(profile);
+  const species = [...profile.species].sort((a, b) => b.confidence - a.confidence);
   const quality = qualityCopy[profile.dataQuality];
+  const sources = profile.sources.map((source) => sourceLabels[source]).join(', ');
 
   return (
     <section className="card p-4">
@@ -87,9 +107,10 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
       </div>
 
       <div className="mt-4 space-y-2">
-        {topSpecies.map((entry) => (
-          <div key={entry.species} className="grid grid-cols-[72px_1fr_36px] items-center gap-2 text-xs">
-            <span className="font-bold capitalize text-slate-300">{entry.species}</span>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vorhandene Fischarten</p>
+        {species.map((entry) => (
+          <div key={entry.species} className="grid grid-cols-[82px_1fr_36px] items-center gap-2 text-xs">
+            <span className="font-bold text-slate-300">{speciesLabels[entry.species]}</span>
             <div className="h-2 overflow-hidden rounded-full bg-slate-800">
               <div
                 className="h-full rounded-full bg-blue-400"
@@ -107,8 +128,8 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
             Tiefe {profile.depth.max ? `bis ${profile.depth.max} m` : `${profile.depth.average ?? '?'} m`}
           </span>
         )}
-        {profile.regulations?.permit_required && <span className="text-yellow-300">Erlaubniskarte</span>}
-        <span>Quelle: {profile.sources.join(', ')}</span>
+        {profile.regulations?.permit_required && <span className="text-yellow-300">Angelerlaubnis pruefen</span>}
+        <span>Daten: {sources}</span>
         {loading && <span className="text-blue-300">Aktualisiert...</span>}
       </div>
     </section>
