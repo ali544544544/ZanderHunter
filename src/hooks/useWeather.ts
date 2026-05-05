@@ -33,7 +33,7 @@ function localDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function useWeather(lat: number = 53.55, lng: number = 9.99) {
+export function useWeather(lat: number = 53.55, lng: number = 9.99, refreshKey: number = 0) {
   const [data, setData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export function useWeather(lat: number = 53.55, lng: number = 9.99) {
     fetchWeather();
     const interval = setInterval(fetchWeather, 30 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [lat, lng]);
+  }, [lat, lng, refreshKey]);
 
   return { data, loading, error };
 }

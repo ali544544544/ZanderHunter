@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationMapOpen, setLocationMapOpen] = useState(false);
+  const [locationRevision, setLocationRevision] = useState(0);
   const { position: gpsPosition, loading: gpsLoading, error: gpsError } = useGeolocation(gpsEnabled);
   const {
     results: locationResults,
@@ -79,7 +80,7 @@ const App: React.FC = () => {
     waterProfileLoading,
     waterProfileError,
     refreshWaterProfile,
-  } = useAngelIndex(targetFish, activeLocation.lat, activeLocation.lng);
+  } = useAngelIndex(targetFish, activeLocation.lat, activeLocation.lng, locationRevision);
 
   const headerDate = useMemo(
     () => new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }),
@@ -131,6 +132,7 @@ const App: React.FC = () => {
   const selectManualLocation = (location: SearchLocation, closeMap = true) => {
     setManualLocation(location);
     setGpsEnabled(false);
+    setLocationRevision((revision) => revision + 1);
     setLocationQuery(location.label.split(',')[0]);
     setLocationSearchOpen(false);
     setLocationMapOpen(!closeMap);
@@ -139,6 +141,7 @@ const App: React.FC = () => {
 
   const clearManualLocation = () => {
     setManualLocation(null);
+    setLocationRevision((revision) => revision + 1);
     setLocationQuery('');
     setLocationSearchOpen(false);
     setLocationMapOpen(false);
@@ -172,6 +175,7 @@ const App: React.FC = () => {
                 onClick={() => {
                   setGpsEnabled((enabled) => !enabled);
                   setManualLocation(null);
+                  setLocationRevision((revision) => revision + 1);
                   setLocationSearchOpen(false);
                   setLocationMapOpen(false);
                   clearLocationSearch();

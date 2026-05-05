@@ -10,7 +10,7 @@ type StoredProfile = {
 const DB_NAME = 'zanderhunter-water-data-cache';
 const STORE_NAME = 'profiles';
 const DB_VERSION = 1;
-const CACHE_KEY_VERSION = 'v2';
+const CACHE_KEY_VERSION = 'v3';
 
 function restoreProfileDates(profile: WaterBodyProfile): WaterBodyProfile {
   return {
@@ -58,8 +58,8 @@ export class WaterDataCache {
   }
 
   private getCacheKey(lat: number, lng: number): string {
-    const roundedLat = Math.round(lat * 100) / 100;
-    const roundedLng = Math.round(lng * 100) / 100;
+    const roundedLat = Math.round(lat * 1000) / 1000;
+    const roundedLng = Math.round(lng * 1000) / 1000;
     return `${CACHE_KEY_VERSION}:${roundedLat},${roundedLng}`;
   }
 

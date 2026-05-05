@@ -29,13 +29,18 @@ function getSunEventForDate(events: string[], date: Date, fallback: string) {
   return events.find((event) => event.startsWith(key)) || fallback;
 }
 
-export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 53.55, lng: number = 9.99) {
-  const weather = useWeather(lat, lng);
+export function useAngelIndex(
+  targetFish: TargetFish = 'zander',
+  lat: number = 53.55,
+  lng: number = 9.99,
+  locationRevision: number = 0
+) {
+  const weather = useWeather(lat, lng, locationRevision);
   const pegel = usePegel();
   const tide = useTide();
   const solunar = useSolunar(lat, lng);
   const moon = useMoon();
-  const waterProfile = useWaterProfile(lat, lng);
+  const waterProfile = useWaterProfile(lat, lng, locationRevision);
 
   return useMemo(() => {
   const isLoading = weather.loading || pegel.loading || tide.loading;
@@ -202,6 +207,7 @@ export function useAngelIndex(targetFish: TargetFish = 'zander', lat: number = 5
     targetFish,
     lat,
     lng,
+    locationRevision,
     tide.events,
     tide.loading,
     weather.data,

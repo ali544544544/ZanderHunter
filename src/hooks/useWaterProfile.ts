@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { waterDataService } from '../services/WaterDataService';
 import type { WaterBodyProfile } from '../types/waterData';
 
-export function useWaterProfile(lat?: number, lng?: number) {
+export function useWaterProfile(lat?: number, lng?: number, refreshKey: number = 0) {
   const [profile, setProfile] = useState<WaterBodyProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +28,12 @@ export function useWaterProfile(lat?: number, lng?: number) {
 
     async function load() {
       if (typeof lat !== 'number' || typeof lng !== 'number') return;
+      setProfile(null);
       setLoading(true);
       setError(null);
 
       try {
-        const data = await waterDataService.getWaterProfile(lat, lng);
+        const data = await waterDataService.getWaterProfile(lat, lng, refreshKey > 0);
         if (!cancelled) setProfile(data);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Gewaesserdaten konnten nicht geladen werden');
@@ -45,7 +46,7 @@ export function useWaterProfile(lat?: number, lng?: number) {
     return () => {
       cancelled = true;
     };
-  }, [lat, lng]);
+  }, [lat, lng, refreshKey]);
 
   const refresh = useCallback(() => fetchProfile(true), [fetchProfile]);
 
