@@ -1,6 +1,6 @@
 import type { SpeciesConfidence, WaterBodyProfile, WaterDataProvider } from '../types/waterData';
 
-interface LocalWaterBody {
+export interface LocalWaterBody {
   id: string;
   name: string;
   type: WaterBodyProfile['type'];
@@ -16,7 +16,7 @@ interface LocalWaterBody {
   species: Array<{ species: SpeciesConfidence['species']; confidence: number; notes?: string }>;
 }
 
-const localWaterBodies: LocalWaterBody[] = [
+export const localWaterBodies: LocalWaterBody[] = [
   {
     id: 'elbe-hamburg',
     name: 'Elbe',
