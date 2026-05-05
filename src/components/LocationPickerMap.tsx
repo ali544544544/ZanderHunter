@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { localWaterBodies } from '../providers/FallbackProvider';
 
 interface LocationPickerMapProps {
   center: {
@@ -48,10 +47,6 @@ function worldXToLng(x: number, zoom: number) {
 function worldYToLat(y: number, zoom: number) {
   const n = Math.PI - 2 * Math.PI * y / (tileSize * Math.pow(2, zoom));
   return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-}
-
-function metersPerPixel(lat: number, zoom: number) {
-  return 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
 }
 
 function locationLabel(lat: number, lng: number) {
@@ -124,56 +119,6 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
       top: selectedWorldY - centerWorld.y + mapHeight / 2,
     };
   }, [centerWorld.x, centerWorld.y, mapWidth, selectedPoint.lat, selectedPoint.lng, zoom]);
-
-  const waterAreaOverlays = useMemo(() => (
-    localWaterBodies.map((waterBody) => {
-      if (waterBody.bounds) {
-        const leftWorld = lngToWorldX(waterBody.bounds.minLng, zoom);
-        const rightWorld = lngToWorldX(waterBody.bounds.maxLng, zoom);
-        const topWorld = latToWorldY(waterBody.bounds.maxLat, zoom);
-        const bottomWorld = latToWorldY(waterBody.bounds.minLat, zoom);
-        const left = leftWorld - centerWorld.x + mapWidth / 2;
-        const top = topWorld - centerWorld.y + mapHeight / 2;
-
-        return {
-          id: waterBody.id,
-          name: waterBody.name,
-          shape: 'rect' as const,
-          style: {
-            left,
-            top,
-            width: rightWorld - leftWorld,
-            height: bottomWorld - topWorld,
-          },
-          labelStyle: {
-            left: left + 8,
-            top: top + 8,
-          },
-        };
-      }
-
-      const centerX = lngToWorldX(waterBody.lng, zoom) - centerWorld.x + mapWidth / 2;
-      const centerY = latToWorldY(waterBody.lat, zoom) - centerWorld.y + mapHeight / 2;
-      const radiusPx = waterBody.radiusMeters / metersPerPixel(waterBody.lat, zoom);
-
-      return {
-        id: waterBody.id,
-        name: waterBody.name,
-        shape: 'circle' as const,
-        style: {
-          left: centerX - radiusPx,
-          top: centerY - radiusPx,
-          width: radiusPx * 2,
-          height: radiusPx * 2,
-          borderRadius: '9999px',
-        },
-        labelStyle: {
-          left: centerX + 8,
-          top: centerY - 10,
-        },
-      };
-    })
-  ), [centerWorld.x, centerWorld.y, mapWidth, zoom]);
 
   const pointToLocation = (clientX: number, clientY: number) => {
     const rect = mapRef.current?.getBoundingClientRect();
@@ -312,26 +257,6 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
             style={{ left: tile.left, top: tile.top }}
           />
         ))}
-        <div className="pointer-events-none absolute inset-0">
-          {waterAreaOverlays.map((area) => (
-            <React.Fragment key={area.id}>
-              <div
-                className={`absolute border ${
-                  area.shape === 'rect'
-                    ? 'border-cyan-300/60 bg-cyan-400/10'
-                    : 'border-emerald-300/60 bg-emerald-400/10'
-                }`}
-                style={area.style}
-              />
-              <div
-                className="absolute whitespace-nowrap rounded bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-cyan-100 shadow shadow-slate-950/40"
-                style={area.labelStyle}
-              >
-                {area.name}
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
         <div className="pointer-events-none absolute inset-0 bg-slate-950/5"></div>
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/85 bg-slate-950/20 shadow-lg shadow-slate-950/60">
           <span className="absolute left-1/2 top-1/2 h-0.5 w-10 -translate-x-1/2 -translate-y-1/2 bg-white/85"></span>
@@ -369,7 +294,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
         </div>
         <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="pointer-events-none rounded bg-slate-950/85 px-2 py-1 text-[9px] font-bold text-slate-300">
-            Bereiche zeigen lokale Gewaesserdaten
+            Ziehen, Mausrad, Doppelklick
           </div>
           <button
             type="button"

@@ -43,7 +43,7 @@ export const localWaterBodies: LocalWaterBody[] = [
     ],
     links: [
       { label: 'AVHH Strom-Elbe', url: 'https://anglerverband-hh.de/unsere-gewaesser/strom-elbe', kind: 'permit' },
-      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'hejfish Suche Elbe', url: 'https://www.hejfish.com/search?search=elbe', kind: 'permit' },
       { label: 'ALLE ANGELN Elbe', url: 'https://www.alleangeln.de/gewaesser/elbe-hamburg-altona', kind: 'community' },
       { label: 'Anglermap Elbe', url: 'https://www.anglermap.de/angeln/steckbrief-gewaesser.php?id=elbe-hamburg-veddel', kind: 'info' },
     ],
@@ -73,7 +73,7 @@ export const localWaterBodies: LocalWaterBody[] = [
     ],
     links: [
       { label: 'AVHH Dove-Elbe', url: 'https://anglerverband-hh.de/unsere-gewaesser/dove-elbe', kind: 'permit' },
-      { label: 'hejfish Gastkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'hejfish Suche Dove-Elbe', url: 'https://www.hejfish.com/search?search=dove-elbe', kind: 'permit' },
       { label: 'ALLE ANGELN Dove-Elbe', url: 'https://www.alleangeln.de/gewaesser/dove-elbe-hamburg-moorfleet', kind: 'community' },
       { label: 'Anglermap Dove-Elbe', url: 'https://www.anglermap.de/angeln/steckbrief-gewaesser.php?id=dove-elbe-hamburg-neuengamme', kind: 'info' },
     ],
@@ -97,7 +97,7 @@ export const localWaterBodies: LocalWaterBody[] = [
     links: [
       { label: 'ALLE ANGELN Billwerder', url: 'https://www.alleangeln.de/gewaesser/billwerder-bucht', kind: 'community' },
       { label: 'Hamburg Angelinfos', url: 'https://www.hamburg.de/wassersport/3023356/angeln', kind: 'info' },
-      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'hejfish Suche Billwerder', url: 'https://www.hejfish.com/search?search=billwerder-bucht', kind: 'permit' },
     ],
   },
   {
@@ -118,7 +118,7 @@ export const localWaterBodies: LocalWaterBody[] = [
     links: [
       { label: 'Hamburg Angelinfos', url: 'https://www.hamburg.de/wassersport/3023356/angeln', kind: 'info' },
       { label: 'ALLE ANGELN Hamburg', url: 'https://www.alleangeln.de/angeln-in-hamburg', kind: 'community' },
-      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'hejfish Suche Mittelkanal', url: 'https://www.hejfish.com/search?search=mittelkanal', kind: 'permit' },
     ],
   },
   {
@@ -140,7 +140,7 @@ export const localWaterBodies: LocalWaterBody[] = [
     ],
     links: [
       { label: 'AVHH Strom-Elbe', url: 'https://anglerverband-hh.de/unsere-gewaesser/strom-elbe', kind: 'permit' },
-      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'hejfish Suche Suederelbe', url: 'https://www.hejfish.com/search?search=suederelbe', kind: 'permit' },
       { label: 'ALLE ANGELN Elbe', url: 'https://www.alleangeln.de/gewaesser/elbe-hamburg-finkenwerder', kind: 'community' },
       { label: 'Anglermap Elbe', url: 'https://www.anglermap.de/angeln/steckbrief-gewaesser.php?id=elbe-hamburg-veddel', kind: 'info' },
     ],
@@ -164,7 +164,7 @@ export const localWaterBodies: LocalWaterBody[] = [
     links: [
       { label: 'ALLE ANGELN Aussenalster', url: 'https://www.alleangeln.de/gewaesser/au%C3%9Fenalster', kind: 'community' },
       { label: 'Hamburg Angelinfos', url: 'https://www.hamburg.de/wassersport/3023356/angeln', kind: 'info' },
-      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'hejfish Suche Aussenalster', url: 'https://www.hejfish.com/search?search=aussenalster', kind: 'permit' },
     ],
   },
 ];
