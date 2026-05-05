@@ -12,6 +12,7 @@ import HechtInfo from './components/HechtInfo';
 import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
 import HechtTaktikView from './components/HechtTaktikView';
+import LocationPickerMap from './components/LocationPickerMap';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useLocationSearch } from './hooks/useLocationSearch';
 import { useUserSpots } from './hooks/useUserSpots';
@@ -45,6 +46,7 @@ const App: React.FC = () => {
   const [manualLocation, setManualLocation] = useState<SearchLocation | null>(null);
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
+  const [locationMapOpen, setLocationMapOpen] = useState(false);
   const { position: gpsPosition, loading: gpsLoading, error: gpsError } = useGeolocation(gpsEnabled);
   const {
     results: locationResults,
@@ -121,10 +123,20 @@ const App: React.FC = () => {
     searchLocation(locationQuery);
   };
 
+  const selectManualLocation = (location: SearchLocation) => {
+    setManualLocation(location);
+    setGpsEnabled(false);
+    setLocationQuery(location.label.split(',')[0]);
+    setLocationSearchOpen(false);
+    setLocationMapOpen(false);
+    clearLocationSearch();
+  };
+
   const clearManualLocation = () => {
     setManualLocation(null);
     setLocationQuery('');
     setLocationSearchOpen(false);
+    setLocationMapOpen(false);
     clearLocationSearch();
   };
 
@@ -149,13 +161,14 @@ const App: React.FC = () => {
                 {gpsError && <span className="ml-1 text-red-400">Fehler</span>}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setGpsEnabled((enabled) => !enabled);
                   setManualLocation(null);
                   setLocationSearchOpen(false);
+                  setLocationMapOpen(false);
                   clearLocationSearch();
                 }}
                 className={`rounded-lg border px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors ${
@@ -174,6 +187,18 @@ const App: React.FC = () => {
                 aria-expanded={locationSearchOpen}
               >
                 {locationSearchOpen ? 'Suche zu' : 'Ort suchen'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationMapOpen((open) => !open);
+                  setLocationSearchOpen(false);
+                  clearLocationSearch();
+                }}
+                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-200 transition-colors hover:bg-slate-700"
+                aria-expanded={locationMapOpen}
+              >
+                {locationMapOpen ? 'Karte zu' : 'Karte'}
               </button>
             </div>
             {manualLocation && (
@@ -208,13 +233,7 @@ const App: React.FC = () => {
                       <button
                         key={result.id}
                         type="button"
-                        onClick={() => {
-                          setManualLocation(result);
-                          setGpsEnabled(false);
-                          setLocationQuery(result.label.split(',')[0]);
-                          setLocationSearchOpen(false);
-                          clearLocationSearch();
-                        }}
+                        onClick={() => selectManualLocation(result)}
                         className="block w-full rounded-md border border-slate-800 bg-slate-900/70 px-2 py-1.5 text-left text-[10px] font-semibold leading-snug text-slate-300 transition-colors hover:border-blue-500/50 hover:text-slate-100"
                       >
                         {result.label}
@@ -223,6 +242,19 @@ const App: React.FC = () => {
                   </div>
                 )}
               </div>
+            )}
+            {locationMapOpen && (
+              <LocationPickerMap
+                center={activeLocation}
+                onSelect={(location) => {
+                  selectManualLocation({
+                    id: `map-${location.lat}-${location.lng}`,
+                    label: location.label,
+                    lat: location.lat,
+                    lng: location.lng,
+                  });
+                }}
+              />
             )}
           </div>
           <div className="flex items-center justify-between gap-3">
