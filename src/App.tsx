@@ -123,12 +123,12 @@ const App: React.FC = () => {
     searchLocation(locationQuery);
   };
 
-  const selectManualLocation = (location: SearchLocation) => {
+  const selectManualLocation = (location: SearchLocation, closeMap = true) => {
     setManualLocation(location);
     setGpsEnabled(false);
     setLocationQuery(location.label.split(',')[0]);
     setLocationSearchOpen(false);
-    setLocationMapOpen(false);
+    setLocationMapOpen(!closeMap);
     clearLocationSearch();
   };
 
@@ -247,12 +247,15 @@ const App: React.FC = () => {
               <LocationPickerMap
                 center={activeLocation}
                 onSelect={(location) => {
-                  selectManualLocation({
-                    id: `map-${location.lat}-${location.lng}`,
-                    label: location.label,
-                    lat: location.lat,
-                    lng: location.lng,
-                  });
+                  selectManualLocation(
+                    {
+                      id: `map-${location.lat}-${location.lng}`,
+                      label: location.label,
+                      lat: location.lat,
+                      lng: location.lng,
+                    },
+                    false
+                  );
                 }}
               />
             )}

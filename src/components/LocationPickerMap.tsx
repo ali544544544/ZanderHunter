@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 interface LocationPickerMapProps {
   center: {
@@ -55,6 +55,7 @@ function locationLabel(lat: number, lng: number) {
 const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect }) => {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const [mapWidth, setMapWidth] = useState(360);
   const [zoomIndex, setZoomIndex] = useState(2);
   const zoom = zoomLevels[zoomIndex];
   const [mapCenter, setMapCenter] = useState(center);
@@ -69,11 +70,10 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   );
 
   const tiles = useMemo(() => {
-    const width = mapRef.current?.clientWidth || 360;
-    const topLeftX = centerWorld.x - width / 2;
+    const topLeftX = centerWorld.x - mapWidth / 2;
     const topLeftY = centerWorld.y - mapHeight / 2;
     const startTileX = Math.floor(topLeftX / tileSize);
-    const endTileX = Math.floor((topLeftX + width) / tileSize);
+    const endTileX = Math.floor((topLeftX + mapWidth) / tileSize);
     const startTileY = Math.floor(topLeftY / tileSize);
     const endTileY = Math.floor((topLeftY + mapHeight) / tileSize);
     const tileCount = Math.pow(2, zoom);
@@ -96,7 +96,17 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     }
 
     return nextTiles;
-  }, [centerWorld.x, centerWorld.y, zoom]);
+  }, [centerWorld.x, centerWorld.y, mapWidth, zoom]);
+
+  const selectedMarkerStyle = useMemo(() => {
+    const selectedWorldX = lngToWorldX(selectedPoint.lng, zoom);
+    const selectedWorldY = latToWorldY(selectedPoint.lat, zoom);
+
+    return {
+      left: selectedWorldX - centerWorld.x + mapWidth / 2,
+      top: selectedWorldY - centerWorld.y + mapHeight / 2,
+    };
+  }, [centerWorld.x, centerWorld.y, mapWidth, selectedPoint.lat, selectedPoint.lng, zoom]);
 
   const pointToLocation = (clientX: number, clientY: number) => {
     const rect = mapRef.current?.getBoundingClientRect();
@@ -125,12 +135,39 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     setZoomIndex((value) => clamp(value + direction, 0, zoomLevels.length - 1));
   };
 
+  useEffect(() => {
+    const mapElement = mapRef.current;
+    if (!mapElement) {
+      return undefined;
+    }
+
+    const updateWidth = () => setMapWidth(mapElement.clientWidth || 360);
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const direction = event.deltaY > 0 ? -1 : 1;
+      setZoomIndex((value) => clamp(value + direction, 0, zoomLevels.length - 1));
+    };
+
+    updateWidth();
+    mapElement.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('resize', updateWidth);
+
+    return () => {
+      mapElement.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, []);
+
   return (
     <div className="space-y-2">
       <div
         ref={mapRef}
         className="relative h-56 touch-none overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
         onPointerDown={(event) => {
+          if (event.button !== 0) {
+            return;
+          }
+
           event.currentTarget.setPointerCapture(event.pointerId);
           dragRef.current = {
             pointerId: event.pointerId,
@@ -167,9 +204,13 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           setSelectedPoint(location);
           onSelect({ ...location, label: locationLabel(location.lat, location.lng) });
         }}
-        onWheel={(event) => {
+        onDoubleClick={(event) => {
           event.preventDefault();
-          changeZoom(event.deltaY > 0 ? -1 : 1);
+          const location = pointToLocation(event.clientX, event.clientY);
+          setMapCenter(location);
+          setSelectedPoint(location);
+          changeZoom(1);
+          onSelect({ ...location, label: locationLabel(location.lat, location.lng) });
         }}
         role="button"
         tabIndex={0}
@@ -192,9 +233,13 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           />
         ))}
         <div className="pointer-events-none absolute inset-0 bg-slate-950/5"></div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-400 bg-blue-400/20 shadow-lg shadow-blue-950"></div>
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 bg-slate-950/20 shadow-lg shadow-slate-950/60"></div>
+        <div
+          className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-400 bg-blue-400/25 shadow-lg shadow-blue-950"
+          style={selectedMarkerStyle}
+        ></div>
         <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-slate-950/85 px-2 py-1 text-[9px] font-bold text-slate-300">
-          Ziehen, zoomen, tippen
+          Ziehen, Mausrad, Doppelklick
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
@@ -202,6 +247,16 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           Karte: OpenStreetMap - Zoom {zoom}
         </p>
         <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedPoint(mapCenter);
+              onSelect({ ...mapCenter, label: locationLabel(mapCenter.lat, mapCenter.lng) });
+            }}
+            className="rounded border border-blue-500/40 bg-blue-500/15 px-2 py-1 text-[10px] font-black text-blue-300"
+          >
+            Mitte
+          </button>
           <button
             type="button"
             onClick={() => changeZoom(-1)}
