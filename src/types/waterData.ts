@@ -43,6 +43,11 @@ export interface WaterBodyProfile {
   };
   dataQuality: DataQuality;
   sources: DataSource[];
+  links?: Array<{
+    label: string;
+    url: string;
+    kind: 'permit' | 'info' | 'community';
+  }>;
   lastUpdated: Date;
 }
 

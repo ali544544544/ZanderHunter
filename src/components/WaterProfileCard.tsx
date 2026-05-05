@@ -43,6 +43,12 @@ const speciesLabels: Record<FishSpecies, string> = {
   wels: 'Wels',
 };
 
+const linkStyles: Record<NonNullable<WaterBodyProfile['links']>[number]['kind'], string> = {
+  permit: 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200',
+  info: 'border-slate-600 bg-slate-800/70 text-slate-200',
+  community: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
+};
+
 export function WaterProfileCard({ profile, loading = false, error = null, onRefresh }: WaterProfileCardProps) {
   if (loading && !profile) {
     return (
@@ -132,6 +138,22 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
         <span>Daten: {sources}</span>
         {loading && <span className="text-blue-300">Aktualisiert...</span>}
       </div>
+
+      {profile.links && profile.links.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {profile.links.map((link) => (
+            <a
+              key={`${link.label}-${link.url}`}
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+              className={`rounded-md border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors ${linkStyles[link.kind]}`}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

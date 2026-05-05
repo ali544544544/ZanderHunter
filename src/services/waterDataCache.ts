@@ -10,7 +10,7 @@ type StoredProfile = {
 const DB_NAME = 'zanderhunter-water-data-cache';
 const STORE_NAME = 'profiles';
 const DB_VERSION = 1;
-const CACHE_KEY_VERSION = 'v4';
+const CACHE_KEY_VERSION = 'v5';
 
 function restoreProfileDates(profile: WaterBodyProfile): WaterBodyProfile {
   return {

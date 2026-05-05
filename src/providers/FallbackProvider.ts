@@ -14,6 +14,7 @@ export interface LocalWaterBody {
     maxLng: number;
   };
   species: Array<{ species: SpeciesConfidence['species']; confidence: number; notes?: string }>;
+  links: NonNullable<WaterBodyProfile['links']>;
 }
 
 export const localWaterBodies: LocalWaterBody[] = [
@@ -40,6 +41,12 @@ export const localWaterBodies: LocalWaterBody[] = [
       { species: 'karpfen', confidence: 0.36 },
       { species: 'wels', confidence: 0.28 },
     ],
+    links: [
+      { label: 'AVHH Strom-Elbe', url: 'https://anglerverband-hh.de/unsere-gewaesser/strom-elbe', kind: 'permit' },
+      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'ALLE ANGELN Elbe', url: 'https://www.alleangeln.de/gewaesser/elbe-hamburg-altona', kind: 'community' },
+      { label: 'Anglermap Elbe', url: 'https://www.anglermap.de/angeln/steckbrief-gewaesser.php?id=elbe-hamburg-veddel', kind: 'info' },
+    ],
   },
   {
     id: 'dove-elbe',
@@ -64,6 +71,12 @@ export const localWaterBodies: LocalWaterBody[] = [
       { species: 'karpfen', confidence: 0.42 },
       { species: 'wels', confidence: 0.22 },
     ],
+    links: [
+      { label: 'AVHH Dove-Elbe', url: 'https://anglerverband-hh.de/unsere-gewaesser/dove-elbe', kind: 'permit' },
+      { label: 'hejfish Gastkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'ALLE ANGELN Dove-Elbe', url: 'https://www.alleangeln.de/gewaesser/dove-elbe-hamburg-moorfleet', kind: 'community' },
+      { label: 'Anglermap Dove-Elbe', url: 'https://www.anglermap.de/angeln/steckbrief-gewaesser.php?id=dove-elbe-hamburg-neuengamme', kind: 'info' },
+    ],
   },
   {
     id: 'billwerder-bucht',
@@ -81,6 +94,11 @@ export const localWaterBodies: LocalWaterBody[] = [
       { species: 'rotauge', confidence: 0.72 },
       { species: 'karpfen', confidence: 0.45 },
     ],
+    links: [
+      { label: 'ALLE ANGELN Billwerder', url: 'https://www.alleangeln.de/gewaesser/billwerder-bucht', kind: 'community' },
+      { label: 'Hamburg Angelinfos', url: 'https://www.hamburg.de/wassersport/3023356/angeln', kind: 'info' },
+      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+    ],
   },
   {
     id: 'mittelkanal',
@@ -96,6 +114,11 @@ export const localWaterBodies: LocalWaterBody[] = [
       { species: 'rotauge', confidence: 0.62 },
       { species: 'brasse', confidence: 0.55 },
       { species: 'karpfen', confidence: 0.32 },
+    ],
+    links: [
+      { label: 'Hamburg Angelinfos', url: 'https://www.hamburg.de/wassersport/3023356/angeln', kind: 'info' },
+      { label: 'ALLE ANGELN Hamburg', url: 'https://www.alleangeln.de/angeln-in-hamburg', kind: 'community' },
+      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
     ],
   },
   {
@@ -115,6 +138,12 @@ export const localWaterBodies: LocalWaterBody[] = [
       { species: 'karpfen', confidence: 0.34 },
       { species: 'wels', confidence: 0.24 },
     ],
+    links: [
+      { label: 'AVHH Strom-Elbe', url: 'https://anglerverband-hh.de/unsere-gewaesser/strom-elbe', kind: 'permit' },
+      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
+      { label: 'ALLE ANGELN Elbe', url: 'https://www.alleangeln.de/gewaesser/elbe-hamburg-finkenwerder', kind: 'community' },
+      { label: 'Anglermap Elbe', url: 'https://www.anglermap.de/angeln/steckbrief-gewaesser.php?id=elbe-hamburg-veddel', kind: 'info' },
+    ],
   },
   {
     id: 'aussenalster',
@@ -131,6 +160,11 @@ export const localWaterBodies: LocalWaterBody[] = [
       { species: 'brasse', confidence: 0.75 },
       { species: 'rotauge', confidence: 0.78 },
       { species: 'karpfen', confidence: 0.48 },
+    ],
+    links: [
+      { label: 'ALLE ANGELN Aussenalster', url: 'https://www.alleangeln.de/gewaesser/au%C3%9Fenalster', kind: 'community' },
+      { label: 'Hamburg Angelinfos', url: 'https://www.hamburg.de/wassersport/3023356/angeln', kind: 'info' },
+      { label: 'hejfish Angelkarten', url: 'https://www.hejfish.com/', kind: 'permit' },
     ],
   },
 ];
@@ -242,6 +276,7 @@ export class FallbackProvider implements WaterDataProvider {
       },
       dataQuality: 'medium',
       sources: ['user_report'],
+      links: waterBody.links,
       lastUpdated,
     };
   }

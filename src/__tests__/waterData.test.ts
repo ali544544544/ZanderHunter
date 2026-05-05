@@ -12,6 +12,7 @@ describe('FallbackProvider local water detection', () => {
     expect(profile.sources).toContain('user_report');
     expect(profile.species.some((entry) => entry.species === 'zander')).toBe(true);
     expect(profile.species.some((entry) => entry.species === 'aal')).toBe(true);
+    expect(profile.links?.some((link) => link.label.includes('hejfish'))).toBe(true);
   });
 
   it('recognizes a map point on the Elbe as a river', async () => {
