@@ -64,7 +64,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   useEffect(() => {
     setMapCenter(center);
     setSelectedPoint(center);
-  }, [center.lat, center.lng]);
+  }, [center]);
 
   const centerWorld = useMemo(
     () => ({

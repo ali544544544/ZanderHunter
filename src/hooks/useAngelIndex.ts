@@ -207,7 +207,6 @@ export function useAngelIndex(
     targetFish,
     lat,
     lng,
-    locationRevision,
     tide.events,
     tide.loading,
     weather.data,
