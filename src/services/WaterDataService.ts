@@ -1,7 +1,5 @@
 import { FallbackProvider } from '../providers/FallbackProvider';
-import { FischInfoNRWProvider } from '../providers/FischInfoNRWProvider';
 import { HejfishAreasProvider } from '../providers/HejfishAreasProvider';
-import { WaterAPIProvider } from '../providers/WaterAPIProvider';
 import type { DataQuality, FishSpecies, SpeciesConfidence, WaterBodyProfile, WaterDataProvider } from '../types/waterData';
 import { WaterDataCache } from './waterDataCache';
 
@@ -21,8 +19,6 @@ export class WaterDataService {
     this.cache = new WaterDataCache();
     this.providers = (providers || [
       new HejfishAreasProvider(),
-      new WaterAPIProvider(),
-      new FischInfoNRWProvider(),
       new FallbackProvider(),
     ]).sort((a, b) => a.priority - b.priority);
   }
@@ -51,7 +47,7 @@ export class WaterDataService {
         const profile = await provider.getWaterBodyProfile(lat, lng);
         if (profile) {
           matches.push(profile);
-          if (profile.dataQuality === 'high') break;
+          if (profile.sources.includes('hejfish') || profile.dataQuality === 'high') break;
         }
       } catch (error) {
         console.error(`WaterDataService: ${provider.name} failed`, error);

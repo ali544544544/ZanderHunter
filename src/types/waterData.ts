@@ -1,4 +1,4 @@
-export type DataSource = 'waterapi' | 'fischinfo_nrw' | 'anglermap' | 'hejfish' | 'user_report' | 'unknown';
+export type DataSource = 'waterapi' | 'fischinfo_nrw' | 'anglermap' | 'hejfish' | 'unknown';
 
 export type KnownFishSpecies =
   | 'zander'

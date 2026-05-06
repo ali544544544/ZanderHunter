@@ -3,27 +3,15 @@ import { FallbackProvider } from '../providers/FallbackProvider';
 import { HejfishAreasProvider } from '../providers/HejfishAreasProvider';
 import type { HejfishArea, HejfishAreaLite } from '../types/hejfishArea';
 
-describe('FallbackProvider local water detection', () => {
-  it('recognizes a map point on the Dove-Elbe', async () => {
+describe('FallbackProvider', () => {
+  it('does not invent local fish data when hejfish has no match', async () => {
     const provider = new FallbackProvider();
     const profile = await provider.getWaterBodyProfile(53.511, 10.121);
 
-    expect(profile.name).toBe('Dove-Elbe');
-    expect(profile.type).toBe('river');
-    expect(profile.dataQuality).toBe('medium');
-    expect(profile.sources).toContain('user_report');
-    expect(profile.species.some((entry) => entry.species === 'zander')).toBe(true);
-    expect(profile.species.some((entry) => entry.species === 'aal')).toBe(true);
-    expect(profile.links?.some((link) => link.label.includes('hejfish'))).toBe(true);
-  });
-
-  it('recognizes a map point on the Elbe as a river', async () => {
-    const provider = new FallbackProvider();
-    const profile = await provider.getWaterBodyProfile(53.545, 9.89);
-
-    expect(profile.name).toBe('Elbe');
-    expect(profile.type).toBe('river');
-    expect(profile.species.length).toBeGreaterThanOrEqual(8);
+    expect(profile.name).toBe('Kein Hejfish-Gewaesser gefunden');
+    expect(profile.dataQuality).toBe('unknown');
+    expect(profile.sources).toEqual(['unknown']);
+    expect(profile.species).toEqual([]);
   });
 });
 

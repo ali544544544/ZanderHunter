@@ -107,13 +107,13 @@ describe('water profile score context', () => {
       longitude: 9.9,
       region: 'Hamburg',
       dataQuality: 'high',
-      sources: ['user_report'],
+      sources: ['hejfish'],
       lastUpdated: new Date('2026-06-01'),
       species: [
         {
           species: 'zander',
           confidence,
-          source: 'user_report',
+          source: 'hejfish',
           lastUpdated: new Date('2026-06-01'),
         },
       ],

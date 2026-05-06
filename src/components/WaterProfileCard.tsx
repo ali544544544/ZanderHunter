@@ -28,7 +28,6 @@ const sourceLabels: Record<DataSource, string> = {
   fischinfo_nrw: 'FischInfo NRW',
   anglermap: 'Anglermap',
   hejfish: 'hejfish',
-  user_report: 'Lokales Gewaesserprofil',
   unknown: 'Schaetzung',
 };
 
@@ -116,6 +115,9 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
 
       <div className="mt-4 space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vorhandene Fischarten</p>
+        {species.length === 0 && (
+          <p className="text-xs font-semibold text-slate-500">Keine Hejfish-Fischdaten fuer diesen Punkt gefunden.</p>
+        )}
         {species.map((entry) => (
           <div key={entry.species} className="grid grid-cols-[82px_1fr_36px] items-center gap-2 text-xs">
             <span className="font-bold text-slate-300">{entry.displayName || speciesLabels[entry.species as KnownFishSpecies] || entry.species}</span>
