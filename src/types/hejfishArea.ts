@@ -1,3 +1,15 @@
+export interface HejfishAreaLite {
+  id: number;
+  name: string;
+  slug: string;
+  lat: number;
+  lng: number;
+  water_type?: string;
+  main_image?: string;
+  fish_count?: number;
+  mobile_ticket?: boolean;
+}
+
 export interface HejfishArea {
   id: number;
   slug: string;

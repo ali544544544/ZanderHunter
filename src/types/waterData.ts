@@ -1,6 +1,6 @@
 export type DataSource = 'waterapi' | 'fischinfo_nrw' | 'anglermap' | 'hejfish' | 'user_report' | 'unknown';
 
-export type FishSpecies =
+export type KnownFishSpecies =
   | 'zander'
   | 'hecht'
   | 'barsch'
@@ -11,11 +11,14 @@ export type FishSpecies =
   | 'forelle'
   | 'wels';
 
+export type FishSpecies = KnownFishSpecies | (string & {});
+
 export type WaterBodyType = 'river' | 'lake' | 'canal' | 'pond' | 'sea';
 export type DataQuality = 'high' | 'medium' | 'low' | 'unknown';
 
 export interface SpeciesConfidence {
   species: FishSpecies;
+  displayName?: string;
   confidence: number;
   source: DataSource;
   lastUpdated: Date;

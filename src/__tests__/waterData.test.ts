@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FallbackProvider } from '../providers/FallbackProvider';
 import { HejfishAreasProvider } from '../providers/HejfishAreasProvider';
-import type { HejfishArea } from '../types/hejfishArea';
+import type { HejfishArea, HejfishAreaLite } from '../types/hejfishArea';
 
 describe('FallbackProvider local water detection', () => {
   it('recognizes a map point on the Dove-Elbe', async () => {
@@ -28,7 +28,17 @@ describe('FallbackProvider local water detection', () => {
 });
 
 describe('HejfishAreasProvider mapping', () => {
-  it('loads areas.json and exposes ticket and fish details', async () => {
+  it('loads split hejfish data and exposes ticket and fish details', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 12071,
+      slug: 'zielfinger-angelsee-zander-forellen-see',
+      name: 'Zielfinger Angelsee',
+      water_type: 'See',
+      fish_count: 7,
+      mobile_ticket: true,
+      lat: 48.0123,
+      lng: 9.3456,
+    };
     const area: HejfishArea = {
       id: 12071,
       slug: 'zielfinger-angelsee-zander-forellen-see',
@@ -49,7 +59,10 @@ describe('HejfishAreasProvider mapping', () => {
       error: false,
     };
     const originalFetch = globalThis.fetch;
-    const fetchMock: typeof fetch = async () => new Response(JSON.stringify([area]));
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      return new Response(JSON.stringify(url.includes('areas_lite') ? [liteArea] : area));
+    };
     globalThis.fetch = fetchMock;
 
     try {

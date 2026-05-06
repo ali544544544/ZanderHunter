@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DataSource, FishSpecies, WaterBodyProfile } from '../types/waterData';
+import type { DataSource, KnownFishSpecies, WaterBodyProfile } from '../types/waterData';
 
 interface WaterProfileCardProps {
   profile: WaterBodyProfile | null;
@@ -32,7 +32,7 @@ const sourceLabels: Record<DataSource, string> = {
   unknown: 'Schaetzung',
 };
 
-const speciesLabels: Record<FishSpecies, string> = {
+const speciesLabels: Record<KnownFishSpecies, string> = {
   zander: 'Zander',
   hecht: 'Hecht',
   barsch: 'Barsch',
@@ -118,7 +118,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vorhandene Fischarten</p>
         {species.map((entry) => (
           <div key={entry.species} className="grid grid-cols-[82px_1fr_36px] items-center gap-2 text-xs">
-            <span className="font-bold text-slate-300">{speciesLabels[entry.species]}</span>
+            <span className="font-bold text-slate-300">{entry.displayName || speciesLabels[entry.species as KnownFishSpecies] || entry.species}</span>
             <div className="h-2 overflow-hidden rounded-full bg-slate-800">
               <div
                 className="h-full rounded-full bg-blue-400"
