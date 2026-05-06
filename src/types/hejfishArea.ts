@@ -16,7 +16,7 @@ export interface HejfishArea {
   url: string;
   name: string;
   description?: string;
-  water_size_ha?: number;
+  water_size_ha?: number | null;
   fish?: string[];
   techniques?: string[];
   properties?: string[];
@@ -41,7 +41,7 @@ export interface HejfishArea {
     points?: unknown[];
     polygons?: unknown[];
     data?: {
-      geojson?: unknown[];
+      geojson?: unknown;
       locations?: unknown[];
     };
   };

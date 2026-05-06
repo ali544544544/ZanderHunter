@@ -16,6 +16,16 @@ export type FishSpecies = KnownFishSpecies | (string & { readonly __fishSpecies?
 export type WaterBodyType = 'river' | 'lake' | 'canal' | 'pond' | 'sea';
 export type DataQuality = 'high' | 'medium' | 'low' | 'unknown';
 
+export interface WaterMapPoint {
+  lat: number;
+  lng: number;
+}
+
+export interface WaterMapGeometry {
+  polygons: WaterMapPoint[][];
+  points: WaterMapPoint[];
+}
+
 export interface SpeciesConfidence {
   species: FishSpecies;
   displayName?: string;
@@ -55,6 +65,7 @@ export interface WaterBodyProfile {
   }>;
   areaDetails?: {
     waterSizeHa?: number;
+    mapGeometry?: WaterMapGeometry;
     season?: string;
     techniques?: string[];
     properties?: string[];

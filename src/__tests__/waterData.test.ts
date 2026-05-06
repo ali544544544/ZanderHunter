@@ -44,6 +44,13 @@ describe('HejfishAreasProvider mapping', () => {
       lat: 48.0123,
       lng: 9.3456,
       country: 'DE',
+      map_data: {
+        polygons: [[
+          { lat: 48.01, lng: 9.34 },
+          { lat: 48.02, lng: 9.34 },
+          { lat: 48.02, lng: 9.35 },
+        ]],
+      },
       error: false,
     };
     const originalFetch = globalThis.fetch;
@@ -61,6 +68,7 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.sources).toContain('hejfish');
       expect(profile?.species.map((entry) => entry.species)).toContain('zander');
       expect(profile?.species.map((entry) => entry.species)).toContain('forelle');
+      expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
       expect(profile?.areaDetails?.tickets?.[0].name).toBe('Tageskarte');
       expect(profile?.links?.[0].url).toBe(area.url);
     } finally {

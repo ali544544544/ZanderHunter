@@ -1,5 +1,5 @@
 import type { HejfishArea, HejfishAreaLite } from '../types/hejfishArea';
-import type { FishSpecies, WaterBodyProfile, WaterBodyType, WaterDataProvider } from '../types/waterData';
+import type { FishSpecies, WaterBodyProfile, WaterBodyType, WaterDataProvider, WaterMapGeometry } from '../types/waterData';
 
 type Coordinate = { lat: number; lng: number };
 type LiteCandidate = { area: HejfishAreaLite; distance: number };
@@ -305,6 +305,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       const species = this.mapFishSpecies(name);
       return [species, { species, displayName: name }];
     })).values());
+    const mapGeometry = this.getAreaMapGeometry(area);
 
     return {
       id: `hejfish-${area.id}`,
@@ -334,7 +335,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
           : []),
       ],
       areaDetails: {
-        waterSizeHa: area.water_size_ha,
+        waterSizeHa: area.water_size_ha ?? undefined,
+        mapGeometry,
         season: area.season,
         techniques: area.techniques,
         properties: area.properties,
@@ -346,6 +348,72 @@ export class HejfishAreasProvider implements WaterDataProvider {
       },
       lastUpdated,
     };
+  }
+
+  private getAreaMapGeometry(area: HejfishArea): WaterMapGeometry | undefined {
+    const polygonSources = [
+      ...(Array.isArray(area.map_data?.polygons) ? area.map_data.polygons : []),
+      area.map_data?.data?.geojson,
+    ];
+    const polygons = polygonSources
+      .flatMap((source) => this.extractPolygons(source))
+      .filter((polygon) => polygon.length >= 3);
+    const points = this.getAreaReferencePoints(area);
+
+    if (polygons.length === 0 && points.length === 0) return undefined;
+
+    return { polygons, points };
+  }
+
+  private extractPolygons(value: unknown): Coordinate[][] {
+    if (!value) return [];
+
+    if (Array.isArray(value)) {
+      const coordinates = this.extractCoordinates(value);
+      if (coordinates.length >= 3) return [coordinates];
+      return value.flatMap((entry) => this.extractPolygons(entry));
+    }
+
+    if (typeof value !== 'object') return [];
+
+    const objectValue = value as Record<string, unknown>;
+    const type = typeof objectValue.type === 'string' ? objectValue.type : '';
+    const coordinates = objectValue.coordinates;
+
+    if (type === 'Polygon') {
+      return Array.isArray(coordinates)
+        ? coordinates.map((ring) => this.extractGeoJsonRing(ring)).filter((ring) => ring.length >= 3)
+        : [];
+    }
+
+    if (type === 'MultiPolygon') {
+      return Array.isArray(coordinates)
+        ? coordinates.flatMap((polygon) => this.extractPolygons({ type: 'Polygon', coordinates: polygon }))
+        : [];
+    }
+
+    if (type === 'Feature') {
+      return this.extractPolygons(objectValue.geometry);
+    }
+
+    if (type === 'FeatureCollection' && Array.isArray(objectValue.features)) {
+      return objectValue.features.flatMap((feature) => this.extractPolygons(feature));
+    }
+
+    return this.extractPolygons(objectValue.polygons || objectValue.points || objectValue.path || objectValue.geojson);
+  }
+
+  private extractGeoJsonRing(value: unknown): Coordinate[] {
+    if (!Array.isArray(value)) return [];
+
+    const first = value[0];
+    if (Array.isArray(first) && typeof first[0] === 'number' && typeof first[1] === 'number') {
+      return (value as number[][])
+        .map((point) => ({ lng: point[0], lat: point[1] }))
+        .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+    }
+
+    return value.flatMap((entry) => this.extractGeoJsonRing(entry));
   }
 
   private mapFishSpecies(name: string): FishSpecies {
