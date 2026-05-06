@@ -61,10 +61,10 @@ const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 
 const sections: { id: SectionId; label: string; hint: string }[] = [
   { id: 'fish', label: 'Fische', hint: 'Erkennen, finden, verstehen' },
-  { id: 'bait', label: 'Koeder', hint: 'Wann welcher Reiz passt' },
-  { id: 'technique', label: 'Fuehrung', hint: 'Tempo, Pausen, Bissphase' },
+  { id: 'bait', label: 'Köder', hint: 'Wann welcher Reiz passt' },
+  { id: 'technique', label: 'Führung', hint: 'Tempo, Pausen, Bissphase' },
   { id: 'knots', label: 'Knoten', hint: 'Einsatz und Schrittfolge' },
-  { id: 'law', label: 'Regeln', hint: 'Schonzeit und Mass' },
+  { id: 'law', label: 'Regeln', hint: 'Schonzeit und Maß' },
 ];
 
 const fishProfiles: FishProfile[] = [
@@ -73,63 +73,63 @@ const fishProfiles: FishProfile[] = [
     name: 'Zander',
     latin: 'Sander lucioperca',
     icon: assetPath('icons/zander.svg'),
-    type: 'vorsichtiger Daemmerungsraeuber',
-    body: 'Schlanker Koerper, grosses Maul, spitze Hundszaehne und helle Augen. Gebaut fuer kurze Attacken auf schlanke Beutefische.',
-    senses: 'Sehr stark bei wenig Licht und Truebung. Er reagiert auf Vibration, Bodenkontakt und saubere Koederfisch-Gerueche.',
+    type: 'vorsichtiger Dämmerungsräuber',
+    body: 'Schlanker Körper, großes Maul, spitze Hundszähne und helle Augen. Gebaut für kurze Attacken auf schlanke Beutefische.',
+    senses: 'Sehr stark bei wenig Licht und Trübung. Er reagiert auf Vibration, Bodenkontakt und saubere Köderfisch-Gerüche.',
     food: 'Laube, Rotauge, kleine Barsche, Grundeln und andere schmale Beutefische.',
     habitat: ['Steinpackung', 'Buhnenkopf', 'harte Kante', 'Spundwand', 'tiefe Rinne'],
-    season: 'Fruehjahr nach der Schonzeit und Herbst sind stark. Im Sommer oft nachts oder bei Sauerstoff und Stroemung.',
-    tactics: ['Grundnah jiggen oder faulenzen.', 'In der Daemmerung flacher suchen.', 'Im Winter kleine Shads und lange Bodenkontakte.'],
+    season: 'Frühjahr nach der Schonzeit und Herbst sind stark. Im Sommer oft nachts oder bei Sauerstoff und Strömung.',
+    tactics: ['Grundnah jiggen oder faulenzen.', 'In der Dämmerung flacher suchen.', 'Im Winter kleine Shads und lange Bodenkontakte.'],
   },
   {
     id: 'hecht',
     name: 'Hecht',
     latin: 'Esox lucius',
     icon: assetPath('icons/hecht.svg'),
-    type: 'explosiver Lauerjaeger',
-    body: 'Pfeilfoermiger Koerper, weit hinten sitzende Flossen und ein breites Maul mit nach hinten gerichteten Zaehnen.',
-    senses: 'Starker Sichtjaeger. Silhouette, Druckwellen und ploetzliche Richtungswechsel loesen Attacken aus.',
-    food: 'Fische, Krebse, Froesche und gelegentlich kleine Wasservoegel.',
-    habitat: ['Krautkante', 'Schilf', 'Totholz', 'Einlauf', 'windgedruecktes Ufer'],
-    season: 'Herbst und fruehes Fruehjahr sind top. Im Hochsommer frueh, spaet und an sauerstoffreichen Zonen.',
-    tactics: ['Grosse Koeder mit klarer Silhouette.', 'Stop-and-go am Kraut.', 'Bei kaltem Wasser langsam und nah am Standplatz.'],
+    type: 'explosiver Lauerjäger',
+    body: 'Pfeilförmiger Körper, weit hinten sitzende Flossen und ein breites Maul mit nach hinten gerichteten Zähnen.',
+    senses: 'Starker Sichtjäger. Silhouette, Druckwellen und plötzliche Richtungswechsel lösen Attacken aus.',
+    food: 'Fische, Krebse, Frösche und gelegentlich kleine Wasservögel.',
+    habitat: ['Krautkante', 'Schilf', 'Totholz', 'Einlauf', 'windgedrücktes Ufer'],
+    season: 'Herbst und frühes Frühjahr sind top. Im Hochsommer früh, spät und an sauerstoffreichen Zonen.',
+    tactics: ['Große Köder mit klarer Silhouette.', 'Stop-and-go am Kraut.', 'Bei kaltem Wasser langsam und nah am Standplatz.'],
   },
   {
     id: 'barsch',
     name: 'Barsch',
     latin: 'Perca fluviatilis',
     icon: assetPath('icons/barsch.svg'),
-    type: 'aktiver Schwarmraeuber',
-    body: 'Hochrueckig, dunkle Querstreifen, rote Flossen und harte Stachelstrahlen in der ersten Rueckenflosse.',
-    senses: 'Reagiert stark auf Futterneid, kleine Fluchtbewegungen und Schwarmaktivitaet von Kleinfischen.',
-    food: 'Insektenlarven, Krebse, Jungfische, Grundeln und kleine Weissfische.',
+    type: 'aktiver Schwarmräuber',
+    body: 'Hochrückig, dunkle Querstreifen, rote Flossen und harte Stachelstrahlen in der ersten Rückenflosse.',
+    senses: 'Reagiert stark auf Futterneid, kleine Fluchtbewegungen und Schwarmaktivität von Kleinfischen.',
+    food: 'Insektenlarven, Krebse, Jungfische, Grundeln und kleine Weißfische.',
     habitat: ['Spundwand', 'Poller', 'Steinpackung', 'Hafeneinfahrt', 'Kleinfischschwarm'],
     season: 'Sommer bis Herbst sehr aktiv. Im Winter tiefer und oft konzentriert in kleinen Gruppen.',
-    tactics: ['Ersten Kontakt ausnutzen und sofort weiterwerfen.', 'Kleine Shads, Dropshot oder Spinner.', 'Grosse Barsche tiefer und strukturgebunden suchen.'],
+    tactics: ['Ersten Kontakt ausnutzen und sofort weiterwerfen.', 'Kleine Shads, Dropshot oder Spinner.', 'Große Barsche tiefer und strukturgebunden suchen.'],
   },
   {
     id: 'karpfen',
     name: 'Karpfen',
     latin: 'Cyprinus carpio',
     type: 'starker Grundfresser',
-    body: 'Gedrungener Koerper, grosse Schuppen oder Spiegelpartien und vier Barteln am Maul.',
-    senses: 'Sehr vorsichtig bei Druck, Schnurkontakt und ungewoehnlichem Widerstand. Geruch und Futterspur sind entscheidend.',
-    food: 'Larven, Schnecken, Muscheln, Pflanzen, Mais, Tigernuesse und Boilies.',
+    body: 'Gedrungener Körper, große Schuppen oder Spiegelpartien und vier Barteln am Maul.',
+    senses: 'Sehr vorsichtig bei Druck, Schnurkontakt und ungewöhnlichem Widerstand. Geruch und Futterspur sind entscheidend.',
+    food: 'Larven, Schnecken, Muscheln, Pflanzen, Mais, Tigernüsse und Boilies.',
     habitat: ['Plateau', 'Seerosenkante', 'weicher Grund', 'Futterplatz', 'warme Flachzone'],
-    season: 'Mai bis Oktober. Bei warmem Wasser aktiv, bei Hitze eher frueh, spaet oder nachts.',
-    tactics: ['Futterplatz sparsam aufbauen.', 'Haarmontage und Selbsthakeffekt nutzen.', 'Schnur sauber ablegen und Stoerung vermeiden.'],
+    season: 'Mai bis Oktober. Bei warmem Wasser aktiv, bei Hitze eher früh, spät oder nachts.',
+    tactics: ['Futterplatz sparsam aufbauen.', 'Haarmontage und Selbsthakeffekt nutzen.', 'Schnur sauber ablegen und Störung vermeiden.'],
   },
   {
     id: 'forelle',
     name: 'Forelle',
     latin: 'Salmo trutta / Oncorhynchus mykiss',
-    type: 'stroemungsliebender Sichtfisch',
-    body: 'Torpedofoermig, Fettflosse, feine Schuppen und gute Beschleunigung in Stroemung.',
-    senses: 'Sieht sehr gut und reagiert auf natuerliche Drift, Insektenaktivitaet und kleine Beutefisch-Impulse.',
+    type: 'strömungsliebender Sichtfisch',
+    body: 'Torpedoförmig, Fettflosse, feine Schuppen und gute Beschleunigung in Strömung.',
+    senses: 'Sieht sehr gut und reagiert auf natürliche Drift, Insektenaktivität und kleine Beutefisch-Impulse.',
     food: 'Insekten, Larven, Anflugnahrung, Bachflohkrebse und kleine Fische.',
-    habitat: ['Gumpen', 'Kehrstroemung', 'unterspueltes Ufer', 'Sauerstoffzone', 'Forellenteichkante'],
-    season: 'Kuehles, sauerstoffreiches Wasser. Im Sommer Schatten und Zulauf, im Fruehjahr flacher.',
-    tactics: ['Natuerliche Drift oder kleine Spinner.', 'Leise bewegen und tief stehen bleiben.', 'Bei Sonne fein und unauffaellig fischen.'],
+    habitat: ['Gumpen', 'Kehrströmung', 'unterspültes Ufer', 'Sauerstoffzone', 'Forellenteichkante'],
+    season: 'Kühles, sauerstoffreiches Wasser. Im Sommer Schatten und Zulauf, im Frühjahr flacher.',
+    tactics: ['Natürliche Drift oder kleine Spinner.', 'Leise bewegen und tief stehen bleiben.', 'Bei Sonne fein und unauffällig fischen.'],
   },
 ];
 
@@ -141,38 +141,38 @@ const baitProfiles: BaitProfile[] = [
     bestFor: 'Zander, Barsch, Hecht',
     useWhen: 'Wenn du Grund, Kanten oder Tiefe kontrolliert absuchen willst.',
     rig: 'Jigkopf, Cheburashka, Texas Rig oder Dropshot.',
-    action: 'Anheben, absinken lassen, Bodenkontakt halten. Farbe: natuerlich bei klarem Wasser, auffaellig bei Truebung.',
-    mistakes: ['Zu schwerer Jigkopf', 'kein Bodenkontakt', 'Anhieb zu spaet beim Zander'],
+    action: 'Anheben, absinken lassen, Bodenkontakt halten. Farbe: natürlich bei klarem Wasser, auffällig bei Trübung.',
+    mistakes: ['Zu schwerer Jigkopf', 'kein Bodenkontakt', 'Anhieb zu spät beim Zander'],
   },
   {
     id: 'wobbler',
     name: 'Wobbler',
     visual: 'wobbler',
     bestFor: 'Hecht, Zander, Forelle, Barsch',
-    useWhen: 'Wenn Raeuber aktiv jagen oder in der Daemmerung flach ziehen.',
+    useWhen: 'Wenn Räuber aktiv jagen oder in der Dämmerung flach ziehen.',
     rig: 'Direkt an Snap oder Rapala-Schlaufe. Stahl/Titan bei Hechtgefahr.',
     action: 'Einleiern, stop-and-go oder twitchen. Suspender im Winter mit langen Pausen.',
-    mistakes: ['Zu schnell im kalten Wasser', 'falsche Lauftiefe', 'zu grosse Snaps bei kleinen Wobblern'],
+    mistakes: ['Zu schnell im kalten Wasser', 'falsche Lauftiefe', 'zu große Snaps bei kleinen Wobblern'],
   },
   {
     id: 'spinner',
     name: 'Spinner / Blinker',
     visual: 'spinner',
     bestFor: 'Barsch, Forelle, Hecht',
-    useWhen: 'Wenn Fische aktiv sind und du Flaeche schnell absuchen willst.',
+    useWhen: 'Wenn Fische aktiv sind und du Fläche schnell absuchen willst.',
     rig: 'Direkt am Snap, bei Drall mit Wirbel. Bei Hecht immer bissfestes Vorfach.',
-    action: 'Konstant fuehren, kurz absinken lassen, ueber Kraut oder Steine lupfen.',
-    mistakes: ['Zu tief ueber Hindernissen', 'ohne Wirbel bei starkem Drall', 'monoton bei Nachlaeufern'],
+    action: 'Konstant führen, kurz absinken lassen, über Kraut oder Steine lupfen.',
+    mistakes: ['Zu tief über Hindernissen', 'ohne Wirbel bei starkem Drall', 'monoton bei Nachläufern'],
   },
   {
     id: 'worm',
     name: 'Wurm',
     visual: 'worm',
     bestFor: 'Barsch, Aal, Schleie, Brassen',
-    useWhen: 'Bei Truebung, Regen, Nacht oder wenn Geruch wichtiger als Optik ist.',
+    useWhen: 'Bei Trübung, Regen, Nacht oder wenn Geruch wichtiger als Optik ist.',
     rig: 'Pose, Grundmontage, Dropshot-Wurm oder kleiner Haken am leichten Blei.',
-    action: 'Lebendig anbieten, nicht ueberladen. Kleine Stuecke fuer vorsichtige Bisse.',
-    mistakes: ['Haken komplett versteckt', 'zu grosser Koeder fuer kleine Fische', 'zu stramme Schnur bei vorsichtigen Friedfischen'],
+    action: 'Lebendig anbieten, nicht überladen. Kleine Stücke für vorsichtige Bisse.',
+    mistakes: ['Haken komplett versteckt', 'zu großer Köder für kleine Fische', 'zu stramme Schnur bei vorsichtigen Friedfischen'],
   },
   {
     id: 'corn',
@@ -181,18 +181,18 @@ const baitProfiles: BaitProfile[] = [
     bestFor: 'Karpfen, Schleie, Rotauge, Brassen',
     useWhen: 'Wenn Friedfische am Platz gehalten werden sollen.',
     rig: 'Pose, Feeder, Haarmontage oder Method Feeder.',
-    action: 'Kleine Futterspur, einzelne Koerner am Haken oder Haar. Nicht ueberfuettern.',
-    mistakes: ['Zu viel Futter am Anfang', 'zu grober Haken', 'zu spaeter Anschlag bei Posenbissen'],
+    action: 'Kleine Futterspur, einzelne Körner am Haken oder Haar. Nicht überfüttern.',
+    mistakes: ['Zu viel Futter am Anfang', 'zu grober Haken', 'zu später Anschlag bei Posenbissen'],
   },
   {
     id: 'deadbait',
-    name: 'Toter Koederfisch',
+    name: 'Toter Köderfisch',
     visual: 'fish',
     bestFor: 'Zander, Hecht, Aal, Wels',
-    useWhen: 'Wenn Geruch, natuerliche Silhouette und passive Praesentation gefragt sind.',
-    rig: 'Grundmontage, Pose oder System. Regeln zum Koederfisch immer lokal pruefen.',
-    action: 'Frisch, sauber und passend gross. Zander eher schlank, Hecht auch groesser.',
-    mistakes: ['Alter Koederfisch', 'zu grosser Widerstand', 'fehlendes Stahlvorfach bei Hechtgefahr'],
+    useWhen: 'Wenn Geruch, natürliche Silhouette und passive Präsentation gefragt sind.',
+    rig: 'Grundmontage, Pose oder System. Regeln zum Köderfisch immer lokal prüfen.',
+    action: 'Frisch, sauber und passend groß. Zander eher schlank, Hecht auch größer.',
+    mistakes: ['Alter Köderfisch', 'zu großer Widerstand', 'fehlendes Stahlvorfach bei Hechtgefahr'],
   },
 ];
 
@@ -202,66 +202,66 @@ const techniqueProfiles: TechniqueProfile[] = [
     name: 'Jiggen',
     bait: 'Gummifisch am Jigkopf',
     targets: 'Zander, Barsch, Hecht',
-    where: 'Kanten, Steinpackungen, Buhnen, harte Boeden, Hafenbecken',
+    where: 'Kanten, Steinpackungen, Buhnen, harte Böden, Hafenbecken',
     tempo: 'Sommer: 1-2 schnelle Kurbelumdrehungen. Winter: 1 kurze Rutenspitzenbewegung oder halbe Kurbelumdrehung.',
-    pause: 'Absinkphase meistens 1-4 Sekunden. Tiefer oder kaelter: 3-8 Sekunden. Wenn der Koeder sofort liegt, leichter fischen.',
-    bite: 'Tock, Schnurstop, seitliches Weglaufen oder ploetzlich kein Bodenkontakt. Sofort Kontakt aufnehmen und anschlagen.',
-    steps: ['Auswerfen und bis Grundkontakt warten.', 'Koeder 20-80 cm anheben.', 'Schnur leicht gespannt halten.', 'Absinken beobachten.', 'Nach 2-3 Spruengen kurz liegen lassen.'],
+    pause: 'Absinkphase meistens 1-4 Sekunden. Tiefer oder kälter: 3-8 Sekunden. Wenn der Köder sofort liegt, leichter fischen.',
+    bite: 'Tock, Schnurstop, seitliches Weglaufen oder plötzlich kein Bodenkontakt. Sofort Kontakt aufnehmen und anschlagen.',
+    steps: ['Auswerfen und bis Grundkontakt warten.', 'Köder 20-80 cm anheben.', 'Schnur leicht gespannt halten.', 'Absinken beobachten.', 'Nach 2-3 Sprüngen kurz liegen lassen.'],
   },
   {
     id: 'faulenzen',
     name: 'Faulenzen',
     bait: 'Gummifisch am Jigkopf',
     targets: 'Zander, Barsch',
-    where: 'Harter Grund, Kanten, flache Daemmerungszonen',
+    where: 'Harter Grund, Kanten, flache Dämmerungszonen',
     tempo: '1-3 Kurbelumdrehungen aus der Rolle, Rute bleibt eher ruhig.',
-    pause: 'Absinkphase 1-5 Sekunden. Im Winter sehr kleine Spruenge und laengere Bodenkontakte.',
+    pause: 'Absinkphase 1-5 Sekunden. Im Winter sehr kleine Sprünge und längere Bodenkontakte.',
     bite: 'Oft als harter Schlag in die lockere Schnur oder als Schnurbogen sichtbar.',
-    steps: ['Grundkontakt finden.', 'Nur mit der Rolle anheben.', 'Rute zeigt Richtung Koeder.', 'Absinken kontrollieren.', 'Bei jedem Verdacht anschlagen.'],
+    steps: ['Grundkontakt finden.', 'Nur mit der Rolle anheben.', 'Rute zeigt Richtung Köder.', 'Absinken kontrollieren.', 'Bei jedem Verdacht anschlagen.'],
   },
   {
     id: 'twitchen',
     name: 'Twitchen',
     bait: 'Suspender-Wobbler oder Minnow',
     targets: 'Barsch, Hecht, Zander, Forelle',
-    where: 'Flache Kanten, Krautluecken, Hafenwaende, Daemmerungsbereiche',
-    tempo: 'Warm: 2-4 kurze Schlaege, dann Pause. Kalt: 1 Schlag, lange stehen lassen.',
+    where: 'Flache Kanten, Krautlücken, Hafenwände, Dämmerungsbereiche',
+    tempo: 'Warm: 2-4 kurze Schläge, dann Pause. Kalt: 1 Schlag, lange stehen lassen.',
     pause: 'Sommer 1-3 Sekunden. Winter 5-30 Sekunden, besonders mit Suspender.',
     bite: 'Attacke kommt oft in der Pause. Schnur leicht beobachten, nicht komplett schlaff werden lassen.',
-    steps: ['Wobbler auf Tiefe bringen.', 'In lockere Schnur schlagen.', 'Koeder ausbrechen lassen.', 'Pause halten.', 'Beim Einschlag direkt Kontakt herstellen.'],
+    steps: ['Wobbler auf Tiefe bringen.', 'In lockere Schnur schlagen.', 'Köder ausbrechen lassen.', 'Pause halten.', 'Beim Einschlag direkt Kontakt herstellen.'],
   },
   {
     id: 'spinner',
-    name: 'Spinner / Blinker fuehren',
-    bait: 'Metallkoeder',
+    name: 'Spinner / Blinker führen',
+    bait: 'Metallköder',
     targets: 'Forelle, Barsch, Hecht',
-    where: 'Flachwasser, Einlaeufe, Krautkanten, aktive Schwarmbereiche',
-    tempo: 'So langsam wie moeglich, so schnell wie noetig: Blatt muss laufen, Blinker darf nicht kippen.',
-    pause: 'Kurze Spinnstopps von 0.5-2 Sekunden. Ueber Kraut nur kurz absinken lassen.',
-    bite: 'Meist klarer Einschlag oder ploetzliches Gewicht. Bei Nachlaeufern Tempo kurz brechen.',
-    steps: ['Nach dem Wurf kurz absinken lassen.', 'Konstant starten.', 'Tempo variieren.', 'An Hindernissen anlupfen.', 'Vor den Fuessen bis zum Ende fuehren.'],
+    where: 'Flachwasser, Einläufe, Krautkanten, aktive Schwarmbereiche',
+    tempo: 'So langsam wie möglich, so schnell wie nötig: Blatt muss laufen, Blinker darf nicht kippen.',
+    pause: 'Kurze Spinnstopps von 0.5-2 Sekunden. Über Kraut nur kurz absinken lassen.',
+    bite: 'Meist klarer Einschlag oder plötzliches Gewicht. Bei Nachläufern Tempo kurz brechen.',
+    steps: ['Nach dem Wurf kurz absinken lassen.', 'Konstant starten.', 'Tempo variieren.', 'An Hindernissen anlupfen.', 'Vor den Füßen bis zum Ende führen.'],
   },
   {
     id: 'dropshot',
     name: 'Drop-Shot',
     bait: 'Wurm, kleiner Shad, Pintail',
     targets: 'Barsch, Zander, Forelle',
-    where: 'Steile Kanten, Spundwaende, tiefe Loecher, unter Boot oder Steg',
-    tempo: 'Sehr langsam. Koeder zupfen, ohne ihn stark vom Platz zu bewegen.',
-    pause: '2-10 Sekunden stehen lassen. Im Winter noch laenger, nur Schnur zittern lassen.',
+    where: 'Steile Kanten, Spundwände, tiefe Löcher, unter Boot oder Steg',
+    tempo: 'Sehr langsam. Köder zupfen, ohne ihn stark vom Platz zu bewegen.',
+    pause: '2-10 Sekunden stehen lassen. Im Winter noch länger, nur Schnur zittern lassen.',
     bite: 'Zupfer, leichtes Ziehen oder Druck. Kurz warten, dann kontrolliert anheben.',
-    steps: ['Blei auf Grund stellen.', 'Schnur leicht spannen.', 'Koeder zittern lassen.', '30-80 cm versetzen.', 'Biss nicht ueberreissen.'],
+    steps: ['Blei auf Grund stellen.', 'Schnur leicht spannen.', 'Köder zittern lassen.', '30-80 cm versetzen.', 'Biss nicht überreißen.'],
   },
   {
     id: 'feeder',
     name: 'Feeder / Grund',
     bait: 'Maden, Mais, Wurm, Pellet',
     targets: 'Brassen, Rotauge, Schleie, Karpfen',
-    where: 'Futterplatz, Kante, Schlamm-Sand-Uebergang, ruhige Stroemung',
-    tempo: 'Praezise wiederholt werfen. Start alle 3-5 Minuten, spaeter nach Bissfrequenz.',
+    where: 'Futterplatz, Kante, Schlamm-Sand-Übergang, ruhige Strömung',
+    tempo: 'Präzise wiederholt werfen. Start alle 3-5 Minuten, später nach Bissfrequenz.',
     pause: 'Rute ruhig. Bei vorsichtigen Bissen 3-10 Sekunden warten, bis der Zug klar wird.',
-    bite: 'Zittern in der Spitze, langsames Ziehen oder ploetzliches Zurueckschnellen.',
-    steps: ['Clip auf Distanz setzen.', 'Futterkorb fuellen.', 'Immer denselben Punkt treffen.', 'Schnur spannen.', 'Bisse ueber Rutenspitze lesen.'],
+    bite: 'Zittern in der Spitze, langsames Ziehen oder plötzliches Zurückschnellen.',
+    steps: ['Clip auf Distanz setzen.', 'Futterkorb füllen.', 'Immer denselben Punkt treffen.', 'Schnur spannen.', 'Bisse über Rutenspitze lesen.'],
   },
 ];
 
@@ -272,8 +272,8 @@ const knotProfiles: KnotProfile[] = [
     use: 'Snap, Wirbel, Haken',
     line: 'Geflecht, Mono',
     strength: 'sehr hoch',
-    steps: ['Schnur doppelt legen.', 'Schlaufe durch die Oese.', 'Einfachen Ueberhandknoten binden.', 'Schlaufe ueber Snap oder Haken legen.', 'Befeuchten und gleichmaessig festziehen.'],
-    warning: 'Bei grossen Wobblern unpraktisch, weil die Schlaufe ueber den ganzen Koeder muss.',
+    steps: ['Schnur doppelt legen.', 'Schlaufe durch die Öse.', 'Einfachen Überhandknoten binden.', 'Schlaufe über Snap oder Haken legen.', 'Befeuchten und gleichmäßig festziehen.'],
+    warning: 'Bei großen Wobblern unpraktisch, weil die Schlaufe über den ganzen Köder muss.',
   },
   {
     id: 'clinch',
@@ -281,7 +281,7 @@ const knotProfiles: KnotProfile[] = [
     use: 'Haken, Wirbel, kleine Snaps',
     line: 'Mono, Fluorocarbon',
     strength: 'hoch',
-    steps: ['Schnur durch die Oese.', '5-7 Windungen um die Hauptschnur.', 'Ende durch die kleine Schlaufe an der Oese.', 'Ende durch die grosse Schlaufe zurueck.', 'Befeuchten und sauber zusammenziehen.'],
+    steps: ['Schnur durch die Öse.', '5-7 Windungen um die Hauptschnur.', 'Ende durch die kleine Schlaufe an der Öse.', 'Ende durch die große Schlaufe zurück.', 'Befeuchten und sauber zusammenziehen.'],
     warning: 'Bei glattem Geflecht kann er rutschen. Dann Palomar nutzen.',
   },
   {
@@ -290,8 +290,8 @@ const knotProfiles: KnotProfile[] = [
     use: 'Vorfach an Hauptschnur',
     line: 'Geflecht zu Fluorocarbon',
     strength: 'schlank',
-    steps: ['Fluorocarbon zur Schlaufe legen.', 'Geflecht durch die Schlaufe fuehren.', '10-12 Windungen zur Schlaufenbasis.', 'Durch die Schlaufe zurueck.', 'Befeuchten, langsam festziehen, Enden kuerzen.'],
-    warning: 'Windungen muessen sauber nebeneinander liegen, sonst hakt der Knoten in den Ringen.',
+    steps: ['Fluorocarbon zur Schlaufe legen.', 'Geflecht durch die Schlaufe führen.', '10-12 Windungen zur Schlaufenbasis.', 'Durch die Schlaufe zurück.', 'Befeuchten, langsam festziehen, Enden kürzen.'],
+    warning: 'Windungen müssen sauber nebeneinander liegen, sonst hakt der Knoten in den Ringen.',
   },
   {
     id: 'rapala',
@@ -299,8 +299,8 @@ const knotProfiles: KnotProfile[] = [
     use: 'Wobbler ohne Snap',
     line: 'Mono, Fluorocarbon',
     strength: 'beweglich',
-    steps: ['Lockeren Ueberhandknoten vorformen.', 'Schnurende durch die Wobbler-Oese.', 'Ende durch den Ueberhandknoten zurueck.', '3-4 Windungen um die Hauptschnur.', 'Zurueck durch den Knoten, befeuchten, festziehen.'],
-    warning: 'Schlaufe nicht zu gross machen, sonst verliert der Koeder Kontrolle.',
+    steps: ['Lockeren Überhandknoten vorformen.', 'Schnurende durch die Wobbler-Öse.', 'Ende durch den Überhandknoten zurück.', '3-4 Windungen um die Hauptschnur.', 'Zurück durch den Knoten, befeuchten, festziehen.'],
+    warning: 'Schlaufe nicht zu groß machen, sonst verliert der Köder Kontrolle.',
   },
   {
     id: 'dropshot',
@@ -308,17 +308,17 @@ const knotProfiles: KnotProfile[] = [
     use: 'Drop-Shot-Haken',
     line: 'Fluorocarbon',
     strength: '90-Grad-Hakenstand',
-    steps: ['Haken mit Spitze nach oben anlegen.', 'Palomar-artig binden.', 'Langes Ende stehen lassen.', 'Ende erneut von oben durch die Oese fuehren.', 'Blei am Ende befestigen.'],
-    warning: 'Wenn der Haken nach unten zeigt, das Ende durch die Oese in die andere Richtung fuehren.',
+    steps: ['Haken mit Spitze nach oben anlegen.', 'Palomar-artig binden.', 'Langes Ende stehen lassen.', 'Ende erneut von oben durch die Öse führen.', 'Blei am Ende befestigen.'],
+    warning: 'Wenn der Haken nach unten zeigt, das Ende durch die Öse in die andere Richtung führen.',
   },
 ];
 
 const legalRows: LegalRow[] = [
   { state: 'Bayern', pikeClosed: '15.02. - 30.04.', pikeSize: '50 cm', zanderClosed: '15.03. - 30.04.', zanderSize: '50 cm' },
   { state: 'NRW', pikeClosed: '15.02. - 30.04.', pikeSize: '45 cm', zanderClosed: '01.04. - 31.05.', zanderSize: '40 cm' },
-  { state: 'Brandenburg', pikeClosed: 'nur Erwerbsfischerei', pikeSize: '45 cm', zanderClosed: 'gewaesserspezifisch', zanderSize: '45 cm' },
+  { state: 'Brandenburg', pikeClosed: 'nur Erwerbsfischerei', pikeSize: '45 cm', zanderClosed: 'gewässerspezifisch', zanderSize: '45 cm' },
   { state: 'Hessen', pikeClosed: 'keine', pikeSize: '50 cm', zanderClosed: 'keine', zanderSize: '45 cm' },
-  { state: 'Baden-Wuerttemberg', pikeClosed: '15.02. - 15.05.', pikeSize: '45 cm', zanderClosed: '01.04. - 15.05.', zanderSize: '45 cm' },
+  { state: 'Baden-Württemberg', pikeClosed: '15.02. - 15.05.', pikeSize: '45 cm', zanderClosed: '01.04. - 15.05.', zanderSize: '45 cm' },
   { state: 'Sachsen', pikeClosed: '01.02. - 31.05.', pikeSize: '50 cm', zanderClosed: '01.02. - 31.05.', zanderSize: '50 cm' },
 ];
 
@@ -415,7 +415,7 @@ function FishVisual({ fish }: { fish: FishProfile }) {
         </div>
       )}
       <div className="relative mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black uppercase text-slate-300">
-        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">Koerper</div>
+        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">Körper</div>
         <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">Sinne</div>
         <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">Standplatz</div>
       </div>
@@ -542,7 +542,7 @@ function FishGuide() {
   );
 
   return (
-    <GuidePanel title="Fische erkennen und gezielt suchen" subtitle="Waehle eine Art und lies nur das, was am Wasser hilft.">
+    <GuidePanel title="Fische erkennen und gezielt suchen" subtitle="Wähle eine Art und lies nur das, was am Wasser hilft.">
       <ChoiceRow items={fishProfiles} activeId={fish.id} onChange={setActiveFishId} />
       <FishVisual fish={fish} />
       <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
@@ -556,7 +556,7 @@ function FishGuide() {
           </span>
         </div>
         <div className="grid gap-2">
-          <InfoBlock label="Koerper" value={fish.body} />
+          <InfoBlock label="Körper" value={fish.body} />
           <InfoBlock label="Sinne" value={fish.senses} />
           <InfoBlock label="Nahrung" value={fish.food} />
           <InfoBlock label="Saison" value={fish.season} />
@@ -564,7 +564,7 @@ function FishGuide() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
-          <h4 className="mb-2 text-xs font-black uppercase tracking-widest text-slate-500">Standplaetze</h4>
+          <h4 className="mb-2 text-xs font-black uppercase tracking-widest text-slate-500">Standplätze</h4>
           <div className="flex flex-wrap gap-2">
             {fish.habitat.map((place) => (
               <span key={place} className="rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-xs font-bold text-cyan-100">
@@ -599,17 +599,17 @@ function BaitGuide() {
   );
 
   return (
-    <GuidePanel title="Koeder: Reiz, Einsatz, Fehler" subtitle="Interaktiv nach Koedertyp. Fokus: wann einsetzen, wie anbieten, was vermeiden.">
+    <GuidePanel title="Köder: Reiz, Einsatz, Fehler" subtitle="Interaktiv nach Ködertyp. Fokus: wann einsetzen, wie anbieten, was vermeiden.">
       <ChoiceRow items={baitProfiles} activeId={bait.id} onChange={setActiveBaitId} />
       <BaitVisual visual={bait.visual} />
       <div className="grid gap-2">
-        <InfoBlock label="Faengt vor allem" value={bait.bestFor} />
+        <InfoBlock label="Fängt vor allem" value={bait.bestFor} />
         <InfoBlock label="Einsetzen wenn" value={bait.useWhen} />
         <InfoBlock label="Montage" value={bait.rig} />
-        <InfoBlock label="Fuehrung / Praesentation" value={bait.action} />
+        <InfoBlock label="Führung / Präsentation" value={bait.action} />
       </div>
       <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3">
-        <h4 className="mb-2 text-xs font-black uppercase tracking-widest text-red-100">Haefige Fehler</h4>
+        <h4 className="mb-2 text-xs font-black uppercase tracking-widest text-red-100">Häufige Fehler</h4>
         <MiniList items={bait.mistakes} />
       </div>
     </GuidePanel>
@@ -624,11 +624,11 @@ function TechniqueGuide() {
   );
 
   return (
-    <GuidePanel title="Fuehrung: Tempo, Pause, Bissphase" subtitle="Konkrete Zeiten und Ablaufe statt allgemeiner Taktiktexte.">
+    <GuidePanel title="Führung: Tempo, Pause, Bissphase" subtitle="Konkrete Zeiten und Abläufe statt allgemeiner Taktiktexte.">
       <ChoiceRow items={techniqueProfiles} activeId={technique.id} onChange={setActiveTechniqueId} />
       <TechniqueMotion technique={technique} />
       <div className="grid gap-2">
-        <InfoBlock label="Koeder" value={technique.bait} />
+        <InfoBlock label="Köder" value={technique.bait} />
         <InfoBlock label="Zielfische" value={technique.targets} />
         <InfoBlock label="Wo" value={technique.where} />
         <InfoBlock label="Tempo" value={technique.tempo} />
@@ -647,7 +647,7 @@ function KnotGuide() {
   );
 
   return (
-    <GuidePanel title="Knoten: welcher, wann, wie" subtitle="Mit Schrittbild. Echte GIFs waeren fuer Fingerfuehrung und Zugrichtung sinnvoll.">
+    <GuidePanel title="Knoten: welcher, wann, wie" subtitle="Mit Schrittbild. Echte GIFs wären für Fingerführung und Zugrichtung sinnvoll.">
       <ChoiceRow items={knotProfiles} activeId={knot.id} onChange={setActiveKnotId} />
       <div className="grid gap-2 sm:grid-cols-3">
         <InfoBlock label="Einsatz" value={knot.use} />
@@ -667,16 +667,16 @@ function KnotGuide() {
 
 function LawGuide() {
   return (
-    <GuidePanel title="Schonzeiten und Mindestmasse" subtitle="Kurze Orientierung. Lokal immer aktuellen Erlaubnisschein und Gewaesserordnung pruefen.">
+    <GuidePanel title="Schonzeiten und Mindestmaße" subtitle="Kurze Orientierung. Lokal immer aktuellen Erlaubnisschein und Gewässerordnung prüfen.">
       <div className="overflow-x-auto rounded-lg border border-slate-800">
         <table className="min-w-[620px] w-full border-collapse text-left text-xs">
           <thead className="bg-slate-950/70 text-[10px] uppercase tracking-widest text-slate-500">
             <tr>
               <th className="border-b border-slate-800 px-3 py-2">Bundesland</th>
               <th className="border-b border-slate-800 px-3 py-2">Hecht Schonzeit</th>
-              <th className="border-b border-slate-800 px-3 py-2">Hecht Mass</th>
+              <th className="border-b border-slate-800 px-3 py-2">Hecht Maß</th>
               <th className="border-b border-slate-800 px-3 py-2">Zander Schonzeit</th>
-              <th className="border-b border-slate-800 px-3 py-2">Zander Mass</th>
+              <th className="border-b border-slate-800 px-3 py-2">Zander Maß</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 bg-slate-950/25">
@@ -705,7 +705,7 @@ const GuidesView: React.FC = () => {
         <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Guide-Bibliothek</p>
         <h1 className="mt-1 text-2xl font-black leading-tight text-white">Kurz, visuell, direkt nutzbar</h1>
         <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-200">
-          Waehle ein Thema. Jeder Guide zeigt konkrete Erkennung, Einsatzbereiche, Zeiten, Fehler und Schrittfolgen.
+          Wähle ein Thema. Jeder Guide zeigt konkrete Erkennung, Einsatzbereiche, Zeiten, Fehler und Schrittfolgen.
         </p>
       </section>
 
