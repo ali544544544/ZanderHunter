@@ -8,6 +8,7 @@ import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
 import Briefing from './components/Briefing';
+import CurrentFishingTips from './components/CurrentFishingTips';
 import HechtInfo from './components/HechtInfo';
 import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
@@ -302,21 +303,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-3 space-y-2">
-            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Köder</p>
-              <p className="text-sm font-black leading-snug text-slate-100">{primaryKoder?.name ?? '--'}</p>
-              <p className="text-xs font-semibold leading-snug text-slate-500">{primaryKoder?.farbe ?? 'Live-Daten'}</p>
-            </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Führung</p>
-              <p className="text-sm font-bold leading-snug text-slate-100">{quickTactic ?? '--'}</p>
-            </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Standplatz</p>
-              <p className="text-sm font-bold leading-snug text-slate-100">{quickHotspot ?? '--'}</p>
-            </div>
-          </div>
         </section>
       </header>
 
@@ -331,6 +317,14 @@ const App: React.FC = () => {
               onRefresh={refreshWaterProfile}
             />
             <WaterAreaMap profile={waterProfile} />
+            {!loading && (
+              <CurrentFishingTips
+                fishLabel={fishLabel}
+                koder={primaryKoder}
+                tactic={quickTactic}
+                hotspot={quickHotspot}
+              />
+            )}
             {!loading && briefingText && <Briefing text={briefingText} fishLabel={fishLabel} />}
             {!loading && hourlyScores && hourlyScores.length > 0 && startHour !== undefined && (
               <DailyForecastChart
