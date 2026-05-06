@@ -94,6 +94,7 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
     if (!geometry) return [];
     return [
       ...geometry.polygons.flat(),
+      ...geometry.lines.flat(),
       ...geometry.points,
       ...(selectedPoint ? [selectedPoint] : []),
     ];
@@ -170,8 +171,20 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
     if (!geometry || !viewport) return [];
     return geometry.points.map(projectPoint);
   }, [geometry, projectPoint, viewport]);
+  const linePaths = useMemo(() => {
+    if (!geometry || !viewport) return [];
+
+    return geometry.lines.map((line) => line
+      .map((point, index) => {
+        const projected = projectPoint(point);
+        return `${index === 0 ? 'M' : 'L'} ${projected.x.toFixed(1)} ${projected.y.toFixed(1)}`;
+      })
+      .join(' ')
+    );
+  }, [geometry, projectPoint, viewport]);
 
   const selectedPointPosition = selectedPoint && viewport ? projectPoint(selectedPoint) : null;
+  const shouldShowReferencePoints = polygonPaths.length === 0 && linePaths.length === 0;
 
   if (!profile?.sources.includes('hejfish') || !geometry || allPoints.length === 0 || !viewport) {
     return null;
@@ -217,7 +230,18 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
               vectorEffect="non-scaling-stroke"
             />
           ))}
-          {referencePoints.map((point, index) => (
+          {linePaths.map((path, index) => (
+            <path
+              key={`${path}-${index}`}
+              d={path}
+              className="fill-none stroke-cyan-300"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          {shouldShowReferencePoints && referencePoints.map((point, index) => (
             <circle
               key={`${point.x}-${point.y}-${index}`}
               cx={point.x}

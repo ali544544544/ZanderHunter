@@ -141,4 +141,79 @@ describe('HejfishAreasProvider mapping', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('matches clicks inside hejfish geojson polygons', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 13001,
+      slug: 'polygon-see',
+      name: 'Polygon See',
+      lat: null,
+      lng: null,
+      water_type: 'See',
+    };
+    const geoIndexEntry: HejfishGeoIndexEntry = {
+      id: 13001,
+      slug: 'polygon-see',
+      name: 'Polygon See',
+      lat: 54,
+      lng: 10,
+      water_type: 'See',
+      bounds: {
+        minLat: 54,
+        maxLat: 54.02,
+        minLng: 10,
+        maxLng: 10.02,
+      },
+      points: [{ lat: 54, lng: 10 }],
+    };
+    const area: HejfishArea = {
+      id: 13001,
+      slug: 'polygon-see',
+      url: 'https://www.hejfish.com/d/13001-polygon-see',
+      name: 'Polygon See',
+      fish: ['Zander', 'Hecht'],
+      map_data: {
+        data: {
+          locations: [{ lat: 54, lng: 10 }],
+          geojson: {
+            type: 'FeatureCollection',
+            features: [{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                  [10, 54],
+                  [10.02, 54],
+                  [10.02, 54.02],
+                  [10, 54.02],
+                  [10, 54],
+                ]],
+              },
+            }],
+          },
+        },
+      },
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
+      return new Response(JSON.stringify(area));
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(54.015, 10.015);
+
+      expect(profile?.name).toBe('Polygon See');
+      expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
+      expect(profile?.areaDetails?.mapGeometry?.lines).toHaveLength(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

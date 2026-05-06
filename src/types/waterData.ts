@@ -23,6 +23,7 @@ export interface WaterMapPoint {
 
 export interface WaterMapGeometry {
   polygons: WaterMapPoint[][];
+  lines: WaterMapPoint[][];
   points: WaterMapPoint[];
 }
 

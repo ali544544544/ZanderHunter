@@ -257,7 +257,12 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
   private getNearestIndexDistanceMeters(lat: number, lng: number, entry: HejfishGeoIndexEntry): number {
     const points = entry.points?.length ? entry.points : [{ lat: entry.lat, lng: entry.lng }];
-    return this.getNearestPointOrSegmentDistanceMeters({ lat, lng }, points);
+    const pointDistance = this.getNearestPointOrSegmentDistanceMeters({ lat, lng }, points);
+    const boundsDistance = entry.bounds
+      ? this.distanceToBoundsMeters({ lat, lng }, entry.bounds)
+      : Number.POSITIVE_INFINITY;
+
+    return Math.min(pointDistance, boundsDistance);
   }
 
   private getGeoIndexRadiusMeters(entry: HejfishGeoIndexEntry): number {
@@ -284,13 +289,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private isInsideAreaPolygon(lat: number, lng: number, area: HejfishArea): boolean {
-    const polygons = area.map_data?.polygons;
-    if (!Array.isArray(polygons)) return false;
-
-    return polygons.some((polygon) => {
-      const coordinates = this.extractCoordinates(polygon);
-      return coordinates.length >= 3 && this.isPointInPolygon({ lat, lng }, coordinates);
-    });
+    return this.getAreaPolygons(area).some((polygon) => this.isPointInPolygon({ lat, lng }, polygon));
   }
 
   private getNearestAreaDistanceMeters(lat: number, lng: number, area: HejfishArea): number {
@@ -436,18 +435,34 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private getAreaMapGeometry(area: HejfishArea): WaterMapGeometry | undefined {
+    const polygons = this.getAreaPolygons(area);
+    const lines = this.getAreaLines(area);
+    const points = this.getAreaReferencePoints(area);
+
+    if (polygons.length === 0 && lines.length === 0 && points.length === 0) return undefined;
+
+    return { polygons, lines, points };
+  }
+
+  private getAreaPolygons(area: HejfishArea): Coordinate[][] {
     const polygonSources = [
       ...(Array.isArray(area.map_data?.polygons) ? area.map_data.polygons : []),
       area.map_data?.data?.geojson,
     ];
-    const polygons = polygonSources
+
+    return polygonSources
       .flatMap((source) => this.extractPolygons(source))
       .filter((polygon) => polygon.length >= 3);
-    const points = this.getAreaReferencePoints(area);
+  }
 
-    if (polygons.length === 0 && points.length === 0) return undefined;
+  private getAreaLines(area: HejfishArea): Coordinate[][] {
+    const lineSources = [
+      area.map_data?.data?.geojson,
+    ];
 
-    return { polygons, points };
+    return lineSources
+      .flatMap((source) => this.extractLines(source))
+      .filter((line) => line.length >= 2);
   }
 
   private extractPolygons(value: unknown): Coordinate[][] {
@@ -486,6 +501,43 @@ export class HejfishAreasProvider implements WaterDataProvider {
     }
 
     return this.extractPolygons(objectValue.polygons || objectValue.points || objectValue.path || objectValue.geojson);
+  }
+
+  private extractLines(value: unknown): Coordinate[][] {
+    if (!value) return [];
+
+    if (Array.isArray(value)) {
+      const coordinates = this.extractGeoJsonRing(value);
+      if (coordinates.length >= 2) return [coordinates];
+      return value.flatMap((entry) => this.extractLines(entry));
+    }
+
+    if (typeof value !== 'object') return [];
+
+    const objectValue = value as Record<string, unknown>;
+    const type = typeof objectValue.type === 'string' ? objectValue.type : '';
+    const coordinates = objectValue.coordinates;
+
+    if (type === 'LineString') {
+      const line = this.extractGeoJsonRing(coordinates);
+      return line.length >= 2 ? [line] : [];
+    }
+
+    if (type === 'MultiLineString') {
+      return Array.isArray(coordinates)
+        ? coordinates.map((line) => this.extractGeoJsonRing(line)).filter((line) => line.length >= 2)
+        : [];
+    }
+
+    if (type === 'Feature') {
+      return this.extractLines(objectValue.geometry);
+    }
+
+    if (type === 'FeatureCollection' && Array.isArray(objectValue.features)) {
+      return objectValue.features.flatMap((feature) => this.extractLines(feature));
+    }
+
+    return this.extractLines(objectValue.lines || objectValue.path || objectValue.geojson);
   }
 
   private extractGeoJsonRing(value: unknown): Coordinate[] {
@@ -576,6 +628,16 @@ export class HejfishAreasProvider implements WaterDataProvider {
       : [];
 
     return Math.min(...pointDistances, ...segmentDistances);
+  }
+
+  private distanceToBoundsMeters(
+    point: Coordinate,
+    bounds: NonNullable<HejfishGeoIndexEntry['bounds']>
+  ): number {
+    const clampedLat = Math.max(bounds.minLat, Math.min(bounds.maxLat, point.lat));
+    const clampedLng = Math.max(bounds.minLng, Math.min(bounds.maxLng, point.lng));
+
+    return this.distanceMeters(point.lat, point.lng, clampedLat, clampedLng);
   }
 
   private distanceToSegmentMeters(point: Coordinate, start: Coordinate, end: Coordinate): number {
