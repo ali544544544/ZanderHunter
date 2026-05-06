@@ -173,20 +173,11 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
   const sources = profile.sources.map((source) => sourceLabels[source]).join(', ');
   const details = profile.areaDetails;
   const formattedUpdatedAt = formatDate(profile.lastUpdated);
-  const geometry = details?.mapGeometry;
-  const geometrySummary = geometry
-    ? [
-        geometry.polygons.length > 0 ? `${geometry.polygons.length} Flaeche${geometry.polygons.length === 1 ? '' : 'n'}` : null,
-        geometry.lines.length > 0 ? `${geometry.lines.length} Strecke${geometry.lines.length === 1 ? '' : 'n'}` : null,
-        geometry.points.length > 0 ? `${geometry.points.length} Punkt${geometry.points.length === 1 ? '' : 'e'}` : null,
-      ].filter(Boolean).join(', ')
-    : null;
   const ticketTone = details?.mobileTicket ? 'good' : profile.regulations?.permit_required ? 'warn' : 'default';
   const hasDetailRows = Boolean(
     details?.season
     || details?.rulesText
     || (details?.properties && details.properties.length > 0)
-    || geometrySummary
   );
   const hasManagerInfo = Boolean(details?.manager && (
     details.manager.name
@@ -273,7 +264,6 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
           <DetailRow label="Saison" value={details?.season} />
           <DetailRow label="Hinweise" value={details?.properties && details.properties.length > 0 ? details.properties.join(', ') : undefined} />
           <DetailRow label="Regeln" value={details?.rulesText} />
-          <DetailRow label="Karte" value={geometrySummary} />
         </div>
       )}
 
@@ -289,7 +279,9 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
           />
           <DetailRow
             label="Ausdruck"
-            value={details?.printRequired === undefined ? undefined : details.printRequired ? 'Erforderlich' : 'Nicht erforderlich'}
+            value={details?.printRequired === undefined ? undefined : details.printRequired
+              ? 'Erforderlich - Karte vor dem Angeln ausdrucken.'
+              : 'Nicht erforderlich - hejfish meldet keine Druckpflicht.'}
           />
         </div>
       )}
@@ -352,6 +344,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
               rel="noreferrer"
               className={`rounded-md border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors ${linkStyles[link.kind]}`}
             >
+              <span aria-hidden="true">↗ </span>
               {link.label}
             </a>
           ))}

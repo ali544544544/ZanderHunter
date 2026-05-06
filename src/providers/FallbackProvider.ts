@@ -11,7 +11,7 @@ export class FallbackProvider implements WaterDataProvider {
   async getWaterBodyProfile(lat: number, lng: number): Promise<WaterBodyProfile> {
     return {
       id: `fallback-${lat.toFixed(3)}-${lng.toFixed(3)}`,
-      name: 'Kein Hejfish-Gewaesser gefunden',
+      name: 'Keine Gewaesserdaten gefunden',
       type: 'lake',
       latitude: lat,
       longitude: lng,

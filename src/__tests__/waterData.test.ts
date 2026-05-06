@@ -8,7 +8,7 @@ describe('FallbackProvider', () => {
     const provider = new FallbackProvider();
     const profile = await provider.getWaterBodyProfile(53.511, 10.121);
 
-    expect(profile.name).toBe('Kein Hejfish-Gewaesser gefunden');
+    expect(profile.name).toBe('Keine Gewaesserdaten gefunden');
     expect(profile.dataQuality).toBe('unknown');
     expect(profile.sources).toEqual(['unknown']);
     expect(profile.species).toEqual([]);
