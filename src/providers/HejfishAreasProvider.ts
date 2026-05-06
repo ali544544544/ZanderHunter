@@ -1,8 +1,8 @@
-import type { HejfishArea, HejfishAreaLite } from '../types/hejfishArea';
+import type { HejfishArea, HejfishAreaLite, HejfishGeoIndexEntry } from '../types/hejfishArea';
 import type { FishSpecies, WaterBodyProfile, WaterBodyType, WaterDataProvider, WaterMapGeometry } from '../types/waterData';
 
 type Coordinate = { lat: number; lng: number };
-type LiteCandidate = { area: HejfishAreaLite; distance: number };
+type AreaCandidate = { id: number; area?: HejfishAreaLite; distance: number };
 
 const knownSpeciesMap: Record<string, FishSpecies> = {
   zander: 'zander',
@@ -36,6 +36,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
   priority = 0;
 
   private liteAreasPromise: Promise<HejfishAreaLite[]> | null = null;
+  private geoIndexPromise: Promise<HejfishGeoIndexEntry[]> | null = null;
   private detailPromises = new Map<number, Promise<HejfishArea | null>>();
   private resolvedDataBaseUrl: string | null = null;
 
@@ -44,11 +45,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   async getWaterBodyProfile(lat: number, lng: number): Promise<WaterBodyProfile | null> {
-    const liteAreas = await this.loadLiteAreas();
-    const candidates = this.findLiteCandidates(liteAreas, lat, lng).slice(0, 8);
+    const [liteAreas, geoIndex] = await Promise.all([
+      this.loadLiteAreas(),
+      this.loadGeoIndex(),
+    ]);
+    const candidates = this.findAreaCandidates(liteAreas, geoIndex, lat, lng).slice(0, 16);
     if (candidates.length === 0) return null;
 
-    const details = (await Promise.all(candidates.map((candidate) => this.loadAreaDetail(candidate.area.id))))
+    const details = (await Promise.all(candidates.map((candidate) => this.loadAreaDetail(candidate.id))))
       .filter((area): area is HejfishArea => Boolean(area));
 
     const polygonMatch = details.find((area) => this.isInsideAreaPolygon(lat, lng, area));
@@ -94,6 +98,13 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return this.liteAreasPromise;
   }
 
+  private async loadGeoIndex(): Promise<HejfishGeoIndexEntry[]> {
+    if (!this.geoIndexPromise) {
+      this.geoIndexPromise = this.fetchGeoIndex();
+    }
+    return this.geoIndexPromise;
+  }
+
   private async fetchLiteAreas(): Promise<HejfishAreaLite[]> {
     for (const baseUrl of this.getDataBaseUrls()) {
       try {
@@ -112,6 +123,34 @@ export class HejfishAreasProvider implements WaterDataProvider {
             && typeof area.id === 'number'
             && (typeof area.lat === 'number' || area.lat === null)
             && (typeof area.lng === 'number' || area.lng === null)
+        ));
+      } catch {
+        continue;
+      }
+    }
+
+    return [];
+  }
+
+  private async fetchGeoIndex(): Promise<HejfishGeoIndexEntry[]> {
+    const baseUrls = this.resolvedDataBaseUrl ? [this.resolvedDataBaseUrl] : this.getDataBaseUrls();
+
+    for (const baseUrl of baseUrls) {
+      try {
+        const response = await fetch(`${baseUrl}areas_geo_index.json`, {
+          cache: 'force-cache',
+        });
+
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        if (!Array.isArray(data)) continue;
+
+        return data.filter((entry): entry is HejfishGeoIndexEntry => (
+          Boolean(entry)
+          && typeof entry.id === 'number'
+          && typeof entry.lat === 'number'
+          && typeof entry.lng === 'number'
         ));
       } catch {
         continue;
@@ -164,10 +203,45 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   }
 
-  private findLiteCandidates(areas: HejfishAreaLite[], lat: number, lng: number): LiteCandidate[] {
+  private findAreaCandidates(
+    areas: HejfishAreaLite[],
+    geoIndex: HejfishGeoIndexEntry[],
+    lat: number,
+    lng: number
+  ): AreaCandidate[] {
+    const candidates = [
+      ...this.findGeoIndexCandidates(geoIndex, lat, lng),
+      ...this.findLiteCandidates(areas, lat, lng),
+    ];
+    const unique = new Map<number, AreaCandidate>();
+
+    for (const candidate of candidates) {
+      const existing = unique.get(candidate.id);
+      if (!existing || candidate.distance < existing.distance) {
+        unique.set(candidate.id, candidate);
+      }
+    }
+
+    return Array.from(unique.values()).sort((a, b) => a.distance - b.distance);
+  }
+
+  private findGeoIndexCandidates(index: HejfishGeoIndexEntry[], lat: number, lng: number): AreaCandidate[] {
+    return index
+      .map((entry) => ({
+        id: entry.id,
+        distance: this.getNearestIndexDistanceMeters(lat, lng, entry),
+        radius: this.getGeoIndexRadiusMeters(entry),
+      }))
+      .filter((match) => match.distance <= match.radius)
+      .sort((a, b) => a.distance - b.distance)
+      .map(({ id, distance }) => ({ id, distance }));
+  }
+
+  private findLiteCandidates(areas: HejfishAreaLite[], lat: number, lng: number): AreaCandidate[] {
     const coordinateCandidates = areas
       .filter((area) => typeof area.lat === 'number' && typeof area.lng === 'number')
       .map((area) => ({
+        id: area.id,
         area,
         distance: this.distanceMeters(lat, lng, area.lat as number, area.lng as number),
       }))
@@ -176,9 +250,20 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
     const regionalCandidates = areas
       .filter((area) => (typeof area.lat !== 'number' || typeof area.lng !== 'number') && this.isRegionalNameCandidate(area, lat, lng))
-      .map((area) => ({ area, distance: Number.MAX_SAFE_INTEGER }));
+      .map((area) => ({ id: area.id, area, distance: Number.MAX_SAFE_INTEGER }));
 
     return [...regionalCandidates, ...coordinateCandidates];
+  }
+
+  private getNearestIndexDistanceMeters(lat: number, lng: number, entry: HejfishGeoIndexEntry): number {
+    const points = entry.points?.length ? entry.points : [{ lat: entry.lat, lng: entry.lng }];
+    return this.getNearestPointOrSegmentDistanceMeters({ lat, lng }, points);
+  }
+
+  private getGeoIndexRadiusMeters(entry: HejfishGeoIndexEntry): number {
+    const type = this.mapWaterType(entry.water_type, entry.name);
+    if (type === 'river' || type === 'canal') return 8000;
+    return 5000;
   }
 
   private getLiteRadiusMeters(area: HejfishAreaLite): number {
@@ -212,7 +297,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const points = this.getAreaReferencePoints(area);
     if (points.length === 0) return Number.POSITIVE_INFINITY;
 
-    return Math.min(...points.map((point) => this.distanceMeters(lat, lng, point.lat, point.lng)));
+    return this.getNearestPointOrSegmentDistanceMeters({ lat, lng }, points);
   }
 
   private getAreaReferencePoints(area: HejfishArea): Coordinate[] {
@@ -482,5 +567,37 @@ export class HejfishAreasProvider implements WaterDataProvider {
       * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
 
     return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  private getNearestPointOrSegmentDistanceMeters(point: Coordinate, line: Coordinate[]): number {
+    const pointDistances = line.map((linePoint) => this.distanceMeters(point.lat, point.lng, linePoint.lat, linePoint.lng));
+    const segmentDistances = line.length >= 2
+      ? line.slice(0, -1).map((start, index) => this.distanceToSegmentMeters(point, start, line[index + 1]))
+      : [];
+
+    return Math.min(...pointDistances, ...segmentDistances);
+  }
+
+  private distanceToSegmentMeters(point: Coordinate, start: Coordinate, end: Coordinate): number {
+    const originLat = point.lat * Math.PI / 180;
+    const metersPerDegreeLat = 111320;
+    const metersPerDegreeLng = Math.cos(originLat) * 111320;
+    const ax = (start.lng - point.lng) * metersPerDegreeLng;
+    const ay = (start.lat - point.lat) * metersPerDegreeLat;
+    const bx = (end.lng - point.lng) * metersPerDegreeLng;
+    const by = (end.lat - point.lat) * metersPerDegreeLat;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const segmentLengthSquared = dx * dx + dy * dy;
+
+    if (segmentLengthSquared === 0) {
+      return Math.sqrt(ax * ax + ay * ay);
+    }
+
+    const t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / segmentLengthSquared));
+    const closestX = ax + t * dx;
+    const closestY = ay + t * dy;
+
+    return Math.sqrt(closestX * closestX + closestY * closestY);
   }
 }

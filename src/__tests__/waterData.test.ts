@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FallbackProvider } from '../providers/FallbackProvider';
 import { HejfishAreasProvider } from '../providers/HejfishAreasProvider';
-import type { HejfishArea, HejfishAreaLite } from '../types/hejfishArea';
+import type { HejfishArea, HejfishAreaLite, HejfishGeoIndexEntry } from '../types/hejfishArea';
 
 describe('FallbackProvider', () => {
   it('does not invent local fish data when hejfish has no match', async () => {
@@ -53,10 +53,22 @@ describe('HejfishAreasProvider mapping', () => {
       },
       error: false,
     };
+    const geoIndexEntry: HejfishGeoIndexEntry = {
+      id: 12071,
+      slug: 'zielfinger-angelsee-zander-forellen-see',
+      name: 'Zielfinger Angelsee',
+      water_type: 'See',
+      fish_count: 7,
+      lat: 48.0123,
+      lng: 9.3456,
+      points: [{ lat: 48.0123, lng: 9.3456 }],
+    };
     const originalFetch = globalThis.fetch;
     const fetchMock: typeof fetch = async (input) => {
       const url = String(input);
-      return new Response(JSON.stringify(url.includes('areas_lite') ? [liteArea] : area));
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
+      return new Response(JSON.stringify(area));
     };
     globalThis.fetch = fetchMock;
 
@@ -71,6 +83,60 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
       expect(profile?.areaDetails?.tickets?.[0].name).toBe('Tageskarte');
       expect(profile?.links?.[0].url).toBe(area.url);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('uses the generated geo index when the lite area has no coordinates', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 12189,
+      slug: 'dove-elbe-kombi-karte',
+      name: 'Dove Elbe (Kombi-Karte)',
+      lat: null,
+      lng: null,
+      water_type: null,
+    };
+    const geoIndexEntry: HejfishGeoIndexEntry = {
+      id: 12189,
+      slug: 'dove-elbe-kombi-karte',
+      name: 'Dove Elbe (Kombi-Karte)',
+      lat: 53.497,
+      lng: 10.078,
+      points: [{ lat: 53.498851, lng: 10.078256 }],
+    };
+    const area: HejfishArea = {
+      id: 12189,
+      slug: 'dove-elbe-kombi-karte',
+      url: 'https://www.hejfish.com/d/12189-dove-elbe-kombi-karte',
+      name: 'Dove Elbe (Kombi-Karte)',
+      fish: ['HechtZanderFlussbarschAal'],
+      location_info: ['Hamburg', 'Hamburg'],
+      map_data: {
+        data: {
+          locations: [{ lat: 53.498851, lng: 10.078256 }],
+        },
+      },
+      country: 'DE',
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
+      return new Response(JSON.stringify(area));
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.4989, 10.0783);
+
+      expect(profile?.name).toBe('Dove Elbe (Kombi-Karte)');
+      expect(profile?.sources).toContain('hejfish');
+      expect(profile?.species.map((entry) => entry.species)).toContain('zander');
+      expect(profile?.areaDetails?.mapGeometry?.points).toHaveLength(1);
     } finally {
       globalThis.fetch = originalFetch;
     }

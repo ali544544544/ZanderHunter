@@ -10,6 +10,23 @@ export interface HejfishAreaLite {
   mobile_ticket?: boolean;
 }
 
+export interface HejfishGeoIndexEntry {
+  id: number;
+  name: string;
+  slug?: string;
+  lat: number;
+  lng: number;
+  water_type?: string | null;
+  fish_count?: number;
+  bounds?: {
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
+  };
+  points?: Array<{ lat: number; lng: number }>;
+}
+
 export interface HejfishArea {
   id: number;
   slug: string;
