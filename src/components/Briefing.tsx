@@ -1,8 +1,12 @@
 import React from 'react';
+import type { KoderEmpfehlung } from '../data/koderLogik';
 
 interface BriefingProps {
   text: string;
   fishLabel?: string;
+  koder?: KoderEmpfehlung;
+  tactic?: string;
+  hotspot?: string;
 }
 
 interface BriefingItem {
@@ -17,6 +21,18 @@ const toneClasses: Record<NonNullable<BriefingItem['tone']>, string> = {
   yellow: 'border-yellow-400/25 bg-yellow-400/10 text-yellow-50',
   red: 'border-red-400/25 bg-red-400/10 text-red-50',
 };
+
+function TipPanel({ label, value, detail }: { label: string; value?: string; detail?: string }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
+      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-black leading-snug text-slate-100">{value || '--'}</p>
+      {detail && (
+        <p className="mt-1 text-xs font-semibold leading-snug text-slate-500">{detail}</p>
+      )}
+    </div>
+  );
+}
 
 function splitBriefing(text: string) {
   return text
@@ -35,7 +51,6 @@ function parseBriefing(text: string, fishLabel: string) {
     const scoreMatch = cleanSentence.match(new RegExp(`^${fishLabel}-Score\\s+(.+)$`, 'i'));
 
     if (scoreMatch) {
-      items.push({ label: 'Score', value: scoreMatch[1], tone: 'green' });
       continue;
     }
 
@@ -45,12 +60,14 @@ function parseBriefing(text: string, fishLabel: string) {
     }
 
     if (/^Taktik:/i.test(cleanSentence)) {
-      items.push({ label: 'Taktik', value: cleanSentence.replace(/^Taktik:\s*/i, ''), tone: 'yellow' });
       continue;
     }
 
     if (/^Hotspot:/i.test(cleanSentence)) {
-      items.push({ label: 'Hotspot', value: cleanSentence.replace(/^Hotspot:\s*/i, ''), tone: 'blue' });
+      continue;
+    }
+
+    if (/^Bester Spot:/i.test(cleanSentence) || /^Greif zu /i.test(cleanSentence)) {
       continue;
     }
 
@@ -65,20 +82,30 @@ function parseBriefing(text: string, fishLabel: string) {
   return { items, notes };
 }
 
-const Briefing: React.FC<BriefingProps> = ({ text, fishLabel = 'Zander' }) => {
+const Briefing: React.FC<BriefingProps> = ({ text, fishLabel = 'Zander', koder, tactic, hotspot }) => {
   const { items, notes } = parseBriefing(text, fishLabel);
 
   return (
-    <section className="card border-blue-500/30 bg-blue-600/10">
+    <section className="card space-y-3 border-blue-500/30 bg-blue-600/10">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Lagebild</p>
-          <h3 className="mt-1 text-base font-black leading-tight text-slate-100">{fishLabel}-Briefing</h3>
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Aktuelle Angeltipps</p>
+          <h3 className="mt-1 text-base font-black leading-tight text-slate-100">Lagebild fuer {fishLabel}</h3>
         </div>
-        <span className="rounded border border-blue-400/25 bg-blue-400/10 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-blue-100">
-          Live
-        </span>
       </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <TipPanel label="Koeder" value={koder?.name} detail={koder ? `${koder.farbe} - ${koder.gewicht}` : undefined} />
+        <TipPanel label="Fuehrung" value={tactic} />
+        <TipPanel label="Standplatz" value={hotspot} />
+      </div>
+
+      {koder?.warum && (
+        <div className="rounded-lg border border-blue-400/20 bg-blue-400/10 px-3 py-2">
+          <p className="text-[9px] font-black uppercase tracking-widest text-blue-200">Warum dieser Tipp</p>
+          <p className="mt-1 text-xs font-semibold leading-relaxed text-blue-50">{koder.warum}</p>
+        </div>
+      )}
 
       {items.length > 0 && (
         <div className="grid gap-2 sm:grid-cols-2">
@@ -92,7 +119,7 @@ const Briefing: React.FC<BriefingProps> = ({ text, fishLabel = 'Zander' }) => {
       )}
 
       {notes.length > 0 && (
-        <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/35 p-3">
+        <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Worauf achten</p>
           <ul className="mt-2 space-y-2">
             {notes.map((note) => (
@@ -105,7 +132,7 @@ const Briefing: React.FC<BriefingProps> = ({ text, fishLabel = 'Zander' }) => {
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between border-t border-slate-700/50 pt-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+      <div className="flex items-center justify-between border-t border-slate-700/50 pt-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">
         <span>Aktuelle Bedingungen</span>
         <span>Automatisch bewertet</span>
       </div>

@@ -8,7 +8,6 @@ import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
 import Briefing from './components/Briefing';
-import CurrentFishingTips from './components/CurrentFishingTips';
 import HechtInfo from './components/HechtInfo';
 import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
@@ -317,15 +316,15 @@ const App: React.FC = () => {
               onRefresh={refreshWaterProfile}
             />
             <WaterAreaMap profile={waterProfile} />
-            {!loading && (
-              <CurrentFishingTips
+            {!loading && briefingText && (
+              <Briefing
+                text={briefingText}
                 fishLabel={fishLabel}
                 koder={primaryKoder}
                 tactic={quickTactic}
                 hotspot={quickHotspot}
               />
             )}
-            {!loading && briefingText && <Briefing text={briefingText} fishLabel={fishLabel} />}
             {!loading && hourlyScores && hourlyScores.length > 0 && startHour !== undefined && (
               <DailyForecastChart
                 hourlyScores={hourlyScores}
