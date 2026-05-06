@@ -67,6 +67,7 @@ export interface WaterBodyProfile {
   areaDetails?: {
     waterSizeHa?: number;
     mapGeometry?: WaterMapGeometry;
+    locationInfo?: string[];
     season?: string;
     techniques?: string[];
     properties?: string[];

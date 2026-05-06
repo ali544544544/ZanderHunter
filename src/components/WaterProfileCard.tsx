@@ -49,8 +49,86 @@ const linkStyles: Record<NonNullable<WaterBodyProfile['links']>[number]['kind'],
   community: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
 };
 
+const speciesOrder: KnownFishSpecies[] = ['zander', 'hecht', 'barsch', 'aal', 'forelle', 'karpfen', 'wels', 'brasse', 'rotauge'];
+
 function getSpeciesLabel(entry: WaterBodyProfile['species'][number]) {
   return entry.displayName || speciesLabels[entry.species as KnownFishSpecies] || entry.species;
+}
+
+function getSpeciesRank(entry: WaterBodyProfile['species'][number]) {
+  const rank = speciesOrder.indexOf(entry.species as KnownFishSpecies);
+  return rank >= 0 ? rank : speciesOrder.length;
+}
+
+function formatArea(value: number) {
+  return new Intl.NumberFormat('de-DE', {
+    maximumFractionDigits: value < 10 ? 1 : 0,
+  }).format(value);
+}
+
+function formatDate(value: Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+      {children}
+    </p>
+  );
+}
+
+function InfoTile({ label, value, tone = 'default' }: { label: string; value: React.ReactNode; tone?: 'default' | 'good' | 'warn' }) {
+  const toneClass = tone === 'good'
+    ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-100'
+    : tone === 'warn'
+      ? 'border-yellow-400/25 bg-yellow-400/10 text-yellow-100'
+      : 'border-slate-700/80 bg-slate-950/25 text-slate-200';
+
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
+      <span className="block text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <span className="mt-0.5 block text-xs font-black leading-snug">{value}</span>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value?: React.ReactNode }) {
+  if (!value) return null;
+
+  return (
+    <div className="grid grid-cols-[92px_1fr] gap-3 border-t border-slate-800 py-2 first:border-t-0 first:pt-0 last:pb-0">
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <span className="text-xs font-semibold leading-relaxed text-slate-300">{value}</span>
+    </div>
+  );
+}
+
+function TagList({ items, tone = 'blue' }: { items: string[]; tone?: 'blue' | 'slate' | 'green' }) {
+  if (items.length === 0) return null;
+
+  const toneClass = tone === 'green'
+    ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-100'
+    : tone === 'slate'
+      ? 'border-slate-700 bg-slate-900/60 text-slate-200'
+      : 'border-blue-400/25 bg-blue-400/10 text-blue-100';
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <span key={item} className={`rounded-md border px-2.5 py-1 text-xs font-black leading-none ${toneClass}`}>
+          {item}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export function WaterProfileCard({ profile, loading = false, error = null, onRefresh }: WaterProfileCardProps) {
@@ -86,21 +164,30 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
     );
   }
 
-  const species = [...profile.species].sort((a, b) => getSpeciesLabel(a).localeCompare(getSpeciesLabel(b)));
+  const species = [...profile.species].sort((a, b) => {
+    const rankDiff = getSpeciesRank(a) - getSpeciesRank(b);
+    return rankDiff || getSpeciesLabel(a).localeCompare(getSpeciesLabel(b), 'de');
+  });
+  const speciesLabelsForDisplay = species.map(getSpeciesLabel);
   const quality = qualityCopy[profile.dataQuality];
   const sources = profile.sources.map((source) => sourceLabels[source]).join(', ');
   const details = profile.areaDetails;
-  const hasFacts = Boolean(details && (
-    typeof details.waterSizeHa === 'number'
-    || details.season
-    || details.mobileTicket
-    || details.printRequired
-  ));
-  const hasFishingInfo = Boolean(details && (
-    (details.techniques && details.techniques.length > 0)
-    || (details.properties && details.properties.length > 0)
-    || details.rulesText
-  ));
+  const formattedUpdatedAt = formatDate(profile.lastUpdated);
+  const geometry = details?.mapGeometry;
+  const geometrySummary = geometry
+    ? [
+        geometry.polygons.length > 0 ? `${geometry.polygons.length} Flaeche${geometry.polygons.length === 1 ? '' : 'n'}` : null,
+        geometry.lines.length > 0 ? `${geometry.lines.length} Strecke${geometry.lines.length === 1 ? '' : 'n'}` : null,
+        geometry.points.length > 0 ? `${geometry.points.length} Punkt${geometry.points.length === 1 ? '' : 'e'}` : null,
+      ].filter(Boolean).join(', ')
+    : null;
+  const ticketTone = details?.mobileTicket ? 'good' : profile.regulations?.permit_required ? 'warn' : 'default';
+  const hasDetailRows = Boolean(
+    details?.season
+    || details?.rulesText
+    || (details?.properties && details.properties.length > 0)
+    || geometrySummary
+  );
   const hasManagerInfo = Boolean(details?.manager && (
     details.manager.name
     || details.manager.phone
@@ -109,12 +196,19 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
   ));
 
   return (
-    <section className="card p-4">
+    <section className="card space-y-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewaesser</p>
-          <h2 className="truncate text-lg font-black text-slate-100">{profile.name}</h2>
-          <p className="text-xs font-semibold text-slate-500">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewaesser</p>
+            {profile.sources.includes('hejfish') && (
+              <span className="rounded border border-blue-400/20 bg-blue-400/10 px-1.5 py-0.5 text-[9px] font-black uppercase text-blue-200">
+                hejfish
+              </span>
+            )}
+          </div>
+          <h2 className="mt-1 text-lg font-black leading-tight text-slate-100">{profile.name}</h2>
+          <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-400">
             {typeLabels[profile.type]} - {profile.region}
           </p>
         </div>
@@ -128,146 +222,128 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
               onClick={onRefresh}
               className="rounded-md border border-slate-700 px-2 py-1 text-[9px] font-black uppercase text-slate-300 transition-colors hover:bg-slate-800"
             >
-              Refresh
+              Neu laden
             </button>
           )}
         </div>
       </div>
 
-      <div className="mt-4 space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vorhandene Fischarten</p>
-        {species.length === 0 && (
-          <p className="text-xs font-semibold text-slate-500">Keine Hejfish-Fischdaten fuer diesen Punkt gefunden.</p>
-        )}
-        {species.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {species.map((entry) => (
-              <span
-                key={`${entry.species}-${entry.displayName || ''}`}
-                className="rounded-md border border-blue-400/25 bg-blue-400/10 px-2.5 py-1 text-xs font-black text-blue-100"
-              >
-                {getSpeciesLabel(entry)}
-              </span>
-            ))}
-          </div>
+      <div className="grid grid-cols-2 gap-2">
+        <InfoTile label="Fischdaten" value={species.length > 0 ? `${species.length} Arten` : 'Keine Angabe'} tone={species.length > 0 ? 'good' : 'default'} />
+        <InfoTile label="Erlaubnis" value={profile.regulations?.permit_required ? 'Noetig' : 'Keine Angabe'} tone={profile.regulations?.permit_required ? 'warn' : 'default'} />
+        <InfoTile label="Ticket" value={details?.mobileTicket ? 'Online' : 'Vor Ort / extern'} tone={ticketTone} />
+        <InfoTile label="Stand" value={formattedUpdatedAt || 'Unbekannt'} />
+      </div>
+
+      {profile.imageUrl && (
+        <img
+          src={profile.imageUrl}
+          alt=""
+          className="max-h-44 w-full rounded-lg border border-slate-800 object-cover"
+          loading="lazy"
+        />
+      )}
+
+      {profile.description && (
+        <p className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300">
+          {profile.description}
+        </p>
+      )}
+
+      <div className="space-y-2">
+        <SectionHeading>Fischarten</SectionHeading>
+        {speciesLabelsForDisplay.length > 0 ? (
+          <TagList items={speciesLabelsForDisplay} />
+        ) : (
+          <p className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-xs font-semibold text-slate-500">
+            Fuer diesen Punkt liegen keine Fischarten aus hejfish vor.
+          </p>
         )}
       </div>
 
-      {(profile.description || details || profile.imageUrl) && (
-        <div className="mt-4 space-y-3 rounded-lg border border-slate-800 bg-slate-950/35 p-3">
-          {profile.imageUrl && (
-            <img
-              src={profile.imageUrl}
-              alt=""
-              className="max-h-40 w-full rounded-md object-cover"
-              loading="lazy"
-            />
-          )}
-          {profile.description && (
-            <p className="text-xs font-semibold leading-relaxed text-slate-300">{profile.description}</p>
-          )}
-
-          {hasFacts && (
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-300">
-              {typeof details?.waterSizeHa === 'number' && (
-                <div>
-                  <span className="block text-[9px] uppercase tracking-widest text-slate-500">Flaeche</span>
-                  {details?.waterSizeHa} ha
-                </div>
-              )}
-              {details?.season && (
-                <div>
-                  <span className="block text-[9px] uppercase tracking-widest text-slate-500">Saison</span>
-                  {details.season}
-                </div>
-              )}
-              {details?.mobileTicket && (
-                <div>
-                  <span className="block text-[9px] uppercase tracking-widest text-slate-500">Ticket</span>
-                  Mobile Karte verfuegbar
-                </div>
-              )}
-              {details?.printRequired && (
-                <div>
-                  <span className="block text-[9px] uppercase tracking-widest text-slate-500">Ausdruck</span>
-                  Erforderlich
-                </div>
-              )}
-            </div>
-          )}
-
-          {hasFishingInfo && (
-            <div className="space-y-2 border-t border-slate-800 pt-3">
-              {details?.techniques && details.techniques.length > 0 && (
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Methoden</p>
-                  <p className="text-[11px] font-semibold text-slate-300">{details.techniques.join(', ')}</p>
-                </div>
-              )}
-              {details?.properties && details.properties.length > 0 && (
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Hinweise</p>
-                  <p className="text-[11px] font-semibold text-slate-300">{details.properties.join(', ')}</p>
-                </div>
-              )}
-              {details?.rulesText && (
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Regeln</p>
-                  <p className="text-[11px] font-semibold leading-relaxed text-slate-400">{details.rulesText}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {details?.tickets && details.tickets.length > 0 && (
-            <div className="grid gap-1 border-t border-slate-800 pt-3">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Tickets</p>
-              {details.tickets.map((ticket) => (
-                <div key={`${ticket.name}-${ticket.price}`} className="flex justify-between gap-3 text-xs font-bold text-slate-300">
-                  <span>{ticket.name}</span>
-                  {ticket.price && <span className="text-slate-100">{ticket.price}</span>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {hasManagerInfo && (
-            <div className="space-y-1 border-t border-slate-800 pt-3 text-[11px] font-semibold text-slate-400">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Betreiber</p>
-              {details?.manager?.name && <p className="font-bold text-slate-300">{details.manager.name}</p>}
-              {details?.manager?.phone && (
-                <a className="block text-blue-200" href={`tel:${details.manager.phone}`}>
-                  Telefon: {details.manager.phone}
-                </a>
-              )}
-              {details?.manager?.email && (
-                <a className="block break-all text-blue-200" href={`mailto:${details.manager.email}`}>
-                  {details.manager.email}
-                </a>
-              )}
-              {details?.manager?.website && (
-                <a className="block break-all text-blue-200" href={details.manager.website} target="_blank" rel="noreferrer">
-                  {details.manager.website}
-                </a>
-              )}
-            </div>
-          )}
+      {details?.techniques && details.techniques.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeading>Angelmethoden</SectionHeading>
+          <TagList items={details.techniques} tone="green" />
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+      {hasDetailRows && (
+        <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
+          <DetailRow label="Saison" value={details?.season} />
+          <DetailRow label="Hinweise" value={details?.properties && details.properties.length > 0 ? details.properties.join(', ') : undefined} />
+          <DetailRow label="Regeln" value={details?.rulesText} />
+          <DetailRow label="Karte" value={geometrySummary} />
+        </div>
+      )}
+
+      {(typeof details?.waterSizeHa === 'number' || details?.locationInfo?.length || details?.printRequired !== undefined) && (
+        <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
+          <DetailRow
+            label="Flaeche"
+            value={typeof details?.waterSizeHa === 'number' ? `${formatArea(details.waterSizeHa)} ha` : undefined}
+          />
+          <DetailRow
+            label="Region"
+            value={details?.locationInfo && details.locationInfo.length > 0 ? details.locationInfo.join(', ') : undefined}
+          />
+          <DetailRow
+            label="Ausdruck"
+            value={details?.printRequired === undefined ? undefined : details.printRequired ? 'Erforderlich' : 'Nicht erforderlich'}
+          />
+        </div>
+      )}
+
+      {details?.tickets && details.tickets.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeading>Tickets</SectionHeading>
+          <div className="divide-y divide-slate-800 rounded-lg border border-slate-800 bg-slate-950/25">
+            {details.tickets.map((ticket) => (
+              <div key={`${ticket.name}-${ticket.price}`} className="flex items-start justify-between gap-3 px-3 py-2 text-xs">
+                <span className="font-bold leading-relaxed text-slate-200">{ticket.name}</span>
+                {ticket.price && <span className="shrink-0 font-black text-slate-100">{ticket.price}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasManagerInfo && (
+        <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
+          <SectionHeading>Betreiber</SectionHeading>
+          <div className="mt-2 space-y-1 text-xs font-semibold leading-relaxed text-slate-300">
+            {details?.manager?.name && <p className="font-black text-slate-100">{details.manager.name}</p>}
+            {details?.manager?.phone && (
+              <a className="block text-blue-200" href={`tel:${details.manager.phone}`}>
+                Telefon: {details.manager.phone}
+              </a>
+            )}
+            {details?.manager?.email && (
+              <a className="block break-all text-blue-200" href={`mailto:${details.manager.email}`}>
+                {details.manager.email}
+              </a>
+            )}
+            {details?.manager?.website && (
+              <a className="block break-all text-blue-200" href={details.manager.website} target="_blank" rel="noreferrer">
+                {details.manager.website}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3 text-[10px] font-bold uppercase tracking-wide text-slate-500">
         {profile.depth && (
           <span>
             Tiefe {profile.depth.max ? `bis ${profile.depth.max} m` : `${profile.depth.average ?? '?'} m`}
           </span>
         )}
-        {profile.regulations?.permit_required && <span className="text-yellow-300">Angelerlaubnis benoetigt</span>}
         <span>Daten: {sources}</span>
         {loading && <span className="text-blue-300">Aktualisiert...</span>}
       </div>
 
       {profile.links && profile.links.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           {profile.links.map((link) => (
             <a
               key={`${link.label}-${link.url}`}

@@ -111,6 +111,8 @@ describe('HejfishAreasProvider mapping', () => {
       url: 'https://www.hejfish.com/d/12189-dove-elbe-kombi-karte',
       name: 'Dove Elbe (Kombi-Karte)',
       fish: ['HechtZanderFlussbarschAal'],
+      techniques: ['SpinnangelnAnsitzangelnPosenangeln'],
+      properties: ['Boot\nTechniken:\nSpinnangelnAnsitzangelnPosenangeln'],
       location_info: ['Hamburg', 'Hamburg'],
       map_data: {
         data: {
@@ -136,6 +138,9 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.name).toBe('Dove Elbe (Kombi-Karte)');
       expect(profile?.sources).toContain('hejfish');
       expect(profile?.species.map((entry) => entry.species)).toContain('zander');
+      expect(profile?.species.map((entry) => entry.displayName)).toEqual(['Hecht', 'Zander', 'Flussbarsch', 'Aal']);
+      expect(profile?.areaDetails?.techniques).toEqual(['Spinnangeln', 'Ansitzangeln', 'Posenangeln']);
+      expect(profile?.areaDetails?.properties).toEqual(['Boot']);
       expect(profile?.areaDetails?.mapGeometry?.points).toHaveLength(1);
     } finally {
       globalThis.fetch = originalFetch;

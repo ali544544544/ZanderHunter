@@ -361,14 +361,16 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private mapLiteAreaToProfile(area: HejfishAreaLite): WaterBodyProfile {
+    const name = this.cleanText(area.name) || area.name;
+
     return {
       id: `hejfish-${area.id}`,
-      name: area.name,
+      name,
       type: this.mapWaterType(area.water_type, area.name),
       latitude: area.lat ?? 0,
       longitude: area.lng ?? 0,
       region: 'hejfish',
-      imageUrl: area.main_image || undefined,
+      imageUrl: this.cleanText(area.main_image),
       species: [],
       regulations: {
         permit_required: true,
@@ -390,16 +392,37 @@ export class HejfishAreasProvider implements WaterDataProvider {
       return [species, { species, displayName: name }];
     })).values());
     const mapGeometry = this.getAreaMapGeometry(area);
+    const locationInfo = this.cleanList(area.location_info || []);
+    const techniques = this.cleanList(area.techniques || []);
+    const techniqueKeys = new Set(techniques.map((entry) => this.normalize(entry)));
+    const properties = this.cleanList(area.properties || [])
+      .filter((entry) => !entry.toLowerCase().startsWith('techniken'))
+      .filter((entry) => !techniqueKeys.has(this.normalize(entry)));
+    const tickets = area.tickets
+      ?.map((ticket) => ({
+        name: this.cleanText(ticket.name) || ticket.name,
+        price: this.cleanText(ticket.price),
+      }))
+      .filter((ticket) => ticket.name);
+    const manager = area.manager
+      ? {
+          name: this.cleanText(area.manager.name),
+          phone: this.cleanText(area.manager.phone),
+          email: this.cleanText(area.manager.email),
+          website: this.cleanText(area.manager.website),
+        }
+      : undefined;
+    const name = this.cleanText(area.name) || area.name;
 
     return {
       id: `hejfish-${area.id}`,
-      name: area.name,
+      name,
       type: this.mapWaterType(area.water_type, area.name),
       latitude: area.lat ?? lat,
       longitude: area.lng ?? lng,
-      region: area.location_info?.join(', ') || area.country || 'Unbekannt',
-      description: area.description,
-      imageUrl: area.main_image,
+      region: locationInfo.join(', ') || area.country || 'Unbekannt',
+      description: this.cleanText(area.description),
+      imageUrl: this.cleanText(area.main_image),
       species: uniqueFish.map((entry) => ({
         species: entry.species,
         displayName: entry.displayName,
@@ -414,21 +437,22 @@ export class HejfishAreasProvider implements WaterDataProvider {
       sources: ['hejfish'],
       links: [
         { label: 'hejfish Gewaesser', url: area.url, kind: 'permit' },
-        ...(area.manager?.website
-          ? [{ label: 'Betreiber', url: area.manager.website, kind: 'info' as const }]
+        ...(manager?.website
+          ? [{ label: 'Betreiber', url: manager.website, kind: 'info' as const }]
           : []),
       ],
       areaDetails: {
         waterSizeHa: area.water_size_ha ?? undefined,
         mapGeometry,
-        season: area.season,
-        techniques: area.techniques,
-        properties: area.properties,
-        rulesText: area.rules_text,
+        locationInfo,
+        season: this.cleanText(area.season),
+        techniques,
+        properties,
+        rulesText: this.cleanText(area.rules_text),
         mobileTicket: area.mobile_ticket,
         printRequired: area.print_required,
-        tickets: area.tickets,
-        manager: area.manager,
+        tickets,
+        manager,
       },
       lastUpdated,
     };
@@ -580,22 +604,62 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private normalizeFishList(fish: string[]): string[] {
-    return fish
-      .flatMap((entry) => this.splitFishEntry(this.fixMojibake(entry)))
-      .map((entry) => entry.trim())
-      .filter(Boolean);
+    return this.cleanList(fish);
   }
 
-  private splitFishEntry(entry: string): string[] {
+  private cleanList(values: string[]): string[] {
+    const unique = new Map<string, string>();
+
+    values
+      .flatMap((entry) => this.splitListEntry(this.fixMojibake(entry)))
+      .map((entry) => this.cleanText(entry))
+      .filter((entry): entry is string => Boolean(entry))
+      .forEach((entry) => {
+        const key = this.normalize(entry);
+        if (key && !unique.has(key)) unique.set(key, entry);
+      });
+
+    return Array.from(unique.values());
+  }
+
+  private splitListEntry(entry: string): string[] {
     return entry
+      .replace(/\r/g, '\n')
+      .replace(/Techniken:/gi, '\n')
+      .replace(/([a-z])([A-Z])/g, '$1\n$2')
       .split(/[,;/\n]+/)
-      .flatMap((part) => part.replace(/([a-z])([A-Z])/g, '$1,$2').split(','))
       .map((part) => part.replace(/\s+/g, ' ').trim())
       .filter(Boolean);
   }
 
+  private cleanText(value?: string | null): string | undefined {
+    if (!value) return undefined;
+
+    const cleaned = this.fixMojibake(value)
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return cleaned || undefined;
+  }
+
   private fixMojibake(value: string): string {
     return value
+      .replace(/\u00c3\u0084/g, 'Ae')
+      .replace(/\u00c3\u0096/g, 'Oe')
+      .replace(/\u00c3\u009c/g, 'Ue')
+      .replace(/\u00c3\u00a4/g, 'ae')
+      .replace(/\u00c3\u00b6/g, 'oe')
+      .replace(/\u00c3\u00bc/g, 'ue')
+      .replace(/\u00c3\u009f/g, 'ss')
+      .replace(/\u00e2\u20ac\u201c|\u00e2\u20ac\u201d/g, '-')
+      .replace(/\u00e2\u20ac\u017e|\u00e2\u20ac\u0153|\u00e2\u20ac\u009d/g, '"')
+      .replace(/\u00e2\u20ac\u02dc|\u00e2\u20ac\u2122/g, "'")
+      .replace(/\u00c2/g, '')
       .replace(/Ã„/g, 'Ae')
       .replace(/Ã–/g, 'Oe')
       .replace(/Ãœ/g, 'Ue')
