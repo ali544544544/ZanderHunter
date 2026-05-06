@@ -115,7 +115,7 @@ export class WaterDataService {
     if (profiles.length === 0) {
       return {
         id: `fallback-${lat.toFixed(3)}-${lng.toFixed(3)}`,
-        name: 'Unbekanntes Gewaesser',
+        name: 'Unbekanntes Gewässer',
         type: 'lake',
         latitude: lat,
         longitude: lng,

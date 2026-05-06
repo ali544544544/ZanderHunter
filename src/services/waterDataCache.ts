@@ -13,11 +13,11 @@ const DB_VERSION = 1;
 const CACHE_KEY_VERSION = 'v14';
 
 function normalizeProfileCopy(profile: WaterBodyProfile): WaterBodyProfile {
-  if (profile.name !== 'Kein Hejfish-Gewaesser gefunden') return profile;
+  if (profile.name !== 'Kein Hejfish-Gewässer gefunden') return profile;
 
   return {
     ...profile,
-    name: 'Keine Gewaesserdaten gefunden',
+    name: 'Keine Gewässerdaten gefunden',
   };
 }
 

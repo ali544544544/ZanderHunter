@@ -228,7 +228,7 @@ const App: React.FC = () => {
                   <input
                     value={locationQuery}
                     onChange={(event) => setLocationQuery(event.target.value)}
-                    placeholder="Ort oder Gewaesser suchen"
+                    placeholder="Ort oder Gewässer suchen"
                     className="min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-900/80 px-2.5 py-2 text-xs font-semibold text-slate-100 outline-none placeholder:text-slate-600 focus:border-blue-500/60"
                   />
                   <button
@@ -289,7 +289,7 @@ const App: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-100'
                   }`}
                   aria-pressed={targetFish === fish.value}
-                  aria-label={`${fish.label} auswaehlen`}
+                  aria-label={`${fish.label} auswählen`}
                   title={fish.label}
                 >
                   <img

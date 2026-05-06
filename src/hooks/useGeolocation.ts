@@ -19,7 +19,7 @@ export function useGeolocation(enabled: boolean) {
     }
 
     if (!('geolocation' in navigator)) {
-      setError('GPS wird von diesem Browser nicht unterstuetzt.');
+      setError('GPS wird von diesem Browser nicht unterstützt.');
       setLoading(false);
       return;
     }

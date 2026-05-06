@@ -227,7 +227,7 @@ export function getHamburgPredatorRules(fish: TargetFish, date: Date = new Date(
     entnahmefenster: fish === 'barsch' ? '10-35 cm' : '45-75 cm',
     baglimit: fish === 'barsch' ? null : 2,
     hinweis: fish === 'barsch'
-      ? 'Keine generelle Barsch-Schonzeit in ASV-Hamburg-Gewaessern. Lokale Kunstkoederverbote waehrend Raubfisch-Schonzeiten beachten.'
+      ? 'Keine generelle Barsch-Schonzeit in ASV-Hamburg-Gewässern. Lokale Kunstköderverbote während Raubfisch-Schonzeiten beachten.'
       : schonzeitAktiv ? 'SCHONZEIT AKTIV: gezieltes Angeln aussetzen.' : 'Fischerei frei nach Hamburger Regeln.'
   };
 }
@@ -315,9 +315,9 @@ function applyWaterProfileContext(
       : rules.entnahmefenster,
     baglimit: legalOverride?.bagLimit?.daily_limit ?? rules.baglimit,
     hinweis: legalOverride?.closedSeason
-      ? `SCHONZEIT AKTIV: ${fish} im Gewaesserprofil gesperrt.`
+      ? `SCHONZEIT AKTIV: ${fish} im Gewässerprofil gesperrt.`
       : legalOverride?.permitRequired
-        ? `${rules.hinweis} Erlaubniskarte fuer dieses Gewaesser pruefen.`
+        ? `${rules.hinweis} Erlaubniskarte für dieses Gewässer prüfen.`
         : rules.hinweis,
   };
 
@@ -461,7 +461,7 @@ function getHechtRating(score: number) {
   if (score >= 85) return 'PERFEKT';
   if (score >= 70) return 'SEHR GUT';
   if (score >= 55) return 'GUT';
-  if (score >= 35) return 'ZAEH';
+  if (score >= 35) return 'ZÄH';
   return 'SCHWACH';
 }
 
@@ -513,10 +513,10 @@ function calculateZanderLightWindScore(input: HechtScoreInput) {
 }
 
 function getZanderPrimeWindow(input: HechtScoreInput) {
-  if (input.tageszeit === 'dämmerung') return 'jetzt: Daemmerung nutzen';
+  if (input.tageszeit === 'dämmerung') return 'jetzt: Dämmerung nutzen';
   if (input.stromPhase === 'ablauf') return 'laufende Ablaufphase';
   if (input.stromPhase === 'kenter') return 'Kenterfenster sofort nutzen';
-  return 'naechste Daemmerung oder Ablaufphase';
+  return 'nächste Dämmerung oder Ablaufphase';
 }
 
 export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetails {
@@ -543,7 +543,7 @@ export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetai
     : '';
   const probability = waterContext.legal.schonzeitAktiv
     ? `${biologicalProbability}% biologisch, Schonzeit beachten`
-    : `${biologicalProbability}% fuer Zanderkontakt${populationSuffix}`;
+    : `${biologicalProbability}% für Zanderkontakt${populationSuffix}`;
 
   return {
     total: waterContext.total,
@@ -560,12 +560,12 @@ export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetai
     waterProfile: waterContext.waterProfile,
     primeWindow: getZanderPrimeWindow(input),
     topTactic: input.wasserTemp < 8
-      ? 'Langsame Grundnaehe mit kleinen Shads'
+      ? 'Langsame Grundnähe mit kleinen Shads'
       : input.tageszeit === 'dämmerung'
         ? 'Ufernahe Kanten mit Shad oder Wobbler'
-        : 'Tiefere Kanten und Stroemungsschatten jiggen',
+        : 'Tiefere Kanten und Strömungsschatten jiggen',
     hotspot: input.stromPhase === 'ablauf' || input.stromPhase === 'kenter'
-      ? 'Stroemungskante, Buhnenkopf oder Spundwand'
+      ? 'Strömungskante, Buhnenkopf oder Spundwand'
       : 'Tiefe Kante, Hafenbecken oder Schattenbereich',
     probability
   };
@@ -600,7 +600,7 @@ export function calculateBarschIndex(input: HechtScoreInput): PredatorScoreDetai
   const populationSuffix = waterContext.populationConfidence !== null
     ? `, Bestand ${Math.round(waterContext.populationConfidence * 100)}%`
     : '';
-  const probability = `${Math.round(clamp(10 + waterContext.total * 0.75, 5, 85))}% fuer Barschkontakt${populationSuffix}`;
+  const probability = `${Math.round(clamp(10 + waterContext.total * 0.75, 5, 85))}% für Barschkontakt${populationSuffix}`;
   const activity = getBarschActivity(waterContext.total);
 
   return {
@@ -715,7 +715,7 @@ function calculateBarschHydroScore(input: HechtScoreInput) {
     minutesSinceNW: normalizedNW,
     currentSpeed,
     structureScore,
-    hotspot: structureScore >= 20 ? 'Spundwand, Poller oder Brueckenpfeiler' : 'Kaimauer, Hafeneinfahrt oder Steinpackung'
+    hotspot: structureScore >= 20 ? 'Spundwand, Poller oder Brückenpfeiler' : 'Kaimauer, Hafeneinfahrt oder Steinpackung'
   };
 }
 
@@ -723,15 +723,15 @@ function getBarschActivity(score: number) {
   if (score > 85) return 'HOCHAKTIV - Futterneid nutzen';
   if (score > 70) return 'AKTIV - systematisch absuchen';
   if (score > 50) return 'MODERAT - Finesse-Methoden';
-  if (score > 30) return 'TRAEGE - ultra-slow';
-  return 'INAKTIV - Alternative erwaegen';
+  if (score > 30) return 'TRÄGE - ultra-slow';
+  return 'INAKTIV - Alternative erwägen';
 }
 
 function getBarschPrimeWindow(input: HechtScoreInput, hydro: ReturnType<typeof calculateBarschHydroScore>) {
   if (hydro.minutesSinceNW > 30 && hydro.minutesSinceNW < 180) return 'erste 3h auflaufend';
-  if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'Daemmerung - Topwater-Zeit';
+  if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'Dämmerung - Topwater-Zeit';
   if (hydro.minutesSinceNW > 210 && hydro.minutesSinceNW < 330) return 'Ablaufend: Kehrwasser-Spots';
-  return 'Struktur-Hopping bis zum naechsten Fenster';
+  return 'Struktur-Hopping bis zum nächsten Fenster';
 }
 
 function getBarschTactic(input: HechtScoreInput, score: number, secchi: number) {
@@ -743,10 +743,10 @@ function getBarschTactic(input: HechtScoreInput, score: number, secchi: number) 
 }
 
 function getPrimeWindow(input: HechtScoreInput) {
-  if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'jetzt bis Ende Daemmerung';
+  if (isTwilightWindow(input.date || new Date(), input.sunrise, input.sunset)) return 'jetzt bis Ende Dämmerung';
   if (input.stromPhase === 'ablauf') return 'erste 90 min der Ablaufphase';
   if (input.stromPhase === 'kenter') return 'Kenterpunkt plus 90 min';
-  return 'naechste Daemmerung';
+  return 'nächste Dämmerung';
 }
 
 export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
@@ -779,7 +779,7 @@ export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
     : '';
   const probability = waterContext.legal.schonzeitAktiv
     ? `${biologicalProbability}% biologisch, Schonzeit beachten`
-    : `${biologicalProbability}% fuer Hecht >60cm${populationSuffix}`;
+    : `${biologicalProbability}% für Hecht >60cm${populationSuffix}`;
 
   return {
     total: waterContext.total,
@@ -796,12 +796,12 @@ export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
     waterProfile: waterContext.waterProfile,
     primeWindow: getPrimeWindow(input),
     topTactic: input.wasserTemp < 8
-      ? 'Langsam gefuehrter Jerkbait oder grosser Softbait'
+      ? 'Langsam geführter Jerkbait oder großer Softbait'
       : lightWindResult.twilight
         ? 'Jerken oder flach laufender Wobbler am Ufer'
         : 'Spinnerbait/Swimbait an Krautkante und Struktur',
     hotspot: hydrologyResult.tide.currentSpeed > 0.3
-      ? 'Buhnenkopf, Einlauf oder windgedrueckte Uferkante'
+      ? 'Buhnenkopf, Einlauf oder windgedrückte Uferkante'
       : 'Krautkante, Hafenbecken oder ruhige Nebenzone',
     probability
   };

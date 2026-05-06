@@ -180,7 +180,7 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
   }, [geometry, projectPoint, viewport]);
 
   const selectedPointPosition = selectedPoint && viewport ? projectPoint(selectedPoint) : null;
-  const mapLabel = polygonPaths.length > 0 ? 'Gewaesserflaeche' : 'Gewaesserstrecke';
+  const mapLabel = polygonPaths.length > 0 ? 'Gewässerfläche' : 'Gewässerstrecke';
 
   if (!profile?.sources.includes('hejfish') || !geometry || !hasAreaGeometry || allPoints.length === 0 || !viewport) {
     return null;

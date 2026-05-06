@@ -90,13 +90,13 @@ const Briefing: React.FC<BriefingProps> = ({ text, fishLabel = 'Zander', koder, 
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Aktuelle Angeltipps</p>
-          <h3 className="mt-1 text-base font-black leading-tight text-slate-100">Lagebild fuer {fishLabel}</h3>
+          <h3 className="mt-1 text-base font-black leading-tight text-slate-100">Lagebild für {fishLabel}</h3>
         </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-3">
-        <TipPanel label="Koeder" value={koder?.name} detail={koder ? `${koder.farbe} - ${koder.gewicht}` : undefined} />
-        <TipPanel label="Fuehrung" value={tactic} />
+        <TipPanel label="Köder" value={koder?.name} detail={koder ? `${koder.farbe} - ${koder.gewicht}` : undefined} />
+        <TipPanel label="Führung" value={tactic} />
         <TipPanel label="Standplatz" value={hotspot} />
       </div>
 

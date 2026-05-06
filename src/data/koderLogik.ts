@@ -90,23 +90,23 @@ function getHechtKoderEmpfehlung(conditions: any): KoderEmpfehlung[] {
   return [
     {
       priorität: 1,
-      name: kalt ? 'Suspending Jerkbait' : 'Grosser Swimbait',
+      name: kalt ? 'Suspending Jerkbait' : 'Großer Swimbait',
       größe: kalt ? '10-13 cm' : '15-20 cm',
       farbe,
       gewicht: '20-45g',
-      technik: kalt ? 'Lange Pausen, kurze Twitches, im Sichtfeld stehen lassen' : 'Langsam gleichmaessig ueber Krautkanten fuehren',
-      wann: kalt ? 'Kaltwasser und hoher Druck' : 'Aktive Suchkoeder-Phase',
-      warum: 'Hecht reagiert stark auf grosse Silhouette und Richtungswechsel'
+      technik: kalt ? 'Lange Pausen, kurze Twitches, im Sichtfeld stehen lassen' : 'Langsam gleichmäßig über Krautkanten führen',
+      wann: kalt ? 'Kaltwasser und hoher Druck' : 'Aktive Suchköder-Phase',
+      warum: 'Hecht reagiert stark auf große Silhouette und Richtungswechsel'
     },
     {
       priorität: 2,
       name: 'Spinnerbait',
       größe: '14-18 cm Trailer',
-      farbe: conditions?.cloudCover > 60 ? 'Chartreuse/Weiss' : 'Natural/Silber',
+      farbe: conditions?.cloudCover > 60 ? 'Chartreuse/Weiß' : 'Natural/Silber',
       gewicht: '18-28g',
-      technik: 'An Krautkanten, Einlaeufen und windgedrueckten Ufern durchkurbeln',
+      technik: 'An Krautkanten, Einläufen und windgedrückten Ufern durchkurbeln',
       wann: 'Wind, Wolken und flacheres Wasser',
-      warum: 'Vibration und Flash bleiben auch bei Truebung gut sichtbar'
+      warum: 'Vibration und Flash bleiben auch bei Trübung gut sichtbar'
     },
     {
       priorität: 3,
@@ -114,8 +114,8 @@ function getHechtKoderEmpfehlung(conditions: any): KoderEmpfehlung[] {
       größe: '12-16 cm',
       farbe,
       gewicht: 'schwebend / slow floating',
-      technik: 'Stop-and-go in der Daemmerung, Pausen direkt an Struktur',
-      wann: 'Prime Window und Ufernaehe',
+      technik: 'Stop-and-go in der Dämmerung, Pausen direkt an Struktur',
+      wann: 'Prime Window und Ufernähe',
       warum: 'Imitiert angeschlagenen Beutefisch in der Attackzone'
     }
   ];
@@ -129,7 +129,7 @@ function getBarschKoderEmpfehlung(): KoderEmpfehlung[] {
       größe: '6-8 cm',
       farbe: 'Motoroil, Firetiger oder UV-Chartreuse',
       gewicht: '7-10g Jigkopf',
-      technik: 'Faulenzen: 5 Spruenge, 2 Sek. Pause, Grundkontakt halten',
+      technik: 'Faulenzen: 5 Sprünge, 2 Sek. Pause, Grundkontakt halten',
       wann: 'Sommer aktiv, Hafen/Spundwand, Score >70',
       warum: 'Sucht aktive Trupps schnell ab und triggert Futterneid'
     },
@@ -140,8 +140,8 @@ function getBarschKoderEmpfehlung(): KoderEmpfehlung[] {
       farbe: 'UV-Chartreuse, Braun/Rot oder Watermelon',
       gewicht: '5-10g Blei',
       technik: 'Minimal zittern lassen, 5-10 Sek. auf der Stelle halten',
-      wann: 'Wenn Jiggen nicht laeuft, Winter oder klare Kanaele',
-      warum: 'Finesse-Option fuer traege oder vorsichtige Barsche'
+      wann: 'Wenn Jiggen nicht läuft, Winter oder klare Kanäle',
+      warum: 'Finesse-Option für träge oder vorsichtige Barsche'
     },
     {
       priorität: 3,
@@ -149,9 +149,9 @@ function getBarschKoderEmpfehlung(): KoderEmpfehlung[] {
       größe: '5-7g',
       farbe: 'Silber/Firetiger',
       gewicht: '5-7g',
-      technik: 'Zuegig kurbeln, kurze Stopps an Struktur',
-      wann: 'Truebe Elbe oder wenn Druckwellen gefragt sind',
-      warum: 'Kompakter Suchkoeder mit Flash und Vibration'
+      technik: 'Zügig kurbeln, kurze Stopps an Struktur',
+      wann: 'Trübe Elbe oder wenn Druckwellen gefragt sind',
+      warum: 'Kompakter Suchköder mit Flash und Vibration'
     }
   ];
 }
@@ -173,10 +173,10 @@ export function generateBriefing(conditions: any, topSpot: any, koder: KoderEmpf
     if (scoreDetails?.legal.schonzeitAktiv) {
       parts.push(scoreDetails.legal.hinweis);
     }
-    parts.push(`Prime Window: ${scoreDetails?.primeWindow ?? 'naechste Daemmerung'}.`);
+    parts.push(`Prime Window: ${scoreDetails?.primeWindow ?? 'nächste Dämmerung'}.`);
     parts.push(`Taktik: ${scoreDetails?.topTactic ?? koder[0]?.technik}.`);
     parts.push(`Hotspot: ${scoreDetails?.hotspot ?? topSpot?.name ?? 'Krautkante oder Einlauf'}.`);
-    if (conditions?.luftdruckTrend === 'fallend') parts.push('Fallender Druck wirkt als Aktivitaets-Trigger.');
+    if (conditions?.luftdruckTrend === 'fallend') parts.push('Fallender Druck wirkt als Aktivitäts-Trigger.');
     if (conditions?.cloudCover > 60 && conditions?.windSpeed > 10) parts.push('Wolken plus Wind geben Deckung im Flachwasser.');
     return parts.join(' ');
   }
@@ -220,7 +220,7 @@ export function generateDynamicSpotAdvice(spot: any, conditions: any, targetFish
     return {
       taktik: 'Struktur-Hopping: Spundwand, Poller und Kanten alle 5-10m abwerfen. Nach Kontakt sofort nachlegen.',
       koderTipp: conditions?.trübung === 'getrübt' ? 'Spinmad/Firetiger oder UV-Shad' : 'Motoroil-Twister oder Dropshot-Wurm',
-      bestePhase: local.stromPhase === 'auflauf' ? 'Auflaufend frueh' : 'Struktur + Daemmerung',
+      bestePhase: local.stromPhase === 'auflauf' ? 'Auflaufend früh' : 'Struktur + Dämmerung',
       tideOffset: local.tideOffset
     };
   }
@@ -229,10 +229,10 @@ export function generateDynamicSpotAdvice(spot: any, conditions: any, targetFish
     const hasStructure = spot.struktur.some((s: string) => /buhne|kraut|röhricht|einlauf|kante/i.test(s));
     return {
       taktik: hasStructure
-        ? 'Struktur eng abwerfen: grosse Koeder parallel zur Kante fuehren, an Hindernissen lange Pausen setzen.'
-        : 'Suchkoeder einsetzen und Strecke machen. Bei Kontakt sofort langsamer und groesser nachfischen.',
-      koderTipp: conditions?.cloudCover > 60 ? 'Spinnerbait oder Firetiger-Jerkbait' : 'Natuerlicher Swimbait in Barsch/Rotauge',
-      bestePhase: local.stromPhase === 'kenter' ? 'Kenter + 90 min' : 'Windkante / Daemmerung',
+        ? 'Struktur eng abwerfen: große Köder parallel zur Kante führen, an Hindernissen lange Pausen setzen.'
+        : 'Suchköder einsetzen und Strecke machen. Bei Kontakt sofort langsamer und größer nachfischen.',
+      koderTipp: conditions?.cloudCover > 60 ? 'Spinnerbait oder Firetiger-Jerkbait' : 'Natürlicher Swimbait in Barsch/Rotauge',
+      bestePhase: local.stromPhase === 'kenter' ? 'Kenter + 90 min' : 'Windkante / Dämmerung',
       tideOffset: local.tideOffset
     };
   }

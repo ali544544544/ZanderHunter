@@ -239,7 +239,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
         }}
         role="button"
         tabIndex={0}
-        aria-label="Standort auf Karte auswaehlen"
+        aria-label="Standort auf Karte auswählen"
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             onSelect({ ...selectedPoint, label: locationLabel(selectedPoint.lat, selectedPoint.lng) });

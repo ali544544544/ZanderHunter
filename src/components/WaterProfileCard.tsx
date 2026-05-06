@@ -28,7 +28,7 @@ const sourceLabels: Record<DataSource, string> = {
   fischinfo_nrw: 'FischInfo NRW',
   anglermap: 'Anglermap',
   hejfish: 'Angelkarten-Daten',
-  unknown: 'Schaetzung',
+  unknown: 'Schätzung',
 };
 
 const speciesLabels: Record<KnownFishSpecies, string> = {
@@ -147,8 +147,8 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
       <section className="card p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewaesser</p>
-            <p className="text-sm font-bold text-slate-300">{error || 'Keine Gewaesserdaten'}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewässer</p>
+            <p className="text-sm font-bold text-slate-300">{error || 'Keine Gewässerdaten'}</p>
           </div>
           {onRefresh && (
             <button
@@ -191,10 +191,10 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewaesser</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewässer</p>
             {profile.sources.includes('hejfish') && (
               <span className="rounded border border-blue-400/20 bg-blue-400/10 px-1.5 py-0.5 text-[9px] font-black uppercase text-blue-200">
-                Gewaesserdaten
+                Gewässerdaten
               </span>
             )}
           </div>
@@ -221,7 +221,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
 
       <div className="grid grid-cols-2 gap-2">
         <InfoTile label="Fischdaten" value={species.length > 0 ? `${species.length} Arten` : 'Keine Angabe'} tone={species.length > 0 ? 'good' : 'default'} />
-        <InfoTile label="Erlaubnis" value={profile.regulations?.permit_required ? 'Noetig' : 'Keine Angabe'} tone={profile.regulations?.permit_required ? 'warn' : 'default'} />
+        <InfoTile label="Erlaubnis" value={profile.regulations?.permit_required ? 'Nötig' : 'Keine Angabe'} tone={profile.regulations?.permit_required ? 'warn' : 'default'} />
         <InfoTile label="Ticket" value={details?.mobileTicket ? 'Online' : 'Vor Ort / extern'} tone={ticketTone} />
         <InfoTile label="Stand" value={formattedUpdatedAt || 'Unbekannt'} />
       </div>
@@ -247,7 +247,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
           <TagList items={speciesLabelsForDisplay} />
         ) : (
           <p className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-xs font-semibold text-slate-500">
-            Fuer diesen Punkt liegen keine Fischarten in den Gewaesserdaten vor.
+            Für diesen Punkt liegen keine Fischarten in den Gewässerdaten vor.
           </p>
         )}
       </div>
@@ -270,7 +270,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
       {(typeof details?.waterSizeHa === 'number' || details?.locationInfo?.length || details?.printRequired !== undefined) && (
         <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
           <DetailRow
-            label="Flaeche"
+            label="Fläche"
             value={typeof details?.waterSizeHa === 'number' ? `${formatArea(details.waterSizeHa)} ha` : undefined}
           />
           <DetailRow
@@ -281,7 +281,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
             label="Ausdruck"
             value={details?.printRequired === undefined ? undefined : details.printRequired
               ? 'Erforderlich - Karte vor dem Angeln ausdrucken.'
-              : 'Nicht erforderlich - laut Gewaesserdaten ist keine Druckpflicht hinterlegt.'}
+              : 'Nicht erforderlich - laut Gewässerdaten ist keine Druckpflicht hinterlegt.'}
           />
         </div>
       )}

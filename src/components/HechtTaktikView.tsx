@@ -26,23 +26,23 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
           ? 'Winterlager: Dropshot oder Vertikalangeln ultra-slow in tiefen Becken.'
           : conditions?.wasserTemp <= 22
             ? 'Aktivphase: Jiggen, Spinmad und Struktur-Hopping funktionieren gut.'
-            : 'Warmwasser: Sauerstoff, Stroemung und Schatten suchen.'
+            : 'Warmwasser: Sauerstoff, Strömung und Schatten suchen.'
         : isHecht
         ? conditions?.wasserTemp < 8
-          ? 'Kaltwasser: langsam, lange Pausen, Koeder im Sichtfeld halten.'
+          ? 'Kaltwasser: langsam, lange Pausen, Köder im Sichtfeld halten.'
           : conditions?.wasserTemp <= 16
-            ? 'Aktivfenster: grosse Silhouette, Jerks und Swimbaits funktionieren gut.'
-            : 'Warmwasser: frueh/spaet fischen, Sauerstoff und Schatten suchen.'
+            ? 'Aktivfenster: große Silhouette, Jerks und Swimbaits funktionieren gut.'
+            : 'Warmwasser: früh/spät fischen, Sauerstoff und Schatten suchen.'
         : conditions?.wasserTemp < 8
-          ? 'Kaltwasser: kleine Shads langsam und grundnah fuehren.'
+          ? 'Kaltwasser: kleine Shads langsam und grundnah führen.'
           : conditions?.wasserTemp <= 18
-            ? 'Komfortzone: Kanten aktiv abjiggen, auch Wobbler in der Daemmerung.'
-            : 'Warmwasser: Sauerstoff, Stroemung und Schatten priorisieren.',
+            ? 'Komfortzone: Kanten aktiv abjiggen, auch Wobbler in der Dämmerung.'
+            : 'Warmwasser: Sauerstoff, Strömung und Schatten priorisieren.',
       info: isBarsch
-        ? 'Barsche sind waermeliebend: Peak um 18C, Winter-Mittagsbonus unter 8C.'
+        ? 'Barsche sind wärmeliebend: Peak um 18C, Winter-Mittagsbonus unter 8C.'
         : isHecht
-        ? 'Temperatur bewertet den Stoffwechsel. Beim Hecht sind etwa 15C sehr stark, um 10C gibt es einen zweiten Aktivitaets-Peak.'
-        : 'Temperatur bewertet die Zander-Komfortzone. 10-18C ist stark, darunter und darueber wird vorsichtiger gefischt.'
+        ? 'Temperatur bewertet den Stoffwechsel. Beim Hecht sind etwa 15C sehr stark, um 10C gibt es einen zweiten Aktivitäts-Peak.'
+        : 'Temperatur bewertet die Zander-Komfortzone. 10-18C ist stark, darunter und darüber wird vorsichtiger gefischt.'
     },
     {
       title: 'Drucktrend',
@@ -51,26 +51,26 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
         ? 'Stabiler Hochdruck ist stark. Bei Druckchaos feiner und langsamer fischen.'
         : conditions?.luftdruckTrend === 'fallend'
         ? 'Sanft fallender Druck triggert Such- und Fressphasen.'
-        : 'Bei stabilem oder steigendem Druck langsamer fuehren und Struktur enger abfischen.',
-      info: isBarsch ? 'Barsch Modul A nutzt 72h-Druckstabilitaet, absoluten Druck und kurzfristigen Trend. Schneller Druckanstieg ist kritisch.' : 'Drucktrend vergleicht aktuellen Luftdruck mit der Historie. Sanft fallender Druck ist gut, schnelle Anstiege oder extreme Wechsel sind schlechter.'
+        : 'Bei stabilem oder steigendem Druck langsamer führen und Struktur enger abfischen.',
+      info: isBarsch ? 'Barsch Modul A nutzt 72h-Druckstabilität, absoluten Druck und kurzfristigen Trend. Schneller Druckanstieg ist kritisch.' : 'Drucktrend vergleicht aktuellen Luftdruck mit der Historie. Sanft fallender Druck ist gut, schnelle Anstiege oder extreme Wechsel sind schlechter.'
     },
     {
       title: 'Licht & Wind',
       value: `${weather?.cloudCover ?? '--'}% Wolken`,
       text: isBarsch
-        ? 'Sichtjaeger: klare bis leicht truebe Bedingungen und gutes Licht aktiv befischen.'
+        ? 'Sichtjäger: klare bis leicht trübe Bedingungen und gutes Licht aktiv befischen.'
         : isHecht
         ? weather?.cloudCover > 60 && weather?.windSpeed > 10
-          ? 'Wolken plus Wind auf Ufer: flache Kanten, Kraut und Einlaeufe priorisieren.'
-          : 'Bei Sonne und wenig Wind tiefer, schattiger und natuerlicher fischen.'
+          ? 'Wolken plus Wind auf Ufer: flache Kanten, Kraut und Einläufe priorisieren.'
+          : 'Bei Sonne und wenig Wind tiefer, schattiger und natürlicher fischen.'
         : conditions?.tageszeit === 'dämmerung' || conditions?.tageszeit === 'nacht'
-          ? 'Restlicht nutzen: Uferkanten, Spundwaende und flachere Jagdzonen abwerfen.'
-          : 'Tagsueber tiefer, schattiger und langsamer am Grund arbeiten.',
+          ? 'Restlicht nutzen: Uferkanten, Spundwände und flachere Jagdzonen abwerfen.'
+          : 'Tagsüber tiefer, schattiger und langsamer am Grund arbeiten.',
       info: isBarsch
-        ? 'Barsch Modul C kombiniert Lichtqualitaet, UV, Sichttiefe und Daemmerung. Klares, diffuses Licht ist ideal.'
+        ? 'Barsch Modul C kombiniert Lichtqualität, UV, Sichttiefe und Dämmerung. Klares, diffuses Licht ist ideal.'
         : isHecht
-        ? 'Licht und Wind werden kombiniert. Wolken und Wind auf die Uferkante geben Hechten Deckung und druecken Beutefische in Reichweite.'
-        : 'Beim Zander zaehlen Restlicht, Nachtfenster, Mond/Solunar und kontrollierbarer Wind besonders stark.'
+        ? 'Licht und Wind werden kombiniert. Wolken und Wind auf die Uferkante geben Hechten Deckung und drücken Beutefische in Reichweite.'
+        : 'Beim Zander zählen Restlicht, Nachtfenster, Mond/Solunar und kontrollierbarer Wind besonders stark.'
     }
   ];
 
@@ -80,7 +80,7 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
         <div className="card bg-red-500/10 border-red-500/30">
           <h3 className="text-red-400 text-sm font-black uppercase tracking-widest mb-2">Schonzeit aktiv</h3>
           <p className="text-slate-200 text-sm leading-relaxed">
-            Der biologische Score bleibt sichtbar. Nutze die Ansicht waehrend Schonzeit nur zur Analyse, nicht zur gezielten Angelei.
+            Der biologische Score bleibt sichtbar. Nutze die Ansicht während Schonzeit nur zur Analyse, nicht zur gezielten Angelei.
           </p>
         </div>
       )}
@@ -104,16 +104,16 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
           <div className="bg-slate-950/40 p-3 rounded-lg border border-slate-800">
             <span className="text-slate-500 uppercase font-bold flex items-center gap-1 mb-1">
               Prime Window
-              <InfoTooltip text="Bestes Zeitfenster laut Score. Kenterpunkt plus 90 min bedeutet: vom Stroemungswechsel bis ungefaehr 90 Minuten danach." align="left" />
+              <InfoTooltip text="Bestes Zeitfenster laut Score. Kenterpunkt plus 90 min bedeutet: vom Strömungswechsel bis ungefähr 90 Minuten danach." align="left" />
             </span>
-            <span className="text-slate-100 font-black">{scoreDetails?.primeWindow ?? 'naechste Daemmerung'}</span>
+            <span className="text-slate-100 font-black">{scoreDetails?.primeWindow ?? 'nächste Dämmerung'}</span>
           </div>
           <div className="bg-slate-950/40 p-3 rounded-lg border border-slate-800">
             <span className="text-slate-500 uppercase font-bold flex items-center gap-1 mb-1">
               Hotspot
-              <InfoTooltip text="Empfohlener Bereichstyp fuer die aktuellen Bedingungen, zum Beispiel Krautkante, Einlauf, Buhnenkopf oder windgedruecktes Ufer." />
+              <InfoTooltip text="Empfohlener Bereichstyp für die aktuellen Bedingungen, zum Beispiel Krautkante, Einlauf, Buhnenkopf oder windgedrücktes Ufer." />
             </span>
-            <span className="text-slate-100 font-black">{scoreDetails?.hotspot ?? (isHecht ? 'Krautkante' : 'Stroemungskante')}</span>
+            <span className="text-slate-100 font-black">{scoreDetails?.hotspot ?? (isHecht ? 'Krautkante' : 'Strömungskante')}</span>
           </div>
         </div>
       </div>
@@ -134,7 +134,7 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm px-1">Koeder</h3>
+        <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm px-1">Köder</h3>
         {koder.map(item => (
           <div key={`${item.priorität}-${item.name}`} className="card">
             <div className="flex justify-between items-start gap-4">
@@ -153,14 +153,14 @@ const HechtTaktikView: React.FC<HechtTaktikViewProps> = ({ conditions, weather, 
               <div>
                 <span className="text-slate-500 uppercase font-bold flex items-center gap-1">
                   Farbe
-                  <InfoTooltip text="Farbempfehlung nach Licht, Truebung und Sichtbarkeit. Auffaellig bei Wolken/Truebung, natuerlicher bei klarem Wasser." align="left" />
+                  <InfoTooltip text="Farbempfehlung nach Licht, Trübung und Sichtbarkeit. Auffällig bei Wolken/Trübung, natürlicher bei klarem Wasser." align="left" />
                 </span>
                 <span className="text-slate-100 font-bold">{item.farbe}</span>
               </div>
               <div>
                 <span className="text-slate-500 uppercase font-bold flex items-center gap-1">
                   Wann
-                  <InfoTooltip text="Situation, in der der Koeder am besten zum aktuellen Score-Modul passt." />
+                  <InfoTooltip text="Situation, in der der Köder am besten zum aktuellen Score-Modul passt." />
                 </span>
                 <span className="text-slate-100 font-bold">{item.wann}</span>
               </div>

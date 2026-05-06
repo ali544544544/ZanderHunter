@@ -48,28 +48,28 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
             <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
               Konfidenz
-              <InfoTooltip text="Der Unsicherheitsbereich des Scores. +/-6 bedeutet: Die realistische Spanne liegt ungefaehr 6 Punkte ueber oder unter dem angezeigten Wert." />
+              <InfoTooltip text="Der Unsicherheitsbereich des Scores. +/-6 bedeutet: Die realistische Spanne liegt ungefähr 6 Punkte über oder unter dem angezeigten Wert." />
             </span>
             <span className="font-black text-slate-100">+/-{scoreDetails.confidence}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
             <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
               Prime Window
-              <InfoTooltip text="Das beste Zeitfenster laut Score. Bei Kenterfenstern ist die Phase um den Stroemungswechsel gemeint, weil Beutefische und Raeuber neu positionieren." />
+              <InfoTooltip text="Das beste Zeitfenster laut Score. Bei Kenterfenstern ist die Phase um den Strömungswechsel gemeint, weil Beutefische und Räuber neu positionieren." />
             </span>
             <span className="font-black text-slate-100">{scoreDetails.primeWindow}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
             <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
               Chance
-              <InfoTooltip text={`Eine grobe, aus dem ${fishLabel}-Score abgeleitete biologische Aktivitaets-Schaetzung. Das ist kein Fangversprechen und ersetzt keine lokale Erfahrung.`} />
+              <InfoTooltip text={`Eine grobe, aus dem ${fishLabel}-Score abgeleitete biologische Aktivitäts-Schätzung. Das ist kein Fangversprechen und ersetzt keine lokale Erfahrung.`} />
             </span>
             <span className="font-black text-slate-100">{scoreDetails.probability}</span>
           </div>
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2">
             <span className="flex items-center gap-1 text-[9px] text-slate-500 uppercase font-bold">
               Bonus
-              <InfoTooltip text="Multiplikativer Synergie-Faktor. Positive Kombinationen wie fallender Druck plus passendes Zeit- oder Tidefenster erhoehen den Gesamtscore." />
+              <InfoTooltip text="Multiplikativer Synergie-Faktor. Positive Kombinationen wie fallender Druck plus passendes Zeit- oder Tidefenster erhöhen den Gesamtscore." />
             </span>
             <span className="font-black text-slate-100">{scoreDetails.interactionBonus > 0 ? '+' : ''}{scoreDetails.interactionBonus}%</span>
           </div>

@@ -12,38 +12,38 @@ const fishCopy = {
   hecht: {
     habitatTitle: 'Habitat-Tipp',
     habitat:
-      'Hechte stehen gern an Krautkanten, Einlaeufen, Schilf, Buhnenkoepfen und windgedrueckten Ufern. Sie lauern oft an klaren Kanten zwischen Deckung und offenem Wasser.',
+      'Hechte stehen gern an Krautkanten, Einläufen, Schilf, Buhnenköpfen und windgedrückten Ufern. Sie lauern oft an klaren Kanten zwischen Deckung und offenem Wasser.',
     warning:
-      'In Hamburg ist waehrend der Schonzeit gezieltes Angeln auf Hecht zu vermeiden. Der Score zeigt nur die biologischen Bedingungen.',
+      'In Hamburg ist während der Schonzeit gezieltes Angeln auf Hecht zu vermeiden. Der Score zeigt nur die biologischen Bedingungen.',
     entnahmeInfo:
-      'Kuechenfenster Hamburg fuer Hecht. Groessere und kleinere Fische muessen zurueckgesetzt werden.',
-    limitInfo: 'Maximale Entnahme pro Tag und Angler in Hamburger Gewaessern.',
+      'Küchenfenster Hamburg für Hecht. Größere und kleinere Fische müssen zurückgesetzt werden.',
+    limitInfo: 'Maximale Entnahme pro Tag und Angler in Hamburger Gewässern.',
     legalTooltip:
-      'Rechtlicher Status fuer Hamburg. Der Score bleibt sichtbar, aber waehrend Schonzeit bitte nicht gezielt auf Hecht angeln.'
+      'Rechtlicher Status für Hamburg. Der Score bleibt sichtbar, aber während Schonzeit bitte nicht gezielt auf Hecht angeln.'
   },
   zander: {
     habitatTitle: 'Habitat-Tipp',
     habitat:
-      'Zander lieben harte Boeden, Steinpackungen und Stroemungskanten. Tagsueber stehen sie oft tiefer und dunkler, in der Daemmerung ziehen sie flacher zum Jagen.',
+      'Zander lieben harte Böden, Steinpackungen und Strömungskanten. Tagsüber stehen sie oft tiefer und dunkler, in der Dämmerung ziehen sie flacher zum Jagen.',
     warning:
-      'In Hamburg ist waehrend der Schonzeit das gezielte Angeln auf Zander zu vermeiden. Der Score zeigt nur die biologischen Bedingungen.',
+      'In Hamburg ist während der Schonzeit das gezielte Angeln auf Zander zu vermeiden. Der Score zeigt nur die biologischen Bedingungen.',
     entnahmeInfo:
-      'Kuechenfenster Hamburg fuer Zander. Groessere und kleinere Fische muessen zurueckgesetzt werden.',
-    limitInfo: 'Maximale Entnahme pro Tag und Angler in Hamburger Gewaessern.',
+      'Küchenfenster Hamburg für Zander. Größere und kleinere Fische müssen zurückgesetzt werden.',
+    limitInfo: 'Maximale Entnahme pro Tag und Angler in Hamburger Gewässern.',
     legalTooltip:
-      'Rechtlicher Status fuer Hamburg. Der Score bleibt sichtbar, aber waehrend Schonzeit bitte nicht gezielt auf Zander angeln.'
+      'Rechtlicher Status für Hamburg. Der Score bleibt sichtbar, aber während Schonzeit bitte nicht gezielt auf Zander angeln.'
   },
   barsch: {
     habitatTitle: 'Habitat-Tipp',
     habitat:
-      'Barsche sammeln sich gern an Spundwaenden, Pollern, Steinpackungen, Hafeneinfahrten und Kleinfisch-Schwaermen. Nach dem ersten Kontakt unbedingt weiterwerfen: Futterneid nutzen.',
+      'Barsche sammeln sich gern an Spundwänden, Pollern, Steinpackungen, Hafeneinfahrten und Kleinfisch-Schwärmen. Nach dem ersten Kontakt unbedingt weiterwerfen: Futterneid nutzen.',
     warning:
-      'Flussbarsch hat in ASV-Hamburg-Gewaessern keine generelle Schonzeit. Lokale Kunstkoederverbote waehrend Raubfisch-Schonzeiten bitte beachten.',
+      'Flussbarsch hat in ASV-Hamburg-Gewässern keine generelle Schonzeit. Lokale Kunstköderverbote während Raubfisch-Schonzeiten bitte beachten.',
     entnahmeInfo:
-      'Entnahmefenster Hamburg/ASV fuer Flussbarsch: 10-35 cm. Barsche ueber 35 cm moeglichst schonen.',
+      'Entnahmefenster Hamburg/ASV für Flussbarsch: 10-35 cm. Barsche über 35 cm möglichst schonen.',
     limitInfo: 'Kein Tageslimit hinterlegt. Lokale Vereinsregeln bitte beachten.',
     legalTooltip:
-      'Flussbarsch: keine generelle Schonzeit im hinterlegten Hamburger/ASV-Regelwerk. Kunstkoederverbote waehrend Raubfisch-Schonzeiten lokal pruefen.'
+      'Flussbarsch: keine generelle Schonzeit im hinterlegten Hamburger/ASV-Regelwerk. Kunstköderverbote während Raubfisch-Schonzeiten lokal prüfen.'
   }
 };
 
@@ -104,7 +104,7 @@ const HechtInfo: React.FC<HechtInfoProps> = ({ scoreDetails, fishLabel = 'Hecht'
           </span>
           <div className="flex items-baseline space-x-1">
             <span className="text-2xl font-black text-slate-100">{targetFish === 'barsch' ? '-' : scoreDetails?.legal.baglimit || 2}</span>
-            {targetFish !== 'barsch' && <span className="text-xs text-slate-500 font-bold uppercase">Stueck</span>}
+            {targetFish !== 'barsch' && <span className="text-xs text-slate-500 font-bold uppercase">Stück</span>}
           </div>
           <p className="text-[9px] text-slate-500 mt-1">{copy.limitInfo}</p>
         </div>
@@ -113,7 +113,7 @@ const HechtInfo: React.FC<HechtInfoProps> = ({ scoreDetails, fishLabel = 'Hecht'
       <div className="card bg-slate-800/30 border-slate-700/30">
         <h5 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1">
           {copy.habitatTitle}
-          <InfoTooltip text={`Typische Standplaetze und Suchbereiche fuer ${fishLabel}.`} align="left" />
+          <InfoTooltip text={`Typische Standplätze und Suchbereiche für ${fishLabel}.`} align="left" />
         </h5>
         <p className="text-xs text-slate-500 leading-relaxed">{copy.habitat}</p>
       </div>

@@ -17,7 +17,7 @@ export function useWaterProfile(lat?: number, lng?: number, refreshKey: number =
       const data = await waterDataService.getWaterProfile(lat, lng, forceRefresh);
       setProfile(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gewaesserdaten konnten nicht geladen werden');
+      setError(err instanceof Error ? err.message : 'Gewässerdaten konnten nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ export function useWaterProfile(lat?: number, lng?: number, refreshKey: number =
         const data = await waterDataService.getWaterProfile(lat, lng, refreshKey > 0);
         if (!cancelled) setProfile(data);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Gewaesserdaten konnten nicht geladen werden');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Gewässerdaten konnten nicht geladen werden');
       } finally {
         if (!cancelled) setLoading(false);
       }

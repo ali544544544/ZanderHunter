@@ -18,23 +18,23 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
   const fishLabel = isHecht ? 'Hecht' : isBarsch ? 'Barsch' : 'Zander';
   const fishInfo = isBarsch
     ? {
-        temp: 'Barsch ist waermeliebend: Peak um 18C, zweiter Winter-Peak um 6C mit Mittagsbonus.',
-        wind: 'Wind ist fuer Barsch vor allem ueber Licht, Sicht und Zirkulation relevant.',
-        tide: 'Auflaufendes Wasser und Stroemung an Struktur druecken Beute in Hafenbereiche.',
-        turbidity: 'Barsche sind Sichtjaeger: klar bis leicht trueb ist gut, extrem trueb kostet Punkte.'
+        temp: 'Barsch ist wärmeliebend: Peak um 18C, zweiter Winter-Peak um 6C mit Mittagsbonus.',
+        wind: 'Wind ist für Barsch vor allem über Licht, Sicht und Zirkulation relevant.',
+        tide: 'Auflaufendes Wasser und Strömung an Struktur drücken Beute in Hafenbereiche.',
+        turbidity: 'Barsche sind Sichtjäger: klar bis leicht trüb ist gut, extrem trüb kostet Punkte.'
       }
     : isHecht
     ? {
-        temp: 'Hecht nutzt eine bimodale Temperaturkurve: Hauptpeak um 15C, zweiter Aktivitaetspuls um 10C. Unter 4C und ueber 25C wird stark gedaempft.',
-        wind: 'Wind plus Wolken kann Hechte ans Ufer druecken. Entscheidend ist, ob der Wind auf die Uferkante steht.',
-        tide: 'Fuer Hecht zaehlen Stroemungsdruck und Kenterfenster. Die erste Phase nach dem Wechsel bekommt einen Boost.',
-        turbidity: 'Leichte Truebung hilft. Klares, sonniges Stillwasser ist fuer Hecht im Score schwach.'
+        temp: 'Hecht nutzt eine bimodale Temperaturkurve: Hauptpeak um 15C, zweiter Aktivitätspuls um 10C. Unter 4C und über 25C wird stark gedämpft.',
+        wind: 'Wind plus Wolken kann Hechte ans Ufer drücken. Entscheidend ist, ob der Wind auf die Uferkante steht.',
+        tide: 'Für Hecht zählen Strömungsdruck und Kenterfenster. Die erste Phase nach dem Wechsel bekommt einen Boost.',
+        turbidity: 'Leichte Trübung hilft. Klares, sonniges Stillwasser ist für Hecht im Score schwach.'
       }
     : {
-        temp: 'Optimal 10-18C. Bei unter 6C wird der Zander extrem traege, ueber 22C sinkt der Sauerstoffgehalt und die Beisslust.',
-        wind: 'Wind bringt Sauerstoff, erschwert aber ab ca. 25 km/h die Koederkontrolle beim Jiggen.',
-        tide: 'Ablaufendes Wasser erzeugt Stroemungskanten. Kenterwasser ist ein kurzes, sensibles Fenster.',
-        turbidity: 'Truebes Wasser ist Zander-Wetter. Klares Wasser macht sie scheuer.'
+        temp: 'Optimal 10-18C. Bei unter 6C wird der Zander extrem träge, über 22C sinkt der Sauerstoffgehalt und die Beißlust.',
+        wind: 'Wind bringt Sauerstoff, erschwert aber ab ca. 25 km/h die Köderkontrolle beim Jiggen.',
+        tide: 'Ablaufendes Wasser erzeugt Strömungskanten. Kenterwasser ist ein kurzes, sensibles Fenster.',
+        turbidity: 'Trübes Wasser ist Zander-Wetter. Klares Wasser macht sie scheuer.'
       };
 
   const items = [
@@ -50,7 +50,7 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       value: `${weather?.pressure || '--'} hPa`,
       sub: conditions?.luftdruckTrend || 'stabil',
       icon: 'P',
-      info: 'Fallender Druck vor Wetterumschwung ist oft ein Aktivitaets-Trigger. Rasch steigender Druck ist schwierig.'
+      info: 'Fallender Druck vor Wetterumschwung ist oft ein Aktivitäts-Trigger. Rasch steigender Druck ist schwierig.'
     },
     {
       label: 'Wind',
@@ -64,7 +64,7 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       value: `${weather?.cloudCover ?? '--'}%`,
       sub: isHecht ? 'Lichtmodul' : 'Wetter',
       icon: 'C',
-      info: isBarsch ? 'Bewoelkung steuert den Lichtscore: diffuses Licht ist ideal, volle Sonne gut, sehr dunkle Bedingungen schlechter.' : isHecht ? 'Wolken reduzieren harte Sonneneinstrahlung und verbessern den Licht/Wind-Score.' : 'Bewoelkung hilft bei vorsichtigen Raeubern und stabilisiert das Licht.'
+      info: isBarsch ? 'Bewölkung steuert den Lichtscore: diffuses Licht ist ideal, volle Sonne gut, sehr dunkle Bedingungen schlechter.' : isHecht ? 'Wolken reduzieren harte Sonneneinstrahlung und verbessern den Licht/Wind-Score.' : 'Bewölkung hilft bei vorsichtigen Räubern und stabilisiert das Licht.'
     },
     {
       label: 'Mondphase',
@@ -81,7 +81,7 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
       info: fishInfo.tide
     },
     {
-      label: 'Truebung',
+      label: 'Trübung',
       value: conditions?.trübung || 'mittel',
       sub: 'Berechnet',
       icon: 'S',
@@ -94,10 +94,10 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
         sub: isBarsch ? '30% Gewicht' : isHecht ? '35% Gewicht' : '25% Gewicht',
         icon: 'A',
         info: isBarsch
-          ? 'Barsch Modul B: Waermeliebend mit Peak um 18C und Winter-Mittagsbonus unter 8C.'
+          ? 'Barsch Modul B: Wärmeliebend mit Peak um 18C und Winter-Mittagsbonus unter 8C.'
           : isHecht
-          ? 'Hecht Modul A: Gausskurven bei 15C und 10C plus Extremwert-Daempfung.'
-          : 'Zander Modul A: Komfortzone 10-18C, Kalt- und Warmwasser werden abgestuft gedaempft.'
+          ? 'Hecht Modul A: Gausskurven bei 15C und 10C plus Extremwert-Dämpfung.'
+          : 'Zander Modul A: Komfortzone 10-18C, Kalt- und Warmwasser werden abgestuft gedämpft.'
       },
       {
         label: 'Druck-Modul',
@@ -105,7 +105,7 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
         sub: isBarsch ? '40% Gewicht' : isHecht ? '25% Gewicht' : '20% Gewicht',
         icon: 'B',
         info: isBarsch
-          ? 'Barsch Modul A: 72h-Druckstabilitaet, Drucklevel und kurzfristiger Trend. Stabiler Hochdruck ist sehr stark.'
+          ? 'Barsch Modul A: 72h-Druckstabilität, Drucklevel und kurzfristiger Trend. Stabiler Hochdruck ist sehr stark.'
           : `${fishLabel} Modul B: fallender Druck wird belohnt, stabile Lage ist neutral, steigender Druck kostet Punkte.`
       },
       {
@@ -114,10 +114,10 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
         sub: isBarsch ? '15% Gewicht' : isHecht ? '25% Gewicht' : '30% Gewicht',
         icon: 'C',
         info: isBarsch
-          ? 'Barsch Modul D: Tidenphase, Stroemung, Struktur und Prime-Window. Auflaufend frueh ist top.'
+          ? 'Barsch Modul D: Tidenphase, Strömung, Struktur und Prime-Window. Auflaufend früh ist top.'
           : isHecht
-          ? 'Hecht Modul C: Tidenwinkel, geschaetzte Stroemung und Kenter-/Ablauffenster.'
-          : 'Zander Modul C: Ablaufwasser, Kenterfenster und Stroemungskanten werden stark gewichtet.'
+          ? 'Hecht Modul C: Tidenwinkel, geschätzte Strömung und Kenter-/Ablauffenster.'
+          : 'Zander Modul C: Ablaufwasser, Kenterfenster und Strömungskanten werden stark gewichtet.'
       },
       {
         label: 'Licht/Wind',
@@ -125,10 +125,10 @@ const ConditionGrid: React.FC<ConditionGridProps> = ({ conditions, pegel, weathe
         sub: isBarsch ? '15% Gewicht' : isHecht ? '15% Gewicht' : '25% Gewicht',
         icon: 'D',
         info: isBarsch
-          ? 'Barsch Modul C: Licht, UV und Sichttiefe. Barsche sind Sichtjaeger und profitieren von klarem, diffusem Licht.'
+          ? 'Barsch Modul C: Licht, UV und Sichttiefe. Barsche sind Sichtjäger und profitieren von klarem, diffusem Licht.'
           : isHecht
-          ? 'Hecht Modul D: Wolken, Windstaerke, Wind auf Ufer und Daemmerung werden kombiniert.'
-          : 'Zander Modul D: Daemmerung, Nacht, Solunar, Mond, Wind und Regen werden zusammengefasst.'
+          ? 'Hecht Modul D: Wolken, Windstärke, Wind auf Ufer und Dämmerung werden kombiniert.'
+          : 'Zander Modul D: Dämmerung, Nacht, Solunar, Mond, Wind und Regen werden zusammengefasst.'
       }
     ] : [])
   ];
