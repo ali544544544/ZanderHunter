@@ -12,6 +12,7 @@ import HechtInfo from './components/HechtInfo';
 import ForecastView from './components/ForecastView';
 import DailyForecastChart from './components/DailyForecastChart';
 import HechtTaktikView from './components/HechtTaktikView';
+import GuidesView from './components/GuidesView';
 import LocationPickerMap from './components/LocationPickerMap';
 import { WaterProfileCard } from './components/WaterProfileCard';
 import { WaterAreaMap } from './components/WaterAreaMap';
@@ -21,7 +22,7 @@ import { useUserSpots } from './hooks/useUserSpots';
 import type { TargetFish } from './utils/calculations';
 import type { SearchLocation } from './hooks/useLocationSearch';
 
-type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast';
+type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast' | 'guides';
 
 const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 
@@ -36,6 +37,7 @@ const navItems: { id: ActiveTab; label: string; icon: string }[] = [
   { id: 'spots', label: 'Spots', icon: '📍' },
   { id: 'koder', label: 'Taktik', icon: '🐟' },
   { id: 'forecast', label: 'Kalender', icon: '📅' },
+  { id: 'guides', label: 'Guides', icon: 'G' },
 ];
 
 const defaultLocation = { lat: 53.55, lng: 9.99 };
@@ -367,10 +369,14 @@ const App: React.FC = () => {
         {activeTab === 'forecast' && (
           <ForecastView spots={allSpots} initialSpot={topSpot} targetFish={targetFish} />
         )}
+
+        {activeTab === 'guides' && (
+          <GuidesView />
+        )}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 px-3 pt-2 pb-7 z-40">
-        <div className="max-w-lg mx-auto grid grid-cols-4 gap-1">
+        <div className="max-w-lg mx-auto grid grid-cols-5 gap-1">
           {navItems.map((item) => (
             <button
               key={item.id}
