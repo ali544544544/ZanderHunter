@@ -377,7 +377,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       },
       dataQuality: 'medium',
       sources: ['hejfish'],
-      links: [{ label: 'Gewaesserdaten oeffnen', url: `https://www.hejfish.com/d/${area.id}-${area.slug}`, kind: 'permit' }],
+      links: [{ label: 'Bei hejfish oeffnen', url: `https://www.hejfish.com/d/${area.id}-${area.slug}`, kind: 'permit' }],
       areaDetails: {
         mobileTicket: area.mobile_ticket,
       },
@@ -436,7 +436,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       dataQuality: uniqueFish.length > 0 ? 'high' : 'medium',
       sources: ['hejfish'],
       links: [
-        { label: 'Gewaesserdaten oeffnen', url: area.url, kind: 'permit' },
+        { label: 'Bei hejfish oeffnen', url: area.url, kind: 'permit' },
         ...(manager?.website
           ? [{ label: 'Betreiber', url: manager.website, kind: 'info' as const }]
           : []),
