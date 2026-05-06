@@ -27,7 +27,7 @@ const sourceLabels: Record<DataSource, string> = {
   waterapi: 'WaterAPI',
   fischinfo_nrw: 'FischInfo NRW',
   anglermap: 'Anglermap',
-  hejfish: 'hejfish',
+  hejfish: 'Angelkarten-Daten',
   unknown: 'Schaetzung',
 };
 
@@ -194,7 +194,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewaesser</p>
             {profile.sources.includes('hejfish') && (
               <span className="rounded border border-blue-400/20 bg-blue-400/10 px-1.5 py-0.5 text-[9px] font-black uppercase text-blue-200">
-                hejfish
+                Gewaesserdaten
               </span>
             )}
           </div>
@@ -247,7 +247,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
           <TagList items={speciesLabelsForDisplay} />
         ) : (
           <p className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-xs font-semibold text-slate-500">
-            Fuer diesen Punkt liegen keine Fischarten aus hejfish vor.
+            Fuer diesen Punkt liegen keine Fischarten in den Gewaesserdaten vor.
           </p>
         )}
       </div>
@@ -281,7 +281,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
             label="Ausdruck"
             value={details?.printRequired === undefined ? undefined : details.printRequired
               ? 'Erforderlich - Karte vor dem Angeln ausdrucken.'
-              : 'Nicht erforderlich - hejfish meldet keine Druckpflicht.'}
+              : 'Nicht erforderlich - laut Gewaesserdaten ist keine Druckpflicht hinterlegt.'}
           />
         </div>
       )}

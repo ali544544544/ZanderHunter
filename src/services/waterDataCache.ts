@@ -10,13 +10,24 @@ type StoredProfile = {
 const DB_NAME = 'zanderhunter-water-data-cache';
 const STORE_NAME = 'profiles';
 const DB_VERSION = 1;
-const CACHE_KEY_VERSION = 'v13';
+const CACHE_KEY_VERSION = 'v14';
 
-function restoreProfileDates(profile: WaterBodyProfile): WaterBodyProfile {
+function normalizeProfileCopy(profile: WaterBodyProfile): WaterBodyProfile {
+  if (profile.name !== 'Kein Hejfish-Gewaesser gefunden') return profile;
+
   return {
     ...profile,
-    lastUpdated: new Date(profile.lastUpdated),
-    species: profile.species.map((species) => ({
+    name: 'Keine Gewaesserdaten gefunden',
+  };
+}
+
+function restoreProfileDates(profile: WaterBodyProfile): WaterBodyProfile {
+  const normalizedProfile = normalizeProfileCopy(profile);
+
+  return {
+    ...normalizedProfile,
+    lastUpdated: new Date(normalizedProfile.lastUpdated),
+    species: normalizedProfile.species.map((species) => ({
       ...species,
       lastUpdated: new Date(species.lastUpdated),
     })),

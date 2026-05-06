@@ -197,7 +197,7 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
           <h2 className="truncate text-sm font-black text-slate-100">{profile.name}</h2>
         </div>
         <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-blue-300">
-          hejfish
+          Kartendaten
         </span>
       </div>
       <div

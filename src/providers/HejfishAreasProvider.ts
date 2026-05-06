@@ -32,7 +32,7 @@ const hamburgAreaKeywords = [
 ];
 
 export class HejfishAreasProvider implements WaterDataProvider {
-  name = 'hejfish areas';
+  name = 'Angelkarten-Daten';
   priority = 0;
 
   private liteAreasPromise: Promise<HejfishAreaLite[]> | null = null;
@@ -369,7 +369,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       type: this.mapWaterType(area.water_type, area.name),
       latitude: area.lat ?? 0,
       longitude: area.lng ?? 0,
-      region: 'hejfish',
+      region: 'Angelkarten-Daten',
       imageUrl: this.cleanText(area.main_image),
       species: [],
       regulations: {
@@ -377,7 +377,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       },
       dataQuality: 'medium',
       sources: ['hejfish'],
-      links: [{ label: 'hejfish Details', url: `https://www.hejfish.com/d/${area.id}-${area.slug}`, kind: 'permit' }],
+      links: [{ label: 'Gewaesserdaten oeffnen', url: `https://www.hejfish.com/d/${area.id}-${area.slug}`, kind: 'permit' }],
       areaDetails: {
         mobileTicket: area.mobile_ticket,
       },
@@ -436,7 +436,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       dataQuality: uniqueFish.length > 0 ? 'high' : 'medium',
       sources: ['hejfish'],
       links: [
-        { label: 'hejfish Gewaesser', url: area.url, kind: 'permit' },
+        { label: 'Gewaesserdaten oeffnen', url: area.url, kind: 'permit' },
         ...(manager?.website
           ? [{ label: 'Betreiber', url: manager.website, kind: 'info' as const }]
           : []),
