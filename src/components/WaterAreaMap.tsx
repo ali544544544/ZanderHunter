@@ -66,6 +66,8 @@ function getBestZoom(bounds: ReturnType<typeof getBounds>, width: number) {
 
 export function WaterAreaMap({ profile }: WaterAreaMapProps) {
   const geometry = profile?.areaDetails?.mapGeometry;
+  const selectedLat = profile?.latitude;
+  const selectedLng = profile?.longitude;
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [mapWidth, setMapWidth] = useState(360);
 
@@ -81,8 +83,12 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
   }, []);
 
   const selectedPoint = useMemo(
-    () => (profile ? { lat: profile.latitude, lng: profile.longitude } : null),
-    [profile?.latitude, profile?.longitude]
+    () => (
+      selectedLat !== undefined && selectedLng !== undefined
+        ? { lat: selectedLat, lng: selectedLng }
+        : null
+    ),
+    [selectedLat, selectedLng]
   );
   const allPoints = useMemo(() => {
     if (!geometry) return [];
