@@ -11,7 +11,7 @@ export type KnownFishSpecies =
   | 'forelle'
   | 'wels';
 
-export type FishSpecies = KnownFishSpecies | (string & {});
+export type FishSpecies = KnownFishSpecies | (string & { readonly __fishSpecies?: never });
 
 export type WaterBodyType = 'river' | 'lake' | 'canal' | 'pond' | 'sea';
 export type DataQuality = 'high' | 'medium' | 'low' | 'unknown';
