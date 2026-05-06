@@ -26,6 +26,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
   private liteAreasPromise: Promise<HejfishAreaLite[]> | null = null;
   private detailPromises = new Map<number, Promise<HejfishArea | null>>();
+  private resolvedDataBaseUrl: string | null = null;
 
   canHandleRegion(): boolean {
     return true;
@@ -85,25 +86,30 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private async fetchLiteAreas(): Promise<HejfishAreaLite[]> {
-    try {
-      const response = await fetch(`${this.getDataBaseUrl()}areas_lite.json`, {
-        cache: 'force-cache',
-      });
+    for (const baseUrl of this.getDataBaseUrls()) {
+      try {
+        const response = await fetch(`${baseUrl}areas_lite.json`, {
+          cache: 'force-cache',
+        });
 
-      if (!response.ok) return [];
+        if (!response.ok) continue;
 
-      const data = await response.json();
-      return Array.isArray(data)
-        ? data.filter((area): area is HejfishAreaLite => (
+        const data = await response.json();
+        if (!Array.isArray(data)) continue;
+
+        this.resolvedDataBaseUrl = baseUrl;
+        return data.filter((area): area is HejfishAreaLite => (
             Boolean(area)
             && typeof area.id === 'number'
             && typeof area.lat === 'number'
             && typeof area.lng === 'number'
-          ))
-        : [];
-    } catch {
-      return [];
+        ));
+      } catch {
+        continue;
+      }
     }
+
+    return [];
   }
 
   private async loadAreaDetail(id: number): Promise<HejfishArea | null> {
@@ -114,24 +120,39 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private async fetchAreaDetail(id: number): Promise<HejfishArea | null> {
-    try {
-      const response = await fetch(`${this.getDataBaseUrl()}details/${id}.json`, {
-        cache: 'force-cache',
-      });
+    const baseUrls = this.resolvedDataBaseUrl ? [this.resolvedDataBaseUrl] : this.getDataBaseUrls();
 
-      if (!response.ok) return null;
+    for (const baseUrl of baseUrls) {
+      try {
+        const response = await fetch(`${baseUrl}details/${id}.json`, {
+          cache: 'force-cache',
+        });
 
-      const data = await response.json();
-      return data && typeof data.id === 'number' && !data.error ? data as HejfishArea : null;
-    } catch {
-      return null;
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        if (data && typeof data.id === 'number' && !data.error) {
+          return data as HejfishArea;
+        }
+      } catch {
+        continue;
+      }
     }
+
+    return null;
   }
 
-  private getDataBaseUrl(): string {
+  private getDataBaseUrls(): string[] {
     const configured = import.meta.env.VITE_HEJFISH_DATA_BASE_URL;
-    const base = configured || `${import.meta.env.BASE_URL}data/dist/`;
-    return base.endsWith('/') ? base : `${base}/`;
+    const baseUrls = configured
+      ? [configured]
+      : [`${import.meta.env.BASE_URL}data/dist/`, `${import.meta.env.BASE_URL}data/`];
+
+    return baseUrls.map((baseUrl) => this.normalizeBaseUrl(baseUrl));
+  }
+
+  private normalizeBaseUrl(baseUrl: string): string {
+    return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   }
 
   private findLiteCandidates(areas: HejfishAreaLite[], lat: number, lng: number) {
