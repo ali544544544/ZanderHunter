@@ -1,237 +1,398 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 
-type GuideTable = {
-  headers: string[];
-  rows: string[][];
-};
+type SectionId = 'fish' | 'bait' | 'technique' | 'knots' | 'law';
 
 type FishProfile = {
+  id: string;
   name: string;
-  scientificName: string;
-  badge: string;
-  text: string;
+  latin: string;
+  icon?: string;
+  type: string;
+  body: string;
+  senses: string;
+  food: string;
+  habitat: string[];
+  season: string;
   tactics: string[];
 };
 
-const designPrinciples: GuideTable = {
-  headers: ['Design-Komponente', 'Strategische Implementierung', 'Effekt'],
-  rows: [
-    ['Visuelle Hierarchie', 'Homescreen auf wenige klare Entscheidungen begrenzen.', 'Weniger kognitive Last, schnellere Task-Erledigung.'],
-    ['Skeleton Screens', 'Platzhalterelemente waehrend Daten geladen werden.', 'Die App wirkt schneller und Nutzer brechen seltener ab.'],
-    ['Adaptive Interfaces', 'Module nach Standort, Zeit und Nutzung priorisieren.', 'Personalisierung erhoeht Relevanz und Bindung.'],
-    ['Kontrast-Management', 'Hochkontrast-Farben fuer Sonne, Daemmerung und nasse Displays.', 'Lesbarkeit bleibt auch draussen stabil.'],
-    ['Offline-Funktionalitaet', 'Karten, Guides und Rechtsinfos lokal cachen.', 'Nutzbar an abgelegenen Gewaessern ohne Empfang.'],
-  ],
+type BaitProfile = {
+  id: string;
+  name: string;
+  visual: 'softbait' | 'wobbler' | 'spinner' | 'worm' | 'corn' | 'fish';
+  bestFor: string;
+  useWhen: string;
+  rig: string;
+  action: string;
+  mistakes: string[];
 };
 
-const filterMatrix: GuideTable = {
-  headers: ['Filterkategorie', 'Parameter', 'Zielsetzung'],
-  rows: [
-    ['Zielfisch', 'Hecht, Zander, Barsch, Karpfen, Forelle', 'Koeder, Montage und Standplatz eingrenzen.'],
-    ['Gewaessertyp', 'Fluss, See, Kanal, Brackwasser, Forellenteich', 'Strategie an Stroemung, Tiefe und Struktur anpassen.'],
-    ['Angelmethode', 'Spinnfischen, Ansitzangeln, Fliegenfischen, Feedern', 'Passendes Geraet und passende Technik waehlen.'],
-    ['Umweltfaktoren', 'Truebung, Wassertemperatur, Luftdruck, Tageszeit', 'Koederempfehlung dynamisch nach Aktivitaet ableiten.'],
-    ['Schwierigkeit', 'Anfaenger, Fortgeschritten, Profi', 'Anleitungen und Rigs in passender Tiefe erklaeren.'],
-  ],
+type TechniqueProfile = {
+  id: string;
+  name: string;
+  bait: string;
+  targets: string;
+  where: string;
+  tempo: string;
+  pause: string;
+  bite: string;
+  steps: string[];
 };
+
+type KnotProfile = {
+  id: string;
+  name: string;
+  use: string;
+  line: string;
+  strength: string;
+  steps: string[];
+  warning: string;
+};
+
+type LegalRow = {
+  state: string;
+  pikeClosed: string;
+  pikeSize: string;
+  zanderClosed: string;
+  zanderSize: string;
+};
+
+const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+
+const sections: { id: SectionId; label: string; hint: string }[] = [
+  { id: 'fish', label: 'Fische', hint: 'Erkennen, finden, verstehen' },
+  { id: 'bait', label: 'Koeder', hint: 'Wann welcher Reiz passt' },
+  { id: 'technique', label: 'Fuehrung', hint: 'Tempo, Pausen, Bissphase' },
+  { id: 'knots', label: 'Knoten', hint: 'Einsatz und Schrittfolge' },
+  { id: 'law', label: 'Regeln', hint: 'Schonzeit und Mass' },
+];
 
 const fishProfiles: FishProfile[] = [
   {
-    name: 'Hecht',
-    scientificName: 'Esox lucius',
-    badge: 'Lauerjaeger',
-    text:
-      'Der Hecht ist ein explosiver Sichtjaeger mit pfeilfoermigem Koerper, weit hinten liegender Rueckenflosse und stark bezahntem Maul. Er nutzt Kraut, Schilf, Totholz und harte Deckung, um Beute aus kurzer Distanz zu attackieren.',
-    tactics: ['Grosse Silhouette und auffaellige Reize nutzen.', 'Morgen und Abend sowie Herbstphasen priorisieren.', 'Krautkanten, Einlaeufe und windgedrueckte Ufer absuchen.'],
-  },
-  {
+    id: 'zander',
     name: 'Zander',
-    scientificName: 'Sander lucioperca',
-    badge: 'Daemmerungsraeuber',
-    text:
-      'Der Zander ist vorsichtiger als der Hecht und konzentriert sich oft auf schlanke Beutefische. Seine lichtempfindlichen Augen und sein feines Gehoer geben ihm in Truebung, Tiefe und Dunkelheit einen Vorteil.',
-    tactics: ['Harte Boeden, Steinpackungen, Buhnenkoepfe und Kanten befischen.', 'Geruch und Frische bei toten Koederfischen beachten.', 'In der Daemmerung flacher, tagsueber tiefer suchen.'],
+    latin: 'Sander lucioperca',
+    icon: assetPath('icons/zander.svg'),
+    type: 'vorsichtiger Daemmerungsraeuber',
+    body: 'Schlanker Koerper, grosses Maul, spitze Hundszaehne und helle Augen. Gebaut fuer kurze Attacken auf schlanke Beutefische.',
+    senses: 'Sehr stark bei wenig Licht und Truebung. Er reagiert auf Vibration, Bodenkontakt und saubere Koederfisch-Gerueche.',
+    food: 'Laube, Rotauge, kleine Barsche, Grundeln und andere schmale Beutefische.',
+    habitat: ['Steinpackung', 'Buhnenkopf', 'harte Kante', 'Spundwand', 'tiefe Rinne'],
+    season: 'Fruehjahr nach der Schonzeit und Herbst sind stark. Im Sommer oft nachts oder bei Sauerstoff und Stroemung.',
+    tactics: ['Grundnah jiggen oder faulenzen.', 'In der Daemmerung flacher suchen.', 'Im Winter kleine Shads und lange Bodenkontakte.'],
   },
   {
-    name: 'Flussbarsch',
-    scientificName: 'Perca fluviatilis',
-    badge: 'Futterneid',
-    text:
-      'Der Flussbarsch ist robust, anpassungsfaehig und an dunklen Querstreifen sowie roten Flossen gut zu erkennen. Seine Stachelflossen schuetzen ihn vor Pradatoren, sein Schwarmverhalten erzeugt oft aggressive Fressphasen.',
-    tactics: ['Kleine Gummifische, Spinner und Twitchbaits aktiv fuehren.', 'Nach Kontakt weiterwerfen und Futterneid ausnutzen.', 'Grosse Barsche tiefer an Spundwaenden und Unterwasserbergen suchen.'],
+    id: 'hecht',
+    name: 'Hecht',
+    latin: 'Esox lucius',
+    icon: assetPath('icons/hecht.svg'),
+    type: 'explosiver Lauerjaeger',
+    body: 'Pfeilfoermiger Koerper, weit hinten sitzende Flossen und ein breites Maul mit nach hinten gerichteten Zaehnen.',
+    senses: 'Starker Sichtjaeger. Silhouette, Druckwellen und ploetzliche Richtungswechsel loesen Attacken aus.',
+    food: 'Fische, Krebse, Froesche und gelegentlich kleine Wasservoegel.',
+    habitat: ['Krautkante', 'Schilf', 'Totholz', 'Einlauf', 'windgedruecktes Ufer'],
+    season: 'Herbst und fruehes Fruehjahr sind top. Im Hochsommer frueh, spaet und an sauerstoffreichen Zonen.',
+    tactics: ['Grosse Koeder mit klarer Silhouette.', 'Stop-and-go am Kraut.', 'Bei kaltem Wasser langsam und nah am Standplatz.'],
   },
   {
+    id: 'barsch',
+    name: 'Barsch',
+    latin: 'Perca fluviatilis',
+    icon: assetPath('icons/barsch.svg'),
+    type: 'aktiver Schwarmraeuber',
+    body: 'Hochrueckig, dunkle Querstreifen, rote Flossen und harte Stachelstrahlen in der ersten Rueckenflosse.',
+    senses: 'Reagiert stark auf Futterneid, kleine Fluchtbewegungen und Schwarmaktivitaet von Kleinfischen.',
+    food: 'Insektenlarven, Krebse, Jungfische, Grundeln und kleine Weissfische.',
+    habitat: ['Spundwand', 'Poller', 'Steinpackung', 'Hafeneinfahrt', 'Kleinfischschwarm'],
+    season: 'Sommer bis Herbst sehr aktiv. Im Winter tiefer und oft konzentriert in kleinen Gruppen.',
+    tactics: ['Ersten Kontakt ausnutzen und sofort weiterwerfen.', 'Kleine Shads, Dropshot oder Spinner.', 'Grosse Barsche tiefer und strukturgebunden suchen.'],
+  },
+  {
+    id: 'karpfen',
     name: 'Karpfen',
-    scientificName: 'Cyprinus carpio',
-    badge: 'Bodenstaubsauger',
-    text:
-      'Der Karpfen ist ein kampfstarker Allesfresser. Er durchsucht den Grund nach Larven, Schnecken und Pflanzenteilen und reagiert bei modernen Montagen besonders gut auf Boilies am Haar.',
-    tactics: ['Futterplatz ruhig und konsequent aufbauen.', 'Haarmontage fuer vorsichtige Aufnahme nutzen.', 'Kanten, Plateaus und weiche Bodenbereiche beobachten.'],
+    latin: 'Cyprinus carpio',
+    type: 'starker Grundfresser',
+    body: 'Gedrungener Koerper, grosse Schuppen oder Spiegelpartien und vier Barteln am Maul.',
+    senses: 'Sehr vorsichtig bei Druck, Schnurkontakt und ungewoehnlichem Widerstand. Geruch und Futterspur sind entscheidend.',
+    food: 'Larven, Schnecken, Muscheln, Pflanzen, Mais, Tigernuesse und Boilies.',
+    habitat: ['Plateau', 'Seerosenkante', 'weicher Grund', 'Futterplatz', 'warme Flachzone'],
+    season: 'Mai bis Oktober. Bei warmem Wasser aktiv, bei Hitze eher frueh, spaet oder nachts.',
+    tactics: ['Futterplatz sparsam aufbauen.', 'Haarmontage und Selbsthakeffekt nutzen.', 'Schnur sauber ablegen und Stoerung vermeiden.'],
   },
   {
-    name: 'Schleie',
-    scientificName: 'Tinca tinca',
-    badge: 'Scheuer Krautfisch',
-    text:
-      'Die Schleie lebt bevorzugt in stehenden oder langsam fliessenden, stark verkrauteten Gewaessern. Sie verraet sich oft durch Gasblasen beim Wuehlen und nimmt Wuermer, Schnecken, Mais oder feines Grundfutter.',
-    tactics: ['Leise auftreten und feine Montagen fischen.', 'Krautluecken und schlammige Zonen beobachten.', 'Fruehe und spaete Tagesphasen nutzen.'],
+    id: 'forelle',
+    name: 'Forelle',
+    latin: 'Salmo trutta / Oncorhynchus mykiss',
+    type: 'stroemungsliebender Sichtfisch',
+    body: 'Torpedofoermig, Fettflosse, feine Schuppen und gute Beschleunigung in Stroemung.',
+    senses: 'Sieht sehr gut und reagiert auf natuerliche Drift, Insektenaktivitaet und kleine Beutefisch-Impulse.',
+    food: 'Insekten, Larven, Anflugnahrung, Bachflohkrebse und kleine Fische.',
+    habitat: ['Gumpen', 'Kehrstroemung', 'unterspueltes Ufer', 'Sauerstoffzone', 'Forellenteichkante'],
+    season: 'Kuehles, sauerstoffreiches Wasser. Im Sommer Schatten und Zulauf, im Fruehjahr flacher.',
+    tactics: ['Natuerliche Drift oder kleine Spinner.', 'Leise bewegen und tief stehen bleiben.', 'Bei Sonne fein und unauffaellig fischen.'],
   },
 ];
 
-const fishBiology: GuideTable = {
-  headers: ['Fischart', 'Koerperbau', 'Nahrung', 'Laichzeit'],
-  rows: [
-    ['Hecht', 'Pfeilfoermig, oberstaendiges Maul', 'Fische, Krebse, kleine Wasservoegel', 'Maerz bis Mai'],
-    ['Zander', 'Spindelfoermig, grosse Augen', 'Schlanke Fische wie Laube und Rotauge', 'April bis Juni'],
-    ['Barsch', 'Hochrueckig, Stachelflossen', 'Insekten, Krebse, kleine Fische', 'Maerz bis Juni'],
-    ['Karpfen', 'Gedrungen, vier Barteln', 'Larven, Pflanzen, Schnecken', 'Mai bis Juli'],
-    ['Forelle', 'Torpedofoermig, Fettflosse', 'Insekten, Anflug, kleine Fische', 'Oktober bis Maerz'],
-  ],
-};
-
-const baitGroups = [
+const baitProfiles: BaitProfile[] = [
   {
-    title: 'Naturkoeder',
-    items: [
-      'Maden und Caster: universell fuer Friedfische, Caster besonders fuer groessere Brassen und Karpfen.',
-      'Tauwurm und Mistwurm: Bewegung und Geruch sprechen Friedfische, Barsche und Aale an.',
-      'Mais und Hanf: klassische Pflanzenkoeder, Hanf haelt Fische lange am Platz.',
-      'Kaese, Fruehstuecksfleisch und Kirschen: Spezialoptionen fuer Barbe und Doebel.',
-      'Tote Koederfische: bei Zander und Wels entscheidet Frische ueber die olfaktorische Qualitaet.',
-    ],
+    id: 'softbait',
+    name: 'Gummifisch',
+    visual: 'softbait',
+    bestFor: 'Zander, Barsch, Hecht',
+    useWhen: 'Wenn du Grund, Kanten oder Tiefe kontrolliert absuchen willst.',
+    rig: 'Jigkopf, Cheburashka, Texas Rig oder Dropshot.',
+    action: 'Anheben, absinken lassen, Bodenkontakt halten. Farbe: natuerlich bei klarem Wasser, auffaellig bei Truebung.',
+    mistakes: ['Zu schwerer Jigkopf', 'kein Bodenkontakt', 'Anhieb zu spaet beim Zander'],
   },
   {
-    title: 'Kunstkoeder',
-    items: [
-      'Wobbler: Hardbaits mit Tauchschaufel, als floating, suspending oder sinking Modell.',
-      'Gummifische: flexible Standardkoeder, die ueber Jigkopf-Gewicht in jeder Tiefe laufen.',
-      'Spinner und Blinker: starke Druckwellen und Lichtreflexe fuer aggressive Raeuber.',
-      'Jerkbaits und Surface-Baits: ruckartige Fuehrung oder Oberflaechenreize fuer Attacken.',
-    ],
-  },
-];
-
-const techniques = [
-  {
-    title: 'Jiggen',
-    text: 'Gummifisch vom Boden anheben und kontrolliert absinken lassen. Viele Bisse kommen in der Absinkphase.',
+    id: 'wobbler',
+    name: 'Wobbler',
+    visual: 'wobbler',
+    bestFor: 'Hecht, Zander, Forelle, Barsch',
+    useWhen: 'Wenn Raeuber aktiv jagen oder in der Daemmerung flach ziehen.',
+    rig: 'Direkt an Snap oder Rapala-Schlaufe. Stahl/Titan bei Hechtgefahr.',
+    action: 'Einleiern, stop-and-go oder twitchen. Suspender im Winter mit langen Pausen.',
+    mistakes: ['Zu schnell im kalten Wasser', 'falsche Lauftiefe', 'zu grosse Snaps bei kleinen Wobblern'],
   },
   {
-    title: 'Twitchen',
-    text: 'Suspender-Wobbler mit kurzen Schlaegen seitlich ausbrechen lassen. Pausen sind besonders im Winter entscheidend.',
+    id: 'spinner',
+    name: 'Spinner / Blinker',
+    visual: 'spinner',
+    bestFor: 'Barsch, Forelle, Hecht',
+    useWhen: 'Wenn Fische aktiv sind und du Flaeche schnell absuchen willst.',
+    rig: 'Direkt am Snap, bei Drall mit Wirbel. Bei Hecht immer bissfestes Vorfach.',
+    action: 'Konstant fuehren, kurz absinken lassen, ueber Kraut oder Steine lupfen.',
+    mistakes: ['Zu tief ueber Hindernissen', 'ohne Wirbel bei starkem Drall', 'monoton bei Nachlaeufern'],
   },
   {
-    title: 'Schleppangeln',
-    text: 'Koeder hinter dem Boot in definierter Tiefe fuehren, um grosse Wasserflaechen und pelagische Fische zu finden.',
+    id: 'worm',
+    name: 'Wurm',
+    visual: 'worm',
+    bestFor: 'Barsch, Aal, Schleie, Brassen',
+    useWhen: 'Bei Truebung, Regen, Nacht oder wenn Geruch wichtiger als Optik ist.',
+    rig: 'Pose, Grundmontage, Dropshot-Wurm oder kleiner Haken am leichten Blei.',
+    action: 'Lebendig anbieten, nicht ueberladen. Kleine Stuecke fuer vorsichtige Bisse.',
+    mistakes: ['Haken komplett versteckt', 'zu grosser Koeder fuer kleine Fische', 'zu stramme Schnur bei vorsichtigen Friedfischen'],
   },
   {
-    title: 'Vertikalangeln',
-    text: 'Koeder direkt unter Boot oder Rutenspitze kontrollieren. Praezise an Kanten und versunkenen Strukturen.',
-  },
-];
-
-const knots: GuideTable = {
-  headers: ['Knoten', 'Einsatz', 'Schnurtyp', 'Vorteil'],
-  rows: [
-    ['Palomar', 'Wirbel, Haken, Snaps', 'Geflecht', 'Sehr hohe Tragkraft, rutschfest.'],
-    ['Clinch', 'Oesen aller Art', 'Mono / Fluorocarbon', 'Einfach, stark bei monofiler Schnur.'],
-    ['Albright', 'Schnurverbindung', 'Mono zu Geflecht', 'Schlankes Profil fuer Rutenringe.'],
-    ['Rapala', 'Wobbler', 'Mono / Fluorocarbon', 'Feste Schlaufe fuer freie Koederaktion.'],
-    ['Schlaufenknoten', 'Posen und Bleie', 'Universell', 'Schnell, praktisch fuer Finesse-Rigs.'],
-    ['Drop-Shot', 'Drop-Shot-Haken', 'Fluorocarbon', 'Haken steht sauber im 90-Grad-Winkel.'],
-  ],
-};
-
-const rigs = [
-  {
-    title: 'Texas Rig',
-    text: 'Bullet-Weight, Perle und Offset-Haken erzeugen eine krautfeste Praesentation fuer Barsch und Zander.',
+    id: 'corn',
+    name: 'Mais / Partikel',
+    visual: 'corn',
+    bestFor: 'Karpfen, Schleie, Rotauge, Brassen',
+    useWhen: 'Wenn Friedfische am Platz gehalten werden sollen.',
+    rig: 'Pose, Feeder, Haarmontage oder Method Feeder.',
+    action: 'Kleine Futterspur, einzelne Koerner am Haken oder Haar. Nicht ueberfuettern.',
+    mistakes: ['Zu viel Futter am Anfang', 'zu grober Haken', 'zu spaeter Anschlag bei Posenbissen'],
   },
   {
-    title: 'Carolina Rig',
-    text: 'Gewicht und Koeder sind getrennt. Der Koeder sinkt langsam und reizt misstrauische Raeuber.',
-  },
-  {
-    title: 'Drop-Shot',
-    text: 'Haken sitzt oberhalb des Bleis. Der Koeder kann fast auf der Stelle tanzen.',
-  },
-  {
-    title: 'Feeder-Durchlaufmontage',
-    text: 'Futterkorb laeuft frei, damit der Fisch den Koeder ohne direkten Gewichtswiderstand aufnehmen kann.',
-  },
-  {
-    title: 'Haarmontage',
-    text: 'Karpfen saugen den Koeder ein, ohne dass der Haken direkt im Koeder steckt. Beim Ausspucken greift der Selbsthakeffekt.',
+    id: 'deadbait',
+    name: 'Toter Koederfisch',
+    visual: 'fish',
+    bestFor: 'Zander, Hecht, Aal, Wels',
+    useWhen: 'Wenn Geruch, natuerliche Silhouette und passive Praesentation gefragt sind.',
+    rig: 'Grundmontage, Pose oder System. Regeln zum Koederfisch immer lokal pruefen.',
+    action: 'Frisch, sauber und passend gross. Zander eher schlank, Hecht auch groesser.',
+    mistakes: ['Alter Koederfisch', 'zu grosser Widerstand', 'fehlendes Stahlvorfach bei Hechtgefahr'],
   },
 ];
 
-const legalExamples: GuideTable = {
-  headers: ['Bundesland', 'Hecht-Schonzeit', 'Hecht-Mass', 'Zander-Schonzeit', 'Zander-Mass'],
-  rows: [
-    ['Bayern', '15.02. - 30.04.', '50 cm', '15.03. - 30.04.', '50 cm'],
-    ['NRW', '15.02. - 30.04.', '45 cm', '01.04. - 31.05.', '40 cm'],
-    ['Brandenburg', 'nur Erwerbsfischerei', '45 cm', 'gewaesserspezifisch', '45 cm'],
-    ['Hessen', 'keine', '50 cm', 'keine', '45 cm'],
-    ['Baden-Wuerttemberg', '15.02. - 15.05.', '45 cm', '01.04. - 15.05.', '45 cm'],
-    ['Sachsen', '01.02. - 31.05.', '50 cm', '01.02. - 31.05.', '50 cm'],
-  ],
-};
-
-const marketFeatures = [
-  'KI-gestuetzte Fangprognosen aus Fanghistorie, Wetter, Luftdruck und Mondphase.',
-  'Digitaler Erlaubnisscheinkauf ueber Partner wie hejfish.',
-  'Hydrographische Karten mit Tiefen, Kanten und Unterwasserstrukturen.',
-  'Community-Gilden mit Mentoren und verifiziertem Erfahrungswissen.',
-  'Smart Gear Management fuer Tackle, Verschleiss und erfolgreiche Koeder-Ruten-Kombinationen.',
+const techniqueProfiles: TechniqueProfile[] = [
+  {
+    id: 'jiggen',
+    name: 'Jiggen',
+    bait: 'Gummifisch am Jigkopf',
+    targets: 'Zander, Barsch, Hecht',
+    where: 'Kanten, Steinpackungen, Buhnen, harte Boeden, Hafenbecken',
+    tempo: 'Sommer: 1-2 schnelle Kurbelumdrehungen. Winter: 1 kurze Rutenspitzenbewegung oder halbe Kurbelumdrehung.',
+    pause: 'Absinkphase meistens 1-4 Sekunden. Tiefer oder kaelter: 3-8 Sekunden. Wenn der Koeder sofort liegt, leichter fischen.',
+    bite: 'Tock, Schnurstop, seitliches Weglaufen oder ploetzlich kein Bodenkontakt. Sofort Kontakt aufnehmen und anschlagen.',
+    steps: ['Auswerfen und bis Grundkontakt warten.', 'Koeder 20-80 cm anheben.', 'Schnur leicht gespannt halten.', 'Absinken beobachten.', 'Nach 2-3 Spruengen kurz liegen lassen.'],
+  },
+  {
+    id: 'faulenzen',
+    name: 'Faulenzen',
+    bait: 'Gummifisch am Jigkopf',
+    targets: 'Zander, Barsch',
+    where: 'Harter Grund, Kanten, flache Daemmerungszonen',
+    tempo: '1-3 Kurbelumdrehungen aus der Rolle, Rute bleibt eher ruhig.',
+    pause: 'Absinkphase 1-5 Sekunden. Im Winter sehr kleine Spruenge und laengere Bodenkontakte.',
+    bite: 'Oft als harter Schlag in die lockere Schnur oder als Schnurbogen sichtbar.',
+    steps: ['Grundkontakt finden.', 'Nur mit der Rolle anheben.', 'Rute zeigt Richtung Koeder.', 'Absinken kontrollieren.', 'Bei jedem Verdacht anschlagen.'],
+  },
+  {
+    id: 'twitchen',
+    name: 'Twitchen',
+    bait: 'Suspender-Wobbler oder Minnow',
+    targets: 'Barsch, Hecht, Zander, Forelle',
+    where: 'Flache Kanten, Krautluecken, Hafenwaende, Daemmerungsbereiche',
+    tempo: 'Warm: 2-4 kurze Schlaege, dann Pause. Kalt: 1 Schlag, lange stehen lassen.',
+    pause: 'Sommer 1-3 Sekunden. Winter 5-30 Sekunden, besonders mit Suspender.',
+    bite: 'Attacke kommt oft in der Pause. Schnur leicht beobachten, nicht komplett schlaff werden lassen.',
+    steps: ['Wobbler auf Tiefe bringen.', 'In lockere Schnur schlagen.', 'Koeder ausbrechen lassen.', 'Pause halten.', 'Beim Einschlag direkt Kontakt herstellen.'],
+  },
+  {
+    id: 'spinner',
+    name: 'Spinner / Blinker fuehren',
+    bait: 'Metallkoeder',
+    targets: 'Forelle, Barsch, Hecht',
+    where: 'Flachwasser, Einlaeufe, Krautkanten, aktive Schwarmbereiche',
+    tempo: 'So langsam wie moeglich, so schnell wie noetig: Blatt muss laufen, Blinker darf nicht kippen.',
+    pause: 'Kurze Spinnstopps von 0.5-2 Sekunden. Ueber Kraut nur kurz absinken lassen.',
+    bite: 'Meist klarer Einschlag oder ploetzliches Gewicht. Bei Nachlaeufern Tempo kurz brechen.',
+    steps: ['Nach dem Wurf kurz absinken lassen.', 'Konstant starten.', 'Tempo variieren.', 'An Hindernissen anlupfen.', 'Vor den Fuessen bis zum Ende fuehren.'],
+  },
+  {
+    id: 'dropshot',
+    name: 'Drop-Shot',
+    bait: 'Wurm, kleiner Shad, Pintail',
+    targets: 'Barsch, Zander, Forelle',
+    where: 'Steile Kanten, Spundwaende, tiefe Loecher, unter Boot oder Steg',
+    tempo: 'Sehr langsam. Koeder zupfen, ohne ihn stark vom Platz zu bewegen.',
+    pause: '2-10 Sekunden stehen lassen. Im Winter noch laenger, nur Schnur zittern lassen.',
+    bite: 'Zupfer, leichtes Ziehen oder Druck. Kurz warten, dann kontrolliert anheben.',
+    steps: ['Blei auf Grund stellen.', 'Schnur leicht spannen.', 'Koeder zittern lassen.', '30-80 cm versetzen.', 'Biss nicht ueberreissen.'],
+  },
+  {
+    id: 'feeder',
+    name: 'Feeder / Grund',
+    bait: 'Maden, Mais, Wurm, Pellet',
+    targets: 'Brassen, Rotauge, Schleie, Karpfen',
+    where: 'Futterplatz, Kante, Schlamm-Sand-Uebergang, ruhige Stroemung',
+    tempo: 'Praezise wiederholt werfen. Start alle 3-5 Minuten, spaeter nach Bissfrequenz.',
+    pause: 'Rute ruhig. Bei vorsichtigen Bissen 3-10 Sekunden warten, bis der Zug klar wird.',
+    bite: 'Zittern in der Spitze, langsames Ziehen oder ploetzliches Zurueckschnellen.',
+    steps: ['Clip auf Distanz setzen.', 'Futterkorb fuellen.', 'Immer denselben Punkt treffen.', 'Schnur spannen.', 'Bisse ueber Rutenspitze lesen.'],
+  },
 ];
 
-function GuideSection({ kicker, title, children }: { kicker: string; title: string; children: React.ReactNode }) {
+const knotProfiles: KnotProfile[] = [
+  {
+    id: 'palomar',
+    name: 'Palomar',
+    use: 'Snap, Wirbel, Haken',
+    line: 'Geflecht, Mono',
+    strength: 'sehr hoch',
+    steps: ['Schnur doppelt legen.', 'Schlaufe durch die Oese.', 'Einfachen Ueberhandknoten binden.', 'Schlaufe ueber Snap oder Haken legen.', 'Befeuchten und gleichmaessig festziehen.'],
+    warning: 'Bei grossen Wobblern unpraktisch, weil die Schlaufe ueber den ganzen Koeder muss.',
+  },
+  {
+    id: 'clinch',
+    name: 'Verbesserter Clinch',
+    use: 'Haken, Wirbel, kleine Snaps',
+    line: 'Mono, Fluorocarbon',
+    strength: 'hoch',
+    steps: ['Schnur durch die Oese.', '5-7 Windungen um die Hauptschnur.', 'Ende durch die kleine Schlaufe an der Oese.', 'Ende durch die grosse Schlaufe zurueck.', 'Befeuchten und sauber zusammenziehen.'],
+    warning: 'Bei glattem Geflecht kann er rutschen. Dann Palomar nutzen.',
+  },
+  {
+    id: 'albright',
+    name: 'Albright',
+    use: 'Vorfach an Hauptschnur',
+    line: 'Geflecht zu Fluorocarbon',
+    strength: 'schlank',
+    steps: ['Fluorocarbon zur Schlaufe legen.', 'Geflecht durch die Schlaufe fuehren.', '10-12 Windungen zur Schlaufenbasis.', 'Durch die Schlaufe zurueck.', 'Befeuchten, langsam festziehen, Enden kuerzen.'],
+    warning: 'Windungen muessen sauber nebeneinander liegen, sonst hakt der Knoten in den Ringen.',
+  },
+  {
+    id: 'rapala',
+    name: 'Rapala-Schlaufe',
+    use: 'Wobbler ohne Snap',
+    line: 'Mono, Fluorocarbon',
+    strength: 'beweglich',
+    steps: ['Lockeren Ueberhandknoten vorformen.', 'Schnurende durch die Wobbler-Oese.', 'Ende durch den Ueberhandknoten zurueck.', '3-4 Windungen um die Hauptschnur.', 'Zurueck durch den Knoten, befeuchten, festziehen.'],
+    warning: 'Schlaufe nicht zu gross machen, sonst verliert der Koeder Kontrolle.',
+  },
+  {
+    id: 'dropshot',
+    name: 'Drop-Shot-Knoten',
+    use: 'Drop-Shot-Haken',
+    line: 'Fluorocarbon',
+    strength: '90-Grad-Hakenstand',
+    steps: ['Haken mit Spitze nach oben anlegen.', 'Palomar-artig binden.', 'Langes Ende stehen lassen.', 'Ende erneut von oben durch die Oese fuehren.', 'Blei am Ende befestigen.'],
+    warning: 'Wenn der Haken nach unten zeigt, das Ende durch die Oese in die andere Richtung fuehren.',
+  },
+];
+
+const legalRows: LegalRow[] = [
+  { state: 'Bayern', pikeClosed: '15.02. - 30.04.', pikeSize: '50 cm', zanderClosed: '15.03. - 30.04.', zanderSize: '50 cm' },
+  { state: 'NRW', pikeClosed: '15.02. - 30.04.', pikeSize: '45 cm', zanderClosed: '01.04. - 31.05.', zanderSize: '40 cm' },
+  { state: 'Brandenburg', pikeClosed: 'nur Erwerbsfischerei', pikeSize: '45 cm', zanderClosed: 'gewaesserspezifisch', zanderSize: '45 cm' },
+  { state: 'Hessen', pikeClosed: 'keine', pikeSize: '50 cm', zanderClosed: 'keine', zanderSize: '45 cm' },
+  { state: 'Baden-Wuerttemberg', pikeClosed: '15.02. - 15.05.', pikeSize: '45 cm', zanderClosed: '01.04. - 15.05.', zanderSize: '45 cm' },
+  { state: 'Sachsen', pikeClosed: '01.02. - 31.05.', pikeSize: '50 cm', zanderClosed: '01.02. - 31.05.', zanderSize: '50 cm' },
+];
+
+function SectionTabs({ activeSection, onChange }: { activeSection: SectionId; onChange: (section: SectionId) => void }) {
+  return (
+    <div className="sticky top-0 z-20 -mx-1 bg-slate-900/95 py-2 backdrop-blur-md">
+      <div className="flex gap-2 overflow-x-auto px-1 pb-1">
+        {sections.map((section) => (
+          <button
+            key={section.id}
+            type="button"
+            onClick={() => onChange(section.id)}
+            className={`min-w-[104px] rounded-lg border px-3 py-2 text-left transition-colors ${
+              activeSection === section.id
+                ? 'border-blue-400/40 bg-blue-500/20 text-white'
+                : 'border-slate-800 bg-slate-950/40 text-slate-400'
+            }`}
+          >
+            <span className="block text-xs font-black uppercase">{section.label}</span>
+            <span className="mt-0.5 block text-[10px] font-semibold leading-tight opacity-75">{section.hint}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GuidePanel({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <section className="card space-y-4">
       <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">{kicker}</p>
-        <h3 className="mt-1 text-xl font-black leading-tight text-white">{title}</h3>
+        <h2 className="text-2xl font-black leading-tight text-white">{title}</h2>
+        <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-400">{subtitle}</p>
       </div>
       {children}
     </section>
   );
 }
 
-function DataTable({ table }: { table: GuideTable }) {
+function ChoiceRow<T extends { id: string; name: string }>({
+  items,
+  activeId,
+  onChange,
+}: {
+  items: T[];
+  activeId: string;
+  onChange: (id: string) => void;
+}) {
   return (
-    <div className="-mx-1 overflow-x-auto rounded-lg border border-slate-800">
-      <table className="min-w-[620px] w-full border-collapse text-left text-xs">
-        <thead className="bg-slate-950/70 text-[10px] uppercase tracking-widest text-slate-500">
-          <tr>
-            {table.headers.map((header) => (
-              <th key={header} className="border-b border-slate-800 px-3 py-2 font-black">
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-800 bg-slate-950/25">
-          {table.rows.map((row) => (
-            <tr key={row.join('|')} className="align-top">
-              {row.map((cell, index) => (
-                <td key={`${cell}-${index}`} className="px-3 py-2 font-semibold leading-relaxed text-slate-300">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onChange(item.id)}
+          className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-black uppercase transition-colors ${
+            activeId === item.id
+              ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-100'
+              : 'border-slate-800 bg-slate-950/40 text-slate-400'
+          }`}
+        >
+          {item.name}
+        </button>
+      ))}
     </div>
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
+function MiniList({ items }: { items: string[] }) {
   return (
     <ul className="space-y-2">
       {items.map((item) => (
         <li key={item} className="flex gap-2 text-sm font-semibold leading-relaxed text-slate-300">
-          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-300" />
+          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-300" />
           <span>{item}</span>
         </li>
       ))}
@@ -239,156 +400,322 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
-const GuidesView: React.FC = () => {
+function FishVisual({ fish }: { fish: FishProfile }) {
   return (
-    <div className="space-y-5 animate-in fade-in duration-500 pb-10">
-      <section className="card border-blue-500/30 bg-blue-600/10">
-        <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Guides</p>
-        <h2 className="mt-2 text-2xl font-black leading-tight text-white">Digitale Angler-Plattform fuer Deutschland</h2>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-200">
-          Ein guter Angel-Guide verbindet Biologie, Recht, Umweltbedingungen und Technik. Die App soll nicht nur Daten sammeln,
-          sondern konkrete Entscheidungen am Wasser beschleunigen: Wo suchen, welchen Koeder waehlen, welche Montage passt und
-          welche Regeln gelten lokal?
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-          {['UX draussen', 'Fischbiologie', 'Koeder & Rigs', 'Recht 2026'].map((item) => (
-            <div key={item} className="rounded-lg border border-blue-400/20 bg-blue-400/10 px-3 py-2 font-black text-blue-50">
-              {item}
+    <div className="relative min-h-[150px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-cyan-500/15 to-transparent" />
+      <div className="absolute left-4 top-5 h-10 w-24 rounded-full bg-emerald-400/10 blur-xl" />
+      {fish.icon ? (
+        <img src={fish.icon} alt="" className="relative mx-auto h-24 w-full object-contain invert" />
+      ) : (
+        <div className="relative mx-auto mt-4 flex h-20 max-w-[230px] items-center justify-center">
+          <div className="h-14 w-36 rounded-[50%] border border-emerald-300/40 bg-emerald-400/15" />
+          <div className="-ml-2 h-0 w-0 border-y-[26px] border-l-[42px] border-y-transparent border-l-emerald-300/40" />
+          <div className="-ml-28 h-2 w-2 rounded-full bg-slate-100" />
+        </div>
+      )}
+      <div className="relative mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black uppercase text-slate-300">
+        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">Koerper</div>
+        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">Sinne</div>
+        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">Standplatz</div>
+      </div>
+    </div>
+  );
+}
+
+function BaitVisual({ visual }: { visual: BaitProfile['visual'] }) {
+  return (
+    <div className="relative flex min-h-[128px] items-center justify-center overflow-hidden rounded-lg border border-slate-800 bg-slate-950/45">
+      <div className="absolute inset-x-4 top-1/2 h-px bg-cyan-300/20" />
+      {visual === 'softbait' && (
+        <div className="relative flex items-center">
+          <div className="h-7 w-24 rounded-full bg-lime-300/80 shadow-lg shadow-lime-900/30" />
+          <div className="-ml-1 h-0 w-0 border-y-[18px] border-l-[34px] border-y-transparent border-l-lime-200/80" />
+          <div className="-ml-24 h-2 w-2 rounded-full bg-slate-950" />
+          <div className="ml-3 h-12 w-8 border-b-2 border-r-2 border-slate-200/70" />
+        </div>
+      )}
+      {visual === 'wobbler' && (
+        <div className="relative flex items-center">
+          <div className="h-9 w-28 rounded-[50%] bg-amber-300/85" />
+          <div className="-ml-2 h-0 w-0 border-y-[18px] border-l-[28px] border-y-transparent border-l-red-300/80" />
+          <div className="-ml-24 h-2 w-2 rounded-full bg-slate-950" />
+          <div className="-ml-4 mt-10 h-8 w-12 -rotate-12 rounded border border-cyan-200/50" />
+        </div>
+      )}
+      {visual === 'spinner' && (
+        <div className="relative flex items-center gap-3">
+          <div className="h-12 w-7 rotate-12 rounded-full border border-yellow-200/70 bg-yellow-300/70" />
+          <div className="h-px w-20 bg-slate-200/70" />
+          <div className="h-10 w-7 border-b-2 border-r-2 border-slate-200/70" />
+        </div>
+      )}
+      {visual === 'worm' && (
+        <div className="relative h-16 w-44">
+          <div className="absolute left-4 top-7 h-5 w-24 rounded-full bg-rose-300/80" />
+          <div className="absolute left-24 top-4 h-5 w-16 rotate-12 rounded-full bg-rose-200/80" />
+          <div className="absolute left-36 top-3 h-2 w-2 rounded-full bg-slate-950" />
+        </div>
+      )}
+      {visual === 'corn' && (
+        <div className="grid grid-cols-4 gap-2">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <span key={index} className="h-5 w-5 rounded-full bg-yellow-300/85 shadow-sm shadow-yellow-900/50" />
+          ))}
+        </div>
+      )}
+      {visual === 'fish' && (
+        <div className="relative flex items-center opacity-80">
+          <div className="h-10 w-28 rounded-[50%] bg-slate-300/80" />
+          <div className="-ml-1 h-0 w-0 border-y-[22px] border-l-[34px] border-y-transparent border-l-slate-300/80" />
+          <div className="-ml-24 h-2 w-2 rounded-full bg-slate-950" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TechniqueMotion({ technique }: { technique: TechniqueProfile }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+      <div className="relative h-28 overflow-hidden rounded-lg bg-gradient-to-b from-cyan-500/10 via-slate-900 to-slate-950">
+        <div className="absolute bottom-5 left-0 right-0 h-px border-t border-dashed border-slate-600" />
+        <div className="absolute bottom-5 left-6 right-6 flex items-end justify-between">
+          {technique.steps.slice(0, 5).map((step, index) => (
+            <div key={step} className="flex flex-col items-center gap-1">
+              <div
+                className={`h-3 w-3 rounded-full ${
+                  index % 2 === 0 ? 'bg-emerald-300' : 'bg-yellow-300'
+                }`}
+                style={{ transform: `translateY(-${index % 2 === 0 ? 34 : 12}px)` }}
+              />
+              <span className="text-[9px] font-black text-slate-500">{index + 1}</span>
             </div>
           ))}
         </div>
+      </div>
+      <ol className="mt-3 space-y-2">
+        {technique.steps.map((step, index) => (
+          <li key={step} className="flex gap-2 text-xs font-semibold leading-relaxed text-slate-300">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-[10px] font-black text-blue-200">
+              {index + 1}
+            </span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function KnotDiagram({ knot }: { knot: KnotProfile }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+      <div className="relative mb-4 h-28 overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
+        <div className="absolute left-6 right-6 top-1/2 h-1 rounded-full bg-cyan-200/80" />
+        <div className="absolute left-14 top-8 h-14 w-20 rounded-full border-4 border-yellow-300/80" />
+        <div className="absolute right-14 top-10 h-10 w-10 rounded-full border-4 border-slate-300/80" />
+        <div className="absolute right-20 top-12 h-12 w-6 border-b-4 border-r-4 border-slate-300/70" />
+        <div className="absolute bottom-2 left-3 rounded bg-slate-950/80 px-2 py-1 text-[10px] font-black uppercase text-slate-400">
+          Schrittbild statt GIF
+        </div>
+      </div>
+      <div className="space-y-2">
+        {knot.steps.map((step, index) => (
+          <div key={step} className="flex gap-2 text-xs font-semibold leading-relaxed text-slate-300">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-yellow-400/20 text-[10px] font-black text-yellow-100">
+              {index + 1}
+            </span>
+            <span>{step}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FishGuide() {
+  const [activeFishId, setActiveFishId] = useState(fishProfiles[0].id);
+  const fish = useMemo(
+    () => fishProfiles.find((item) => item.id === activeFishId) ?? fishProfiles[0],
+    [activeFishId]
+  );
+
+  return (
+    <GuidePanel title="Fische erkennen und gezielt suchen" subtitle="Waehle eine Art und lies nur das, was am Wasser hilft.">
+      <ChoiceRow items={fishProfiles} activeId={fish.id} onChange={setActiveFishId} />
+      <FishVisual fish={fish} />
+      <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-black text-white">{fish.name}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{fish.latin}</p>
+          </div>
+          <span className="rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-2 py-1 text-[10px] font-black uppercase text-emerald-100">
+            {fish.type}
+          </span>
+        </div>
+        <div className="grid gap-2">
+          <InfoBlock label="Koerper" value={fish.body} />
+          <InfoBlock label="Sinne" value={fish.senses} />
+          <InfoBlock label="Nahrung" value={fish.food} />
+          <InfoBlock label="Saison" value={fish.season} />
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
+          <h4 className="mb-2 text-xs font-black uppercase tracking-widest text-slate-500">Standplaetze</h4>
+          <div className="flex flex-wrap gap-2">
+            {fish.habitat.map((place) => (
+              <span key={place} className="rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-xs font-bold text-cyan-100">
+                {place}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
+          <h4 className="mb-2 text-xs font-black uppercase tracking-widest text-slate-500">Direkte Taktik</h4>
+          <MiniList items={fish.tactics} />
+        </div>
+      </div>
+    </GuidePanel>
+  );
+}
+
+function InfoBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-3">
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-300">{value}</p>
+    </div>
+  );
+}
+
+function BaitGuide() {
+  const [activeBaitId, setActiveBaitId] = useState(baitProfiles[0].id);
+  const bait = useMemo(
+    () => baitProfiles.find((item) => item.id === activeBaitId) ?? baitProfiles[0],
+    [activeBaitId]
+  );
+
+  return (
+    <GuidePanel title="Koeder: Reiz, Einsatz, Fehler" subtitle="Interaktiv nach Koedertyp. Fokus: wann einsetzen, wie anbieten, was vermeiden.">
+      <ChoiceRow items={baitProfiles} activeId={bait.id} onChange={setActiveBaitId} />
+      <BaitVisual visual={bait.visual} />
+      <div className="grid gap-2">
+        <InfoBlock label="Faengt vor allem" value={bait.bestFor} />
+        <InfoBlock label="Einsetzen wenn" value={bait.useWhen} />
+        <InfoBlock label="Montage" value={bait.rig} />
+        <InfoBlock label="Fuehrung / Praesentation" value={bait.action} />
+      </div>
+      <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3">
+        <h4 className="mb-2 text-xs font-black uppercase tracking-widest text-red-100">Haefige Fehler</h4>
+        <MiniList items={bait.mistakes} />
+      </div>
+    </GuidePanel>
+  );
+}
+
+function TechniqueGuide() {
+  const [activeTechniqueId, setActiveTechniqueId] = useState(techniqueProfiles[0].id);
+  const technique = useMemo(
+    () => techniqueProfiles.find((item) => item.id === activeTechniqueId) ?? techniqueProfiles[0],
+    [activeTechniqueId]
+  );
+
+  return (
+    <GuidePanel title="Fuehrung: Tempo, Pause, Bissphase" subtitle="Konkrete Zeiten und Ablaufe statt allgemeiner Taktiktexte.">
+      <ChoiceRow items={techniqueProfiles} activeId={technique.id} onChange={setActiveTechniqueId} />
+      <TechniqueMotion technique={technique} />
+      <div className="grid gap-2">
+        <InfoBlock label="Koeder" value={technique.bait} />
+        <InfoBlock label="Zielfische" value={technique.targets} />
+        <InfoBlock label="Wo" value={technique.where} />
+        <InfoBlock label="Tempo" value={technique.tempo} />
+        <InfoBlock label="Pause / Phase" value={technique.pause} />
+        <InfoBlock label="Biss erkennen" value={technique.bite} />
+      </div>
+    </GuidePanel>
+  );
+}
+
+function KnotGuide() {
+  const [activeKnotId, setActiveKnotId] = useState(knotProfiles[0].id);
+  const knot = useMemo(
+    () => knotProfiles.find((item) => item.id === activeKnotId) ?? knotProfiles[0],
+    [activeKnotId]
+  );
+
+  return (
+    <GuidePanel title="Knoten: welcher, wann, wie" subtitle="Mit Schrittbild. Echte GIFs waeren fuer Fingerfuehrung und Zugrichtung sinnvoll.">
+      <ChoiceRow items={knotProfiles} activeId={knot.id} onChange={setActiveKnotId} />
+      <div className="grid gap-2 sm:grid-cols-3">
+        <InfoBlock label="Einsatz" value={knot.use} />
+        <InfoBlock label="Schnur" value={knot.line} />
+        <InfoBlock label="Vorteil" value={knot.strength} />
+      </div>
+      <KnotDiagram knot={knot} />
+      <div className="rounded-lg border border-yellow-400/25 bg-yellow-400/10 p-3">
+        <p className="text-[10px] font-black uppercase tracking-widest text-yellow-100">Wichtig</p>
+        <p className="mt-1 text-sm font-semibold leading-relaxed text-yellow-50">
+          {knot.warning} Immer befeuchten, langsam zuziehen und beide Enden kontrollieren.
+        </p>
+      </div>
+    </GuidePanel>
+  );
+}
+
+function LawGuide() {
+  return (
+    <GuidePanel title="Schonzeiten und Mindestmasse" subtitle="Kurze Orientierung. Lokal immer aktuellen Erlaubnisschein und Gewaesserordnung pruefen.">
+      <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <table className="min-w-[620px] w-full border-collapse text-left text-xs">
+          <thead className="bg-slate-950/70 text-[10px] uppercase tracking-widest text-slate-500">
+            <tr>
+              <th className="border-b border-slate-800 px-3 py-2">Bundesland</th>
+              <th className="border-b border-slate-800 px-3 py-2">Hecht Schonzeit</th>
+              <th className="border-b border-slate-800 px-3 py-2">Hecht Mass</th>
+              <th className="border-b border-slate-800 px-3 py-2">Zander Schonzeit</th>
+              <th className="border-b border-slate-800 px-3 py-2">Zander Mass</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800 bg-slate-950/25">
+            {legalRows.map((row) => (
+              <tr key={row.state}>
+                <td className="px-3 py-2 font-black text-slate-100">{row.state}</td>
+                <td className="px-3 py-2 font-semibold text-slate-300">{row.pikeClosed}</td>
+                <td className="px-3 py-2 font-semibold text-slate-300">{row.pikeSize}</td>
+                <td className="px-3 py-2 font-semibold text-slate-300">{row.zanderClosed}</td>
+                <td className="px-3 py-2 font-semibold text-slate-300">{row.zanderSize}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </GuidePanel>
+  );
+}
+
+const GuidesView: React.FC = () => {
+  const [activeSection, setActiveSection] = useState<SectionId>('fish');
+
+  return (
+    <div className="space-y-4 animate-in fade-in duration-500 pb-10">
+      <section className="card border-emerald-400/20 bg-emerald-400/10">
+        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Guide-Bibliothek</p>
+        <h1 className="mt-1 text-2xl font-black leading-tight text-white">Kurz, visuell, direkt nutzbar</h1>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-200">
+          Waehle ein Thema. Jeder Guide zeigt konkrete Erkennung, Einsatzbereiche, Zeiten, Fehler und Schrittfolgen.
+        </p>
       </section>
 
-      <GuideSection kicker="Architektur" title="Interface-Psychologie im Outdoor-Kontext">
-        <p className="text-sm font-semibold leading-relaxed text-slate-300">
-          Am Wasser zaehlen Klarheit, grosse Touch-Targets und Lesbarkeit bei Sonne, Regen und Daemmerung. Primaere Aktionen
-          gehoeren in die Daumenzone, der Dark Mode reduziert Blendung und spart auf OLED-Displays Energie.
-        </p>
-        <DataTable table={designPrinciples} />
-        <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Praediktive UX</p>
-          <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-300">
-            Standort, Tageszeit und Gewohnheiten koennen Shortcuts ausloesen: Beissindex bei Sonnenaufgang, passende
-            Landesregeln beim Bundeslandwechsel oder Offline-Karten in Empfangsloechern.
-          </p>
-        </div>
-      </GuideSection>
+      <SectionTabs activeSection={activeSection} onChange={setActiveSection} />
 
-      <GuideSection kicker="Navigation" title="Such- und Filterlogik als Zentrum">
-        <p className="text-sm font-semibold leading-relaxed text-slate-300">
-          Die Informationsarchitektur sollte natuerliche Sprache, klare Kategorien und multidimensionale Filter kombinieren.
-          So findet ein Nutzer nicht nur einen Artikel, sondern eine handlungsrelevante Antwort fuer die aktuelle Situation.
-        </p>
-        <DataTable table={filterMatrix} />
-      </GuideSection>
-
-      <GuideSection kicker="Ichthyologie" title="Fischsteckbriefe und Verhalten">
-        <div className="space-y-3">
-          {fishProfiles.map((fish) => (
-            <article key={fish.name} className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
-              <div className="mb-2 flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="text-base font-black text-white">{fish.name}</h4>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{fish.scientificName}</p>
-                </div>
-                <span className="rounded-lg border border-blue-400/20 bg-blue-400/10 px-2 py-1 text-[10px] font-black uppercase text-blue-200">
-                  {fish.badge}
-                </span>
-              </div>
-              <p className="text-sm font-semibold leading-relaxed text-slate-300">{fish.text}</p>
-              <div className="mt-3">
-                <BulletList items={fish.tactics} />
-              </div>
-            </article>
-          ))}
-        </div>
-        <DataTable table={fishBiology} />
-      </GuideSection>
-
-      <GuideSection kicker="Koederoekologie" title="Natuerliche und kuenstliche Reizquellen">
-        <div className="grid gap-3 sm:grid-cols-2">
-          {baitGroups.map((group) => (
-            <div key={group.title} className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
-              <h4 className="mb-3 text-sm font-black uppercase tracking-wide text-white">{group.title}</h4>
-              <BulletList items={group.items} />
-            </div>
-          ))}
-        </div>
-        <p className="text-sm font-semibold leading-relaxed text-slate-300">
-          Die Koederwahl sollte Biologie und Physik zusammenfuehren: Geruch und Geschmack bei Naturkoedern, Druckwellen,
-          Silhouette, Farbe und Laufverhalten bei Kunstkoedern.
-        </p>
-      </GuideSection>
-
-      <GuideSection kicker="Praesentation" title="Fuehrungstechniken nach Jahreszeit">
-        <div className="grid gap-3 sm:grid-cols-2">
-          {techniques.map((technique) => (
-            <div key={technique.title} className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
-              <h4 className="text-sm font-black text-white">{technique.title}</h4>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-300">{technique.text}</p>
-            </div>
-          ))}
-        </div>
-        <div className="rounded-lg border border-yellow-400/25 bg-yellow-400/10 p-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200">Saisonlogik</p>
-          <p className="mt-1 text-sm font-semibold leading-relaxed text-yellow-50">
-            Im Sommer funktionieren schnelle, aggressive Reize haeufig besser. Im Winter sinkt der Stoffwechsel: langsamer
-            fuehren, laengere Pausen setzen und energiereiche Beute imitieren.
-          </p>
-        </div>
-      </GuideSection>
-
-      <GuideSection kicker="Knotenkunde" title="Mechanische Verbindung zum Fisch">
-        <p className="text-sm font-semibold leading-relaxed text-slate-300">
-          Knoten entscheiden ueber Tragkraft und Kontrolle. Schnur vor dem Festziehen immer befeuchten, damit Reibungshitze
-          Monofil, Fluorocarbon oder Geflecht nicht strukturell schwaecht.
-        </p>
-        <DataTable table={knots} />
-        <div className="space-y-2">
-          {rigs.map((rig) => (
-            <div key={rig.title} className="rounded-lg border border-slate-800 bg-slate-950/35 p-3">
-              <h4 className="text-sm font-black text-white">{rig.title}</h4>
-              <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-300">{rig.text}</p>
-            </div>
-          ))}
-        </div>
-      </GuideSection>
-
-      <GuideSection kicker="Compliance" title="Gesetzliche Regelungen und Artenschutz">
-        <div className="rounded-lg border border-red-400/25 bg-red-400/10 p-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-red-200">Wichtiger Hinweis</p>
-          <p className="mt-1 text-sm font-semibold leading-relaxed text-red-50">
-            Die Tabelle dient als redaktionelle Orientierung. Verbindlich sind immer aktuelle Landesverordnungen,
-            Gewaesserordnungen, Erlaubnisscheine und Vereinsregeln vor Ort.
-          </p>
-        </div>
-        <DataTable table={legalExamples} />
-        <BulletList
-          items={[
-            'Schonzeiten schuetzen Fische waehrend der Fortpflanzungsphase.',
-            'Mindestmasse sollen sicherstellen, dass Fische vor Entnahme mindestens einmal ablaichen konnten.',
-            'Lebende Wirbeltiere als Koeder sind in vielen Rechtsraeumen unzulaessig und muessen als Warnhinweis behandelt werden.',
-            'Ganzjaehrig geschuetzte Arten wie Stoer, Moderlieschen, Lachs oder regional Quappe brauchen sichere Identifikationshilfen.',
-            'Berlin regelt unter anderem Haelterung, Setzkescher und bestimmte Mehrfachhaken besonders detailliert.',
-          ]}
-        />
-      </GuideSection>
-
-      <GuideSection kicker="Markt" title="Differenzierung einer modernen Angel-App">
-        <p className="text-sm font-semibold leading-relaxed text-slate-300">
-          Plattformen wie Fishbrain oder Alle Angeln zeigen, dass Community, Fangdaten und Karten hohe Erwartungen setzen.
-          Eine neue App sollte daher echte Problemlosung liefern statt nur Fanglogs zu sammeln.
-        </p>
-        <BulletList items={marketFeatures} />
-      </GuideSection>
-
-      <GuideSection kicker="Ausblick" title="Tradition trifft Echtzeitdaten">
-        <p className="text-sm font-semibold leading-relaxed text-slate-300">
-          Der Kern einer digitalen Angler-Plattform ist ein Assistent, der Datenflut in einfache Empfehlungen uebersetzt.
-          Wenn Biologie, Recht, Gewaesserzustand und Technik zusammenarbeiten, steigt nicht nur die Fangchance, sondern auch
-          die Waidgerechtigkeit und der Schutz der Fischbestaende.
-        </p>
-      </GuideSection>
+      {activeSection === 'fish' && <FishGuide />}
+      {activeSection === 'bait' && <BaitGuide />}
+      {activeSection === 'technique' && <TechniqueGuide />}
+      {activeSection === 'knots' && <KnotGuide />}
+      {activeSection === 'law' && <LawGuide />}
     </div>
   );
 };
