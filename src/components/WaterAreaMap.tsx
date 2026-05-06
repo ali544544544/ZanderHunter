@@ -66,6 +66,7 @@ function getBestZoom(bounds: ReturnType<typeof getBounds>, width: number) {
 
 export function WaterAreaMap({ profile }: WaterAreaMapProps) {
   const geometry = profile?.areaDetails?.mapGeometry;
+  const hasAreaGeometry = Boolean(geometry && (geometry.polygons.length > 0 || geometry.lines.length > 0));
   const selectedLat = profile?.latitude;
   const selectedLng = profile?.longitude;
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -91,14 +92,13 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
     [selectedLat, selectedLng]
   );
   const allPoints = useMemo(() => {
-    if (!geometry) return [];
+    if (!geometry || !hasAreaGeometry) return [];
     return [
       ...geometry.polygons.flat(),
       ...geometry.lines.flat(),
-      ...geometry.points,
       ...(selectedPoint ? [selectedPoint] : []),
     ];
-  }, [geometry, selectedPoint]);
+  }, [geometry, hasAreaGeometry, selectedPoint]);
 
   const viewport = useMemo(() => {
     if (allPoints.length === 0) return null;
@@ -167,10 +167,6 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
     );
   }, [geometry, projectPoint, viewport]);
 
-  const referencePoints = useMemo(() => {
-    if (!geometry || !viewport) return [];
-    return geometry.points.map(projectPoint);
-  }, [geometry, projectPoint, viewport]);
   const linePaths = useMemo(() => {
     if (!geometry || !viewport) return [];
 
@@ -184,9 +180,9 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
   }, [geometry, projectPoint, viewport]);
 
   const selectedPointPosition = selectedPoint && viewport ? projectPoint(selectedPoint) : null;
-  const shouldShowReferencePoints = polygonPaths.length === 0 && linePaths.length === 0;
+  const mapLabel = polygonPaths.length > 0 ? 'Gewaesserflaeche' : 'Gewaesserstrecke';
 
-  if (!profile?.sources.includes('hejfish') || !geometry || allPoints.length === 0 || !viewport) {
+  if (!profile?.sources.includes('hejfish') || !geometry || !hasAreaGeometry || allPoints.length === 0 || !viewport) {
     return null;
   }
 
@@ -197,7 +193,7 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
     <section className="card overflow-hidden p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewaesserkarte</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{mapLabel}</p>
           <h2 className="truncate text-sm font-black text-slate-100">{profile.name}</h2>
         </div>
         <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-blue-300">
@@ -225,7 +221,8 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
             <path
               key={`${path}-${index}`}
               d={`${path} Z`}
-              className="fill-blue-400/25 stroke-blue-300"
+              fill="rgba(96, 165, 250, 0.28)"
+              stroke="rgb(147, 197, 253)"
               strokeWidth="2"
               vectorEffect="non-scaling-stroke"
             />
@@ -234,21 +231,12 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
             <path
               key={`${path}-${index}`}
               d={path}
-              className="fill-none stroke-cyan-300"
+              fill="none"
+              stroke="rgb(103, 232, 249)"
               strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-            />
-          ))}
-          {shouldShowReferencePoints && referencePoints.map((point, index) => (
-            <circle
-              key={`${point.x}-${point.y}-${index}`}
-              cx={point.x}
-              cy={point.y}
-              r="3"
-              className="fill-cyan-200 stroke-slate-950"
-              strokeWidth="1.5"
             />
           ))}
           {selectedPointPosition && (
@@ -256,7 +244,8 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
               cx={selectedPointPosition.x}
               cy={selectedPointPosition.y}
               r="5"
-              className="fill-yellow-300 stroke-slate-950"
+              fill="rgb(253, 224, 71)"
+              stroke="rgb(2, 6, 23)"
               strokeWidth="2"
             />
           )}
