@@ -37,7 +37,7 @@ const navItems: { id: ActiveTab; label: string; icon: string }[] = [
   { id: 'spots', label: 'Spots', icon: '📍' },
   { id: 'koder', label: 'Taktik', icon: '🐟' },
   { id: 'forecast', label: 'Kalender', icon: '📅' },
-  { id: 'guides', label: 'Guides', icon: 'G' },
+  { id: 'guides', label: 'Guides', icon: '📚' },
 ];
 
 const defaultLocation = { lat: 53.55, lng: 9.99 };
