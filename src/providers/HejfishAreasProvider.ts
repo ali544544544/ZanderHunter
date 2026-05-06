@@ -2,6 +2,7 @@ import type { HejfishArea, HejfishAreaLite } from '../types/hejfishArea';
 import type { FishSpecies, WaterBodyProfile, WaterBodyType, WaterDataProvider } from '../types/waterData';
 
 type Coordinate = { lat: number; lng: number };
+type LiteCandidate = { area: HejfishAreaLite; distance: number };
 
 const knownSpeciesMap: Record<string, FishSpecies> = {
   zander: 'zander',
@@ -19,6 +20,16 @@ const knownSpeciesMap: Record<string, FishSpecies> = {
   wels: 'wels',
   waller: 'wels',
 };
+
+const hamburgAreaKeywords = [
+  'doveelbe',
+  'stromelbe',
+  'elbe',
+  'hamburg',
+  'hohendeicher',
+  'oortkatensee',
+  'billwerder',
+];
 
 export class HejfishAreasProvider implements WaterDataProvider {
   name = 'hejfish areas';
@@ -46,9 +57,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const nearestDetail = details
       .map((area) => ({
         area,
-        distance: typeof area.lat === 'number' && typeof area.lng === 'number'
-          ? this.distanceMeters(lat, lng, area.lat, area.lng)
-          : Number.POSITIVE_INFINITY,
+        distance: this.getNearestAreaDistanceMeters(lat, lng, area),
       }))
       .filter((match) => match.distance <= this.getRadiusMeters(match.area))
       .sort((a, b) => a.distance - b.distance)[0]?.area;
@@ -101,8 +110,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
         return data.filter((area): area is HejfishAreaLite => (
             Boolean(area)
             && typeof area.id === 'number'
-            && typeof area.lat === 'number'
-            && typeof area.lng === 'number'
+            && (typeof area.lat === 'number' || area.lat === null)
+            && (typeof area.lng === 'number' || area.lng === null)
         ));
       } catch {
         continue;
@@ -155,25 +164,35 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   }
 
-  private findLiteCandidates(areas: HejfishAreaLite[], lat: number, lng: number) {
-    return areas
+  private findLiteCandidates(areas: HejfishAreaLite[], lat: number, lng: number): LiteCandidate[] {
+    const coordinateCandidates = areas
+      .filter((area) => typeof area.lat === 'number' && typeof area.lng === 'number')
       .map((area) => ({
         area,
-        distance: this.distanceMeters(lat, lng, area.lat, area.lng),
+        distance: this.distanceMeters(lat, lng, area.lat as number, area.lng as number),
       }))
       .filter((match) => match.distance <= this.getLiteRadiusMeters(match.area))
       .sort((a, b) => a.distance - b.distance);
+
+    const regionalCandidates = areas
+      .filter((area) => (typeof area.lat !== 'number' || typeof area.lng !== 'number') && this.isRegionalNameCandidate(area, lat, lng))
+      .map((area) => ({ area, distance: Number.MAX_SAFE_INTEGER }));
+
+    return [...regionalCandidates, ...coordinateCandidates];
   }
 
   private getLiteRadiusMeters(area: HejfishAreaLite): number {
-    const type = this.mapWaterType(area.water_type);
+    const type = this.mapWaterType(area.water_type, area.name);
     if (type === 'river' || type === 'canal') return 2500;
     return 1500;
   }
 
   private getRadiusMeters(area: HejfishArea): number {
     const sizeHa = area.water_size_ha || 0;
-    if (sizeHa <= 0) return this.mapWaterType(area.water_type) === 'river' ? 2500 : 1000;
+    if (sizeHa <= 0) {
+      if (this.getAreaReferencePoints(area).length > 0) return 5000;
+      return this.mapWaterType(area.water_type, area.name) === 'river' ? 2500 : 1000;
+    }
 
     const radius = Math.sqrt(sizeHa * 10000 / Math.PI) + 300;
     return Math.max(500, Math.min(3000, radius));
@@ -187,6 +206,23 @@ export class HejfishAreasProvider implements WaterDataProvider {
       const coordinates = this.extractCoordinates(polygon);
       return coordinates.length >= 3 && this.isPointInPolygon({ lat, lng }, coordinates);
     });
+  }
+
+  private getNearestAreaDistanceMeters(lat: number, lng: number, area: HejfishArea): number {
+    const points = this.getAreaReferencePoints(area);
+    if (points.length === 0) return Number.POSITIVE_INFINITY;
+
+    return Math.min(...points.map((point) => this.distanceMeters(lat, lng, point.lat, point.lng)));
+  }
+
+  private getAreaReferencePoints(area: HejfishArea): Coordinate[] {
+    const directPoint = typeof area.lat === 'number' && typeof area.lng === 'number'
+      ? [{ lat: area.lat, lng: area.lng }]
+      : [];
+    const mapPoints = this.extractCoordinates(area.map_data?.points);
+    const locationPoints = this.extractCoordinates(area.map_data?.data?.locations);
+
+    return [...directPoint, ...mapPoints, ...locationPoints];
   }
 
   private extractCoordinates(value: unknown): Coordinate[] {
@@ -244,11 +280,11 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return {
       id: `hejfish-${area.id}`,
       name: area.name,
-      type: this.mapWaterType(area.water_type),
-      latitude: area.lat,
-      longitude: area.lng,
+      type: this.mapWaterType(area.water_type, area.name),
+      latitude: area.lat ?? 0,
+      longitude: area.lng ?? 0,
       region: 'hejfish',
-      imageUrl: area.main_image,
+      imageUrl: area.main_image || undefined,
       species: [],
       regulations: {
         permit_required: true,
@@ -265,7 +301,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
   private mapAreaToProfile(area: HejfishArea, lat: number, lng: number): WaterBodyProfile {
     const lastUpdated = new Date(area.last_updated || Date.now());
-    const uniqueFish = Array.from(new Map((area.fish || []).map((name) => {
+    const uniqueFish = Array.from(new Map(this.normalizeFishList(area.fish || []).map((name) => {
       const species = this.mapFishSpecies(name);
       return [species, { species, displayName: name }];
     })).values());
@@ -273,7 +309,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return {
       id: `hejfish-${area.id}`,
       name: area.name,
-      type: this.mapWaterType(area.water_type),
+      type: this.mapWaterType(area.water_type, area.name),
       latitude: area.lat ?? lat,
       longitude: area.lng ?? lng,
       region: area.location_info?.join(', ') || area.country || 'Unbekannt',
@@ -317,13 +353,51 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return knownSpeciesMap[normalized] || normalized || name;
   }
 
-  private mapWaterType(type?: string): WaterBodyType {
-    const normalized = this.normalize(type || '');
+  private mapWaterType(type?: string | null, name?: string): WaterBodyType {
+    const normalized = this.normalize(`${type || ''} ${name || ''}`);
     if (normalized.includes('fliess') || normalized.includes('fluss') || normalized.includes('river')) return 'river';
+    if (normalized.includes('elbe') || normalized.includes('rhein') || normalized.includes('weser')) return 'river';
     if (normalized.includes('kanal') || normalized.includes('canal')) return 'canal';
     if (normalized.includes('teich') || normalized.includes('pond')) return 'pond';
     if (normalized.includes('meer') || normalized.includes('sea')) return 'sea';
     return 'lake';
+  }
+
+  private isRegionalNameCandidate(area: HejfishAreaLite, lat: number, lng: number): boolean {
+    if (!this.isHamburgRegion(lat, lng)) return false;
+
+    const normalized = this.normalize(`${area.name} ${area.slug}`);
+    return hamburgAreaKeywords.some((keyword) => normalized.includes(keyword));
+  }
+
+  private isHamburgRegion(lat: number, lng: number): boolean {
+    return lat >= 53.35 && lat <= 53.7 && lng >= 9.65 && lng <= 10.35;
+  }
+
+  private normalizeFishList(fish: string[]): string[] {
+    return fish
+      .flatMap((entry) => this.splitFishEntry(this.fixMojibake(entry)))
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  private splitFishEntry(entry: string): string[] {
+    return entry
+      .split(/[,;/\n]+/)
+      .flatMap((part) => part.replace(/([a-z])([A-Z])/g, '$1,$2').split(','))
+      .map((part) => part.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+  }
+
+  private fixMojibake(value: string): string {
+    return value
+      .replace(/Ã„/g, 'Ae')
+      .replace(/Ã–/g, 'Oe')
+      .replace(/Ãœ/g, 'Ue')
+      .replace(/Ã¤/g, 'ae')
+      .replace(/Ã¶/g, 'oe')
+      .replace(/Ã¼/g, 'ue')
+      .replace(/ÃŸ/g, 'ss');
   }
 
   private normalize(value: string): string {

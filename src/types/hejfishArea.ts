@@ -2,10 +2,10 @@ export interface HejfishAreaLite {
   id: number;
   name: string;
   slug: string;
-  lat: number;
-  lng: number;
-  water_type?: string;
-  main_image?: string;
+  lat: number | null;
+  lng: number | null;
+  water_type?: string | null;
+  main_image?: string | null;
   fish_count?: number;
   mobile_ticket?: boolean;
 }
@@ -40,6 +40,10 @@ export interface HejfishArea {
   map_data?: {
     points?: unknown[];
     polygons?: unknown[];
+    data?: {
+      geojson?: unknown[];
+      locations?: unknown[];
+    };
   };
   country?: string;
   last_updated?: string;
