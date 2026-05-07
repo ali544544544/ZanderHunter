@@ -7,12 +7,16 @@ export interface HejfishAreaLite {
   water_type?: string | null;
   main_image?: string | null;
   fish_count?: number;
+  has_geometry?: boolean;
+  geometry_quality?: 'none' | 'point' | 'line' | 'polygon' | string;
+  detail_path?: string;
   mobile_ticket?: boolean;
   platform?: string;
 }
 
 export interface HejfishGeoIndexEntry {
   id: number | string;
+  platform?: string;
   name: string;
   slug?: string;
   lat: number;
@@ -26,6 +30,7 @@ export interface HejfishGeoIndexEntry {
     maxLng: number;
   };
   points?: Array<{ lat: number; lng: number }>;
+  geometry_quality?: 'none' | 'point' | 'line' | 'polygon' | string;
 }
 
 export interface HejfishArea {
@@ -75,6 +80,19 @@ export interface HejfishArea {
   features?: Record<string, boolean | string | number | null | undefined>;
   lat?: number;
   lng?: number;
+  center?: {
+    lat: number;
+    lng: number;
+    source?: string;
+    confidence?: string;
+  };
+  geometry?: {
+    points?: Array<{ lat: number; lng: number }>;
+    lines?: Array<Array<{ lat: number; lng: number }>>;
+    polygons?: Array<Array<{ lat: number; lng: number }>>;
+    source?: string;
+    confidence?: string;
+  };
   geocode_source?: string;
   map_data?: {
     points?: unknown[];
@@ -90,6 +108,16 @@ export interface HejfishArea {
   last_updated?: string;
   source_platform?: string;
   global_id?: string;
+  source_ids?: Record<string, number | string>;
   external_ids?: Record<string, number | string>;
+  links?: Record<string, string | undefined>;
+  metadata?: {
+    merged_fields?: Record<string, string | string[]>;
+    sources?: Record<string, Partial<HejfishArea> & {
+      platform?: string;
+      source_last_updated?: string;
+      seo_name?: string;
+    }>;
+  };
   error?: boolean;
 }

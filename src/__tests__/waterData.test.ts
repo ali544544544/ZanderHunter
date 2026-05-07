@@ -816,4 +816,127 @@ describe('HejfishAreasProvider mapping', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('uses canonical dist detail center, geometry and merged source metadata', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 'hejfish-12046',
+      name: 'Kiesgrube Schwarzer Hecht',
+      platform: 'merged',
+      lat: 50.789989,
+      lng: 10.30387,
+      water_type: 'See',
+      fish_count: 7,
+      has_geometry: true,
+      geometry_quality: 'polygon',
+      detail_path: 'details/merged/hejfish-12046.json',
+    };
+    const geoIndexEntry: HejfishGeoIndexEntry = {
+      id: 'hejfish-12046',
+      platform: 'merged',
+      name: 'Kiesgrube Schwarzer Hecht',
+      lat: 50.789989,
+      lng: 10.30387,
+      points: [{ lat: 50.789989, lng: 10.30387 }],
+      geometry_quality: 'polygon',
+    };
+    const area: HejfishArea = {
+      id: 'hejfish-12046',
+      source_platform: 'merged',
+      source_ids: {
+        hejfish: 12046,
+        alleangeln: 'kiesgrube-schwarzer-hecht',
+      },
+      name: 'Kiesgrube Schwarzer Hecht',
+      water_type: 'See',
+      country: 'DE',
+      center: {
+        lat: 50.789989,
+        lng: 10.30387,
+        source: 'hejfish_api_map_geojson',
+        confidence: 'high',
+      },
+      geometry: {
+        points: [{ lat: 50.790017, lng: 10.30405 }],
+        lines: [],
+        polygons: [[
+          { lat: 50.789592, lng: 10.304312 },
+          { lat: 50.789968, lng: 10.304827 },
+          { lat: 50.790175, lng: 10.304897 },
+          { lat: 50.789592, lng: 10.304312 },
+        ]],
+        source: 'hejfish_api_map_geojson',
+        confidence: 'high',
+      },
+      links: {
+        source: 'https://www.hejfish.com/d/12046-kiesgrube-schwarzer-hecht',
+        hejfish: 'https://www.hejfish.com/d/12046-kiesgrube-schwarzer-hecht',
+        alleangeln: 'https://www.alleangeln.de/gewaesser/kiesgrube-schwarzer-hecht',
+        image: 'https://example.test/hecht.jpg',
+      },
+      fish: ['Karpfen', 'Schleie', 'Rotauge', 'Hecht', 'Flussbarsch', 'Aal', 'Regenbogenforelle'],
+      metadata: {
+        merged_fields: {
+          center: 'hejfish',
+          fish: ['hejfish', 'alleangeln'],
+          description: 'hejfish',
+          geometry: 'hejfish',
+          water_type: 'hejfish',
+        },
+        sources: {
+          hejfish: {
+            platform: 'hejfish',
+            description: '<p>Kleiner Kiessee mit sehr gutem Karpfenbestand.</p>',
+            techniques: ['Ansitzangeln', 'Spinnangeln'],
+            rules_text: '<p>Gewaesserordnung beachten.</p>',
+            tickets: [{ name: 'Tageskarte', price: '17,50 EUR' }],
+            manager: { name: 'Sportanglerverein Barchfeld e.V.' },
+            features: { digital_ticket: true },
+            location: {
+              city: { name: 'Barchfeld' },
+              state: { name: 'Thueringen' },
+              country: { name: 'Deutschland', code: 'de' },
+            },
+          },
+          alleangeln: {
+            platform: 'alleangeln',
+            best_method: 'Spinnfischen',
+          },
+        },
+      },
+      last_updated: '2026-05-07T11:46:39.173Z',
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const detailUrls: string[] = [];
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
+      detailUrls.push(url);
+      if (url.includes('/details/merged/hejfish-12046.json')) return new Response(JSON.stringify(area));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(50.789989, 10.30387);
+
+      expect(detailUrls[0]).toContain('/details/merged/hejfish-12046.json');
+      expect(profile?.id).toBe('hejfish-12046');
+      expect(profile?.latitude).toBe(50.789989);
+      expect(profile?.longitude).toBe(10.30387);
+      expect(profile?.sources).toEqual(['hejfish', 'alleangeln']);
+      expect(profile?.description).toContain('Kleiner Kiessee');
+      expect(profile?.imageUrl).toBe('https://example.test/hecht.jpg');
+      expect(profile?.species.map((entry) => entry.species)).toEqual(expect.arrayContaining(['hecht', 'barsch', 'aal', 'forelle']));
+      expect(profile?.areaDetails?.mapGeometry?.points).toEqual([{ lat: 50.790017, lng: 10.30405 }]);
+      expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
+      expect(profile?.areaDetails?.tickets?.[0].name).toBe('Tageskarte');
+      expect(profile?.areaDetails?.mobileTicket).toBe(true);
+      expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/kiesgrube-schwarzer-hecht')).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
