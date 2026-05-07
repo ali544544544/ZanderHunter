@@ -123,6 +123,46 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('keeps lite metadata when a matching geo index entry has no detail file', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 'hejfish-12004',
+      name: 'Detailfreier Testsee',
+      lat: 51.1,
+      lng: 9.1,
+      water_type: 'See',
+      platform: 'merged',
+      fish_count: 0,
+    };
+    const geoIndexEntry: HejfishGeoIndexEntry = {
+      id: 12004,
+      name: 'Detailfreier Testsee',
+      lat: 51.1001,
+      lng: 9.1001,
+      water_type: 'See',
+      points: [{ lat: 51.1001, lng: 9.1001 }],
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(51.1001, 9.1001);
+
+      expect(profile?.id).toBe('hejfish-12004');
+      expect(profile?.name).toBe('Detailfreier Testsee');
+      expect(profile?.sources).toEqual(['hejfish']);
+      expect(profile?.dataQuality).toBe('medium');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('uses the generated geo index when the lite area has no coordinates', async () => {
     const liteArea: HejfishAreaLite = {
       id: 12189,

@@ -50,10 +50,10 @@ export class HejfishAreasProvider implements WaterDataProvider {
       this.loadLiteAreas(),
       this.loadGeoIndex(),
     ]);
-    const candidates = this.findAreaCandidates(liteAreas, geoIndex, lat, lng).slice(0, 16);
+    const candidates = this.findAreaCandidates(liteAreas, geoIndex, lat, lng);
     if (candidates.length === 0) return null;
 
-    const details = (await Promise.all(candidates.map((candidate) => this.loadAreaDetail(candidate.id))))
+    const details = (await Promise.all(candidates.slice(0, 32).map((candidate) => this.loadAreaDetail(candidate.id))))
       .filter((area): area is HejfishArea => Boolean(area));
 
     const polygonMatch = details.find((area) => this.isInsideAreaPolygon(lat, lng, area));
@@ -247,8 +247,24 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
     for (const candidate of candidates) {
       const existing = unique.get(candidate.id);
-      if (!existing || candidate.distance < existing.distance) {
+      if (!existing) {
         unique.set(candidate.id, candidate);
+        continue;
+      }
+
+      if (candidate.distance < existing.distance) {
+        unique.set(candidate.id, {
+          ...candidate,
+          area: candidate.area || existing.area,
+        });
+        continue;
+      }
+
+      if (!existing.area && candidate.area) {
+        unique.set(candidate.id, {
+          ...existing,
+          area: candidate.area,
+        });
       }
     }
 

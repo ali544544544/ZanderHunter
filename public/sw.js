@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zanderhunter-v3';
+const CACHE_NAME = 'zanderhunter-v4';
 const APP_SHELL = ['.', 'index.html', 'manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -54,6 +54,19 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match('index.html') || caches.match('.')),
+    );
+    return;
+  }
+
+  if (requestUrl.pathname.includes('/data/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(async () => (await caches.match(event.request)) || Response.error()),
     );
     return;
   }
