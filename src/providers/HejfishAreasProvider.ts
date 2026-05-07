@@ -4,7 +4,7 @@ import type { DataQuality, DataSource, FishSpecies, WaterBodyProfile, WaterBodyT
 type Coordinate = { lat: number; lng: number };
 type AreaId = number | string;
 type AreaCandidate = { id: string; platform: string; area?: HejfishAreaLite; distance: number; regional?: boolean };
-type AreaDetailMatch = { area: HejfishArea; distance: number; candidateDistance: number; insidePolygon: boolean };
+type AreaDetailMatch = { area: HejfishArea; distance: number; candidateDistance: number; insidePolygon: boolean; regional: boolean };
 type ProfileManager = NonNullable<WaterBodyProfile['areaDetails']>['manager'];
 type RelatedAreaLink = { source: DataSource; label: string; url: string };
 
@@ -296,8 +296,10 @@ export class HejfishAreasProvider implements WaterDataProvider {
     lng: number
   ): HejfishArea | null {
     const candidateDistanceById = new Map<string, number>();
+    const candidateRegionalById = new Map<string, boolean>();
     for (const candidate of candidates) {
       candidateDistanceById.set(candidate.id, candidate.distance);
+      candidateRegionalById.set(candidate.id, Boolean(candidate.regional));
     }
 
     const matches = details
@@ -308,16 +310,27 @@ export class HejfishAreasProvider implements WaterDataProvider {
           distance: this.getNearestAreaDistanceMeters(lat, lng, area),
           candidateDistance: candidateDistanceById.get(id) ?? Number.POSITIVE_INFINITY,
           insidePolygon: this.isInsideAreaPolygon(lat, lng, area),
+          regional: candidateRegionalById.get(id) ?? false,
         };
       })
       .filter((match) => (
         match.insidePolygon
         || match.distance <= this.getRadiusMeters(match.area)
         || match.candidateDistance <= this.getRadiusMeters(match.area)
-      ))
-      .sort((a, b) => this.getAreaMatchScore(a) - this.getAreaMatchScore(b));
+      ));
 
-    return matches[0]?.area || null;
+    const closeDirectMatchScore = Math.min(
+      ...matches
+        .filter((match) => !match.regional)
+        .map((match) => this.getAreaMatchScore(match))
+        .filter((score) => Number.isFinite(score) && score <= 1500)
+    );
+    const filteredMatches = Number.isFinite(closeDirectMatchScore)
+      ? matches.filter((match) => !match.regional || this.getAreaMatchScore(match) <= closeDirectMatchScore * 1.4)
+      : matches;
+
+    return filteredMatches
+      .sort((a, b) => this.getAreaMatchScore(a) - this.getAreaMatchScore(b))[0]?.area || null;
   }
 
   private getAreaMatchScore(match: AreaDetailMatch): number {

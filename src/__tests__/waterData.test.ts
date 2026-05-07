@@ -400,6 +400,78 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('prefers the nearest city water over regional Hamburg combo waters', async () => {
+    const liteAreas: HejfishAreaLite[] = [
+      {
+        id: 'alleangeln-außenalster',
+        name: 'Außenalster',
+        lat: 53.564222482522,
+        lng: 10.006684783935,
+        water_type: 'See',
+        platform: 'alleangeln',
+        fish_count: 0,
+      },
+      {
+        id: 'hejfish-12190',
+        name: 'Strom-Elbe Hamburg (Kombi-Karte)',
+        lat: 53.397707,
+        lng: 10.178841,
+        water_type: 'Fluss',
+        platform: 'hejfish',
+        fish_count: 18,
+      },
+    ];
+    const außenalster: HejfishArea = {
+      id: 'außenalster',
+      global_id: 'alleangeln-außenalster',
+      source_platform: 'alleangeln',
+      name: 'Außenalster',
+      water_type: 'See',
+      description: 'Außenalster ist ein See in Hamburg.',
+      lat: 53.564222482522,
+      lng: 10.006684783935,
+      error: false,
+    };
+    const stromElbe: HejfishArea = {
+      id: 12190,
+      global_id: 'hejfish-12190',
+      source_platform: 'hejfish',
+      name: 'Strom-Elbe Hamburg (Kombi-Karte)',
+      water_type: 'Fluss',
+      fish: ['Zander', 'Hecht'],
+      lat: 53.397707,
+      lng: 10.178841,
+      map_data: {
+        locations: [
+          { lat: 53.486067, lng: 10.053832 },
+          { lat: 53.528347, lng: 9.825725 },
+        ],
+      },
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify(liteAreas));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      if (url.includes('/details/alleangeln/alleangeln-außenalster.json')) return new Response(JSON.stringify(außenalster));
+      if (url.includes('/details/hejfish/hejfish-12190.json')) return new Response(JSON.stringify(stromElbe));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.5637, 10.0028);
+
+      expect(profile?.id).toBe('alleangeln-außenalster');
+      expect(profile?.name).toBe('Außenalster');
+      expect(profile?.sources).toEqual(['alleangeln']);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('keeps lite metadata when a matching geo index entry has no detail file', async () => {
     const liteArea: HejfishAreaLite = {
       id: 'hejfish-12004',
