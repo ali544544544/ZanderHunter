@@ -59,7 +59,11 @@ export class HejfishAreasProvider implements WaterDataProvider {
     if (candidates.length === 0) return null;
 
     const nearestCoordinateCandidate = this.getNearestCoordinateCandidate(candidates);
-    if (nearestCoordinateCandidate && nearestCoordinateCandidate.distance <= this.getNearestPreferredRadiusMeters(nearestCoordinateCandidate.area)) {
+    if (
+      nearestCoordinateCandidate
+      && nearestCoordinateCandidate.distance <= this.getNearestPreferredRadiusMeters(nearestCoordinateCandidate.area)
+      && !this.shouldInspectDetailCandidates(candidates, nearestCoordinateCandidate)
+    ) {
       const detail = await this.loadAreaDetail(nearestCoordinateCandidate);
       return detail
         ? this.mapAreaToProfile(detail, lat, lng, liteAreas)
@@ -327,6 +331,44 @@ export class HejfishAreasProvider implements WaterDataProvider {
     )) || null;
   }
 
+  private shouldInspectDetailCandidates(
+    candidates: AreaCandidate[],
+    nearestCoordinateCandidate: AreaCandidate & { area: HejfishAreaLite }
+  ): boolean {
+    const nearestType = this.mapWaterType(
+      nearestCoordinateCandidate.area.water_type,
+      nearestCoordinateCandidate.area.name
+    );
+    const nearbyRegionalCandidates = candidates.filter((candidate): candidate is AreaCandidate & { area: HejfishAreaLite } => {
+      if (!candidate.regional || !candidate.area) return false;
+      return this.isLikelySpecificHamburgWater(candidate.area);
+    });
+
+    if (nearbyRegionalCandidates.length === 0) return false;
+    if (nearestCoordinateCandidate.distance > 1000) return true;
+
+    return (nearestType === 'lake' || nearestType === 'pond')
+      && this.isSmallStillwaterNearRegionalRoute(nearestCoordinateCandidate.area, nearbyRegionalCandidates);
+  }
+
+  private isSmallStillwaterNearRegionalRoute(
+    area: HejfishAreaLite,
+    regionalCandidates: Array<AreaCandidate & { area: HejfishAreaLite }>
+  ): boolean {
+    const normalizedName = this.normalize(`${area.name} ${area.slug || ''}`);
+    if (normalizedName.includes('alster')) return false;
+
+    const regionalHaystack = regionalCandidates
+      .map((candidate) => this.normalize(`${candidate.area.name} ${candidate.area.slug || ''}`))
+      .join(' ');
+
+    if (regionalHaystack.includes('doveelbe') || regionalHaystack.includes('goseelbe')) {
+      return true;
+    }
+
+    return false;
+  }
+
   private getNearestPreferredRadiusMeters(area: HejfishAreaLite): number {
     const type = this.mapWaterType(area.water_type, area.name);
     if (type === 'river' || type === 'canal') return 900;
@@ -380,6 +422,10 @@ export class HejfishAreasProvider implements WaterDataProvider {
   private getAreaMatchScore(match: AreaDetailMatch): number {
     const nearestKnownDistance = Number.isFinite(match.distance) ? match.distance : match.candidateDistance;
     const baseScore = Number.isFinite(nearestKnownDistance) ? nearestKnownDistance : Number.MAX_SAFE_INTEGER;
+
+    if (this.isLikelySpecificHamburgWater(match.area) && baseScore <= 1200) {
+      return baseScore * 0.25;
+    }
 
     if (!match.insidePolygon) return baseScore;
 
@@ -788,11 +834,17 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
   private isRegionalNameCandidate(area: HejfishAreaLite, lat: number, lng: number): boolean {
     if (!this.isHamburgRegion(lat, lng)) return false;
-    if (this.getAreaPlatform(area) !== 'hejfish') return false;
+    const platform = this.getAreaPlatform(area);
+    if (platform !== 'hejfish' && platform !== 'merged') return false;
     if (typeof area.lat === 'number' && typeof area.lng === 'number' && !this.isHamburgRegion(area.lat, area.lng)) return false;
 
     const normalized = this.normalize(`${area.name} ${area.slug || ''}`);
     return hamburgAreaKeywords.some((keyword) => normalized.includes(keyword));
+  }
+
+  private isLikelySpecificHamburgWater(area: Pick<HejfishAreaLite | HejfishArea, 'name' | 'slug'>): boolean {
+    const normalized = this.normalize(`${area.name} ${area.slug || ''}`);
+    return ['doveelbe', 'goseelbe', 'stromelbe', 'altesuederelbe'].some((keyword) => normalized.includes(keyword));
   }
 
   private getAreaProfileId(area: HejfishArea): string {

@@ -136,7 +136,7 @@ describe('HejfishAreasProvider mapping', () => {
 
     try {
       const provider = new HejfishAreasProvider();
-      const profile = await provider.getWaterBodyProfile(53.5637, 10.0028);
+      const profile = await provider.getWaterBodyProfile(53.5631, 10.0038);
 
       expect(requestedUrls[0]).toContain('/data/areas_lite.json');
       expect(requestedUrls.some((url) => url.includes('/data/dist/areas_lite.json'))).toBe(false);
@@ -558,6 +558,15 @@ describe('HejfishAreasProvider mapping', () => {
       platform: 'merged',
       fish_count: 14,
     };
+    const nearbyLake: HejfishAreaLite = {
+      id: 'alleangeln-eichbaumsee',
+      name: 'Eichbaumsee',
+      lat: 53.485366017398,
+      lng: 10.103371314819,
+      water_type: 'See',
+      platform: 'alleangeln',
+      fish_count: 0,
+    };
     const geoIndexEntry: HejfishGeoIndexEntry = {
       id: 12189,
       name: 'Dove Elbe (Kombi-Karte)',
@@ -584,14 +593,25 @@ describe('HejfishAreasProvider mapping', () => {
       },
       error: false,
     };
+    const lakeArea: HejfishArea = {
+      id: 'eichbaumsee',
+      global_id: 'alleangeln-eichbaumsee',
+      source_platform: 'alleangeln',
+      name: 'Eichbaumsee',
+      water_type: 'See',
+      lat: 53.485366017398,
+      lng: 10.103371314819,
+      error: false,
+    };
     const originalFetch = globalThis.fetch;
     const requestedDetails: string[] = [];
     const fetchMock: typeof fetch = async (input) => {
       const url = String(input);
-      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea, nearbyLake]));
       if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
       requestedDetails.push(url);
       if (url.includes('/details/merged/hejfish-12189.json')) return new Response(JSON.stringify(area));
+      if (url.includes('/details/alleangeln/alleangeln-eichbaumsee.json')) return new Response(JSON.stringify(lakeArea));
       return new Response(null, { status: 404 });
     };
     globalThis.fetch = fetchMock;
@@ -608,6 +628,10 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.dataQuality).toBe('high');
       expect(profile?.species.map((entry) => entry.species)).toContain('zander');
       expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/dove-elbe-krapphofschleuse')).toBe(true);
+
+      const mapClickProfile = await provider.getWaterBodyProfile(53.4831, 10.1016);
+      expect(mapClickProfile?.id).toBe('hejfish-12189');
+      expect(mapClickProfile?.name).toBe('Dove Elbe (Kombi-Karte)');
     } finally {
       globalThis.fetch = originalFetch;
     }
