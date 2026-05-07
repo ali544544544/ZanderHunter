@@ -64,10 +64,12 @@ describe('HejfishAreasProvider mapping', () => {
       points: [{ lat: 48.0123, lng: 9.3456 }],
     };
     const originalFetch = globalThis.fetch;
+    const detailUrls: string[] = [];
     const fetchMock: typeof fetch = async (input) => {
       const url = String(input);
       if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
       if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
+      detailUrls.push(url);
       return new Response(JSON.stringify(area));
     };
     globalThis.fetch = fetchMock;
@@ -83,6 +85,39 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
       expect(profile?.areaDetails?.tickets?.[0].name).toBe('Tageskarte');
       expect(profile?.links?.[0].url).toBe(area.url);
+      expect(detailUrls[0]).toContain('/details/hejfish-12071.json');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('accepts new global ids from lite data and falls back to lite profiles without detail files', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 'alleangeln-decksteiner-weiher',
+      name: 'Decksteiner Weiher',
+      lat: 50.9072,
+      lng: 6.8985,
+      water_type: 'Weiher',
+      platform: 'alleangeln',
+      fish_count: 0,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(50.9072, 6.8985);
+
+      expect(profile?.id).toBe('alleangeln-decksteiner-weiher');
+      expect(profile?.name).toBe('Decksteiner Weiher');
+      expect(profile?.sources).toEqual(['alleangeln']);
+      expect(profile?.type).toBe('pond');
     } finally {
       globalThis.fetch = originalFetch;
     }

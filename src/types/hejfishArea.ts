@@ -1,17 +1,18 @@
 export interface HejfishAreaLite {
-  id: number;
+  id: number | string;
   name: string;
-  slug: string;
+  slug?: string;
   lat: number | null;
   lng: number | null;
   water_type?: string | null;
   main_image?: string | null;
   fish_count?: number;
   mobile_ticket?: boolean;
+  platform?: string;
 }
 
 export interface HejfishGeoIndexEntry {
-  id: number;
+  id: number | string;
   name: string;
   slug?: string;
   lat: number;
@@ -57,6 +58,8 @@ export interface HejfishArea {
   map_data?: {
     points?: unknown[];
     polygons?: unknown[];
+    geojson?: unknown;
+    locations?: unknown[];
     data?: {
       geojson?: unknown;
       locations?: unknown[];
@@ -64,5 +67,8 @@ export interface HejfishArea {
   };
   country?: string;
   last_updated?: string;
+  source_platform?: string;
+  global_id?: string;
+  external_ids?: Record<string, number | string>;
   error?: boolean;
 }

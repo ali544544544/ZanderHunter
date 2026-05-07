@@ -28,6 +28,7 @@ const sourceLabels: Record<DataSource, string> = {
   fischinfo_nrw: 'FischInfo NRW',
   anglermap: 'Anglermap',
   hejfish: 'Angelkarten-Daten',
+  alleangeln: 'Alle Angeln',
   unknown: 'Schätzung',
 };
 
