@@ -165,6 +165,69 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('prefers short border info and links matching Alle Angeln entries', async () => {
+    const liteAreas: HejfishAreaLite[] = [
+      {
+        id: 'hejfish-12720',
+        name: 'Gose Elbe (Kombi-Karte)',
+        lat: 53.419741,
+        lng: 10.20275,
+        water_type: 'Altarm',
+        platform: 'hejfish',
+        fish_count: 14,
+      },
+      {
+        id: 'alleangeln-gose-elbe',
+        name: 'Gose Elbe',
+        lat: 53.458185,
+        lng: 10.156695,
+        water_type: 'Fluss',
+        platform: 'alleangeln',
+        fish_count: 0,
+      },
+    ];
+    const area: HejfishArea = {
+      id: 12720,
+      global_id: 'hejfish-12720',
+      source_platform: 'hejfish',
+      name: 'Gose Elbe (Kombi-Karte)',
+      url: 'https://www.hejfish.com/d/12720-gose-elbe-kombi-karte',
+      water_type: 'Altarm',
+      description: '<p>Die Gose Elbe ist ein ca. 15km langer Altwasserarm.</p>',
+      borders: '<p>Gose-Elbe: Es darf ab der Bruecke Heinrich-Stubbe-Web bis zur Reitschleuse geangelt werden.</p><p>Dove-Elbe: Es darf die Strecke von der Krapphof-Schleuse bis zur Tatenberger-Schleuse beangelt werden.</p>',
+      rules_text: 'Fangmeldung und allgemeine Verhaltensregeln. Grenzen des Gewaessers: Viel zu spaet.',
+      fish: ['Zander', 'Flussbarsch', 'Karpfen'],
+      techniques: ['Spinnangeln'],
+      tickets: [{ name: 'Jahreskarte', price: '30,00 EUR' }],
+      lat: 53.419741,
+      lng: 10.20275,
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify(liteAreas));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      if (url.includes('/details/hejfish/hejfish-12720.json')) return new Response(JSON.stringify(area));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.419741, 10.20275);
+
+      expect(profile?.dataQuality).toBe('high');
+      expect(profile?.sources).toEqual(['hejfish', 'alleangeln']);
+      expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/gose-elbe')).toBe(true);
+      expect(profile?.areaDetails?.rulesText).toContain('Gose-Elbe');
+      expect(profile?.areaDetails?.rulesText).toContain('Dove-Elbe');
+      expect(profile?.areaDetails?.rulesText).not.toContain('Fangmeldung');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('keeps lite metadata when a matching geo index entry has no detail file', async () => {
     const liteArea: HejfishAreaLite = {
       id: 'hejfish-12004',
