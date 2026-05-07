@@ -117,6 +117,9 @@ describe('HejfishAreasProvider mapping', () => {
       name: 'Außenalster',
       water_type: 'See',
       description: 'Außenalster ist ein See in Hamburg.',
+      fish: [],
+      most_caught_fish: ['Flussbarsch', 'Hecht', 'Zander', 'Brachse', 'Rapfen', '14 weitere Fischarten'],
+      best_method: 'Spinnfischen',
       lat: 53.564222482522,
       lng: 10.006684783935,
       error: false,
@@ -142,6 +145,9 @@ describe('HejfishAreasProvider mapping', () => {
       expect(requestedUrls.some((url) => url.includes('/data/dist/areas_lite.json'))).toBe(false);
       expect(profile?.id).toBe('alleangeln-außenalster');
       expect(profile?.sources).toEqual(['alleangeln']);
+      expect(profile?.species.map((entry) => entry.species)).toEqual(expect.arrayContaining(['barsch', 'hecht', 'zander', 'brasse']));
+      expect(profile?.species.map((entry) => entry.displayName)).not.toContain('14 weitere Fischarten');
+      expect(profile?.areaDetails?.techniques).toEqual(['Spinnfischen']);
     } finally {
       globalThis.fetch = originalFetch;
     }

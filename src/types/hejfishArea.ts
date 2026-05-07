@@ -39,6 +39,11 @@ export interface HejfishArea {
   borders?: string;
   water_size_ha?: number | null;
   fish?: string[];
+  most_caught_fish?: string[];
+  best_method?: string;
+  followers?: number;
+  catches_count?: number;
+  images_count?: number;
   techniques?: string[];
   properties?: string[];
   season?: string;

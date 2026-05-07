@@ -609,13 +609,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
   private mapAreaToProfile(area: HejfishArea, lat: number, lng: number, liteAreas: HejfishAreaLite[] = []): WaterBodyProfile {
     const lastUpdated = new Date(area.last_updated || Date.now());
-    const uniqueFish = Array.from(new Map(this.normalizeFishList(area.fish || []).map((name) => {
+    const fishNames = this.getAreaFishNames(area);
+    const uniqueFish = Array.from(new Map(fishNames.map((name) => {
       const species = this.mapFishSpecies(name);
       return [species, { species, displayName: name }];
     })).values());
     const mapGeometry = this.getAreaMapGeometry(area);
     const locationInfo = this.getLocationInfo(area);
-    const techniques = this.cleanList(area.techniques || []);
+    const techniques = this.cleanList([...(area.techniques || []), area.best_method || '']);
     const techniqueKeys = new Set(techniques.map((entry) => this.normalize(entry)));
     const properties = this.cleanList(area.properties || [])
       .filter((entry) => !entry.toLowerCase().startsWith('techniken'))
@@ -820,6 +821,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
   private mapFishSpecies(name: string): FishSpecies {
     const normalized = this.normalize(name);
     return knownSpeciesMap[normalized] || normalized || name;
+  }
+
+  private getAreaFishNames(area: HejfishArea): string[] {
+    const primaryFish = this.normalizeFishList(area.fish || []);
+    if (primaryFish.length > 0) return primaryFish;
+
+    return this.normalizeFishList(area.most_caught_fish || [])
+      .filter((name) => !/^\d+\s+weitere/i.test(name));
   }
 
   private mapWaterType(type?: string | null, name?: string): WaterBodyType {

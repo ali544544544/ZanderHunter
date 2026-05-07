@@ -225,7 +225,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Gewässer</p>
-            {profile.sources.includes('hejfish') && (
+            {(profile.sources.includes('hejfish') || profile.sources.includes('alleangeln')) && (
               <span className="rounded border border-blue-400/20 bg-blue-400/10 px-1.5 py-0.5 text-[9px] font-black uppercase text-blue-200">
                 Gewässerdaten
               </span>
