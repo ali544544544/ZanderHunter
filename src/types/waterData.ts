@@ -72,9 +72,12 @@ export interface WaterBodyProfile {
     techniques?: string[];
     properties?: string[];
     rulesText?: string;
+    rulesFiles?: Array<{ name: string; url: string }>;
     mobileTicket?: boolean;
     printRequired?: boolean;
     tickets?: Array<{ name: string; price?: string }>;
+    ticketTypes?: unknown[];
+    features?: string[];
     manager?: {
       name?: string;
       phone?: string;

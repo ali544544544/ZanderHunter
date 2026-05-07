@@ -85,7 +85,7 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
       expect(profile?.areaDetails?.tickets?.[0].name).toBe('Tageskarte');
       expect(profile?.links?.[0].url).toBe(area.url);
-      expect(detailUrls[0]).toContain('/details/hejfish-12071.json');
+      expect(detailUrls[0]).toContain('/details/hejfish/hejfish-12071.json');
     } finally {
       globalThis.fetch = originalFetch;
     }

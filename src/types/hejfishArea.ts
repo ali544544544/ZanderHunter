@@ -29,29 +29,44 @@ export interface HejfishGeoIndexEntry {
 }
 
 export interface HejfishArea {
-  id: number;
-  slug: string;
-  url: string;
+  id: number | string;
+  slug?: string;
+  url?: string;
   name: string;
   description?: string;
+  intro?: string;
+  details?: string;
   water_size_ha?: number | null;
   fish?: string[];
   techniques?: string[];
   properties?: string[];
   season?: string;
+  season_begin?: string;
+  season_end?: string;
   water_type?: string;
   rules_text?: string;
+  rules_files?: Array<{ name?: string; description?: string | null; file?: string; url?: string }>;
   mobile_ticket?: boolean;
   print_required?: boolean;
   tickets?: Array<{ name: string; price?: string }>;
+  ticket_types?: unknown[];
   manager?: {
     name?: string;
     phone?: string;
+    telephone?: string;
     email?: string;
     website?: string;
   };
   main_image?: string;
+  image?: string;
   location_info?: string[];
+  location?: {
+    city?: { name?: string };
+    district?: { name?: string };
+    state?: { name?: string };
+    country?: { name?: string; code?: string };
+  };
+  features?: Record<string, boolean | string | number | null | undefined>;
   lat?: number;
   lng?: number;
   geocode_source?: string;
