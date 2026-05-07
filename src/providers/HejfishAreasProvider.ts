@@ -3,7 +3,7 @@ import type { DataQuality, DataSource, FishSpecies, WaterBodyProfile, WaterBodyT
 
 type Coordinate = { lat: number; lng: number };
 type AreaId = number | string;
-type AreaCandidate = { id: string; platform: string; area?: HejfishAreaLite; distance: number; regional?: boolean };
+type AreaCandidate = { id: string; platform: string; area?: HejfishAreaLite; distance: number; regional?: boolean; coordinate?: boolean };
 type AreaDetailMatch = { area: HejfishArea; distance: number; candidateDistance: number; insidePolygon: boolean; regional: boolean };
 type ProfileManager = NonNullable<WaterBodyProfile['areaDetails']>['manager'];
 type RelatedAreaLink = { source: DataSource; label: string; url: string };
@@ -251,6 +251,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       ...this.findLiteCandidates(areas, lat, lng),
     ];
     const unique = new Map<string, AreaCandidate>();
+    const areaById = new Map(areas.map((area) => [this.getGlobalAreaId(area.id, area.platform), area]));
 
     for (const candidate of candidates) {
       const existing = unique.get(candidate.id);
@@ -265,6 +266,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
           ...candidate,
           area,
           platform: area ? this.getAreaPlatform(area) : candidate.platform,
+          regional: candidate.area ? candidate.regional : existing.regional,
+          coordinate: candidate.coordinate || existing.coordinate,
         });
         continue;
       }
@@ -274,8 +277,25 @@ export class HejfishAreasProvider implements WaterDataProvider {
           ...existing,
           area: candidate.area,
           platform: this.getAreaPlatform(candidate.area),
+          regional: candidate.regional,
+          coordinate: candidate.coordinate || existing.coordinate,
         });
       }
+    }
+
+    for (const [id, candidate] of unique) {
+      if (candidate.area) continue;
+
+      const area = areaById.get(id);
+      if (!area) continue;
+
+      unique.set(id, {
+        ...candidate,
+        area,
+        platform: this.getAreaPlatform(area),
+        regional: candidate.regional || this.isRegionalNameCandidate(area, lat, lng),
+        coordinate: candidate.coordinate,
+      });
     }
 
     return Array.from(unique.values()).sort((a, b) => a.distance - b.distance);
@@ -301,6 +321,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return candidates.find((candidate): candidate is AreaCandidate & { area: HejfishAreaLite } => (
       !candidate.regional
       && Boolean(candidate.area)
+      && candidate.coordinate === true
       && Number.isFinite(candidate.distance)
       && candidate.distance < Number.MAX_SAFE_INTEGER
     )) || null;
@@ -388,6 +409,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
         platform: this.getAreaPlatform(area),
         area,
         distance: this.distanceMeters(lat, lng, area.lat as number, area.lng as number),
+        coordinate: true,
       }))
       .filter((match) => match.distance <= this.getLiteRadiusMeters(match.area))
       .sort((a, b) => a.distance - b.distance);
@@ -400,6 +422,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
         area,
         distance: Number.MAX_SAFE_INTEGER,
         regional: true,
+        coordinate: false,
       }));
 
     return [...regionalCandidates, ...coordinateCandidates];

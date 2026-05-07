@@ -451,10 +451,24 @@ describe('HejfishAreasProvider mapping', () => {
     };
     const originalFetch = globalThis.fetch;
     const requestedDetails: string[] = [];
+    const geoIndex: HejfishGeoIndexEntry[] = [{
+      id: 12190,
+      name: 'Strom-Elbe Hamburg (Kombi-Karte)',
+      lat: 53.5637,
+      lng: 10.0028,
+      water_type: 'Fluss',
+      bounds: {
+        minLat: 53.55,
+        maxLat: 53.57,
+        minLng: 9.99,
+        maxLng: 10.02,
+      },
+      points: [{ lat: 53.5637, lng: 10.0028 }],
+    }];
     const fetchMock: typeof fetch = async (input) => {
       const url = String(input);
       if (url.includes('areas_lite')) return new Response(JSON.stringify(liteAreas));
-      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify(geoIndex));
       requestedDetails.push(url);
       if (url.includes('/details/alleangeln/alleangeln-außenalster.json')) return new Response(JSON.stringify(außenalster));
       if (url.includes('/details/hejfish/hejfish-12190.json')) return new Response(JSON.stringify(stromElbe));
@@ -473,6 +487,71 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.id).toBe('alleangeln-außenalster');
       expect(profile?.name).toBe('Außenalster');
       expect(profile?.sources).toEqual(['alleangeln']);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('keeps merged platform when geo index and lite index share the same id', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 'hejfish-12189',
+      name: 'Dove Elbe (Kombi-Karte)',
+      lat: 53.469139,
+      lng: 10.189977,
+      water_type: 'Altarm',
+      platform: 'merged',
+      fish_count: 14,
+    };
+    const geoIndexEntry: HejfishGeoIndexEntry = {
+      id: 12189,
+      name: 'Dove Elbe (Kombi-Karte)',
+      lat: 53.498851,
+      lng: 10.078256,
+      water_type: 'Altarm',
+      points: [{ lat: 53.498851, lng: 10.078256 }],
+    };
+    const area: HejfishArea = {
+      id: 12189,
+      global_id: 'hejfish-12189',
+      source_platform: 'merged',
+      external_ids: { hejfish: 12189, alleangeln: 'dove-elbe-krapphofschleuse' },
+      name: 'Dove Elbe (Kombi-Karte)',
+      water_type: 'Altarm',
+      fish: ['Zander', 'Hecht', 'Flussbarsch'],
+      techniques: ['Spinnangeln'],
+      borders: 'Dove-Elbe: Angelstrecke der Kombi-Karte.',
+      tickets: [{ name: 'Jahreskarte', price: '30,00 EUR' }],
+      lat: 53.469139,
+      lng: 10.189977,
+      map_data: {
+        locations: [{ lat: 53.498851, lng: 10.078256 }],
+      },
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const requestedDetails: string[] = [];
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([geoIndexEntry]));
+      requestedDetails.push(url);
+      if (url.includes('/details/merged/hejfish-12189.json')) return new Response(JSON.stringify(area));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.498851, 10.078256);
+
+      expect(requestedDetails).toEqual(expect.arrayContaining([
+        expect.stringContaining('/details/merged/hejfish-12189.json'),
+      ]));
+      expect(requestedDetails.some((url) => url.includes('/details/hejfish/hejfish-12189.json'))).toBe(false);
+      expect(profile?.id).toBe('hejfish-12189');
+      expect(profile?.dataQuality).toBe('high');
+      expect(profile?.species.map((entry) => entry.species)).toContain('zander');
+      expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/dove-elbe-krapphofschleuse')).toBe(true);
     } finally {
       globalThis.fetch = originalFetch;
     }
