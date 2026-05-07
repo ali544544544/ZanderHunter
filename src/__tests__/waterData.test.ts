@@ -91,6 +91,62 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('prefers the bundled public data index before stale dist data', async () => {
+    const publicLiteArea: HejfishAreaLite = {
+      id: 'alleangeln-außenalster',
+      name: 'Außenalster',
+      lat: 53.564222482522,
+      lng: 10.006684783935,
+      water_type: 'See',
+      platform: 'alleangeln',
+      fish_count: 0,
+    };
+    const staleDistLiteArea: HejfishAreaLite = {
+      id: 'hejfish-12190',
+      name: 'Strom-Elbe Hamburg (Kombi-Karte)',
+      lat: 53.397707,
+      lng: 10.178841,
+      water_type: 'Fluss',
+      platform: 'hejfish',
+      fish_count: 18,
+    };
+    const publicDetail: HejfishArea = {
+      id: 'außenalster',
+      global_id: 'alleangeln-außenalster',
+      source_platform: 'alleangeln',
+      name: 'Außenalster',
+      water_type: 'See',
+      description: 'Außenalster ist ein See in Hamburg.',
+      lat: 53.564222482522,
+      lng: 10.006684783935,
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const requestedUrls: string[] = [];
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      requestedUrls.push(url);
+      if (url.includes('/data/areas_lite.json')) return new Response(JSON.stringify([publicLiteArea]));
+      if (url.includes('/data/dist/areas_lite.json')) return new Response(JSON.stringify([staleDistLiteArea]));
+      if (url.includes('/data/areas_geo_index.json')) return new Response(JSON.stringify([]));
+      if (url.includes('/data/details/alleangeln/alleangeln-außenalster.json')) return new Response(JSON.stringify(publicDetail));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.5637, 10.0028);
+
+      expect(requestedUrls[0]).toContain('/data/areas_lite.json');
+      expect(requestedUrls.some((url) => url.includes('/data/dist/areas_lite.json'))).toBe(false);
+      expect(profile?.id).toBe('alleangeln-außenalster');
+      expect(profile?.sources).toEqual(['alleangeln']);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('accepts new global ids from lite data and falls back to lite profiles without detail files', async () => {
     const liteArea: HejfishAreaLite = {
       id: 'alleangeln-decksteiner-weiher',
