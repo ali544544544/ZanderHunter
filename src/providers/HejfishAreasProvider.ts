@@ -702,11 +702,38 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private getSeasonText(area: HejfishArea): string | undefined {
-    if (area.season) return this.cleanText(area.season);
-    if (area.season_begin || area.season_end) {
-      return this.cleanText([area.season_begin, area.season_end].filter(Boolean).join(' bis '));
-    }
+    const season = this.cleanText(area.season);
+    if (season && !this.isPlaceholderSeason(season)) return season;
+
+    const begin = this.formatSeasonDate(area.season_begin);
+    const end = this.formatSeasonDate(area.season_end);
+    if (begin && end) return `${begin} bis ${end}`;
+    if (begin) return `ab ${begin}`;
+    if (end) return `bis ${end}`;
+
     return undefined;
+  }
+
+  private formatSeasonDate(value?: string): string | undefined {
+    const clean = this.cleanText(value);
+    if (!clean || this.isPlaceholderSeason(clean)) return undefined;
+
+    const isoDate = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoDate) {
+      const [, year, month, day] = isoDate;
+      return `${day}.${month}.${year}`;
+    }
+
+    return clean;
+  }
+
+  private isPlaceholderSeason(value: string): boolean {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return true;
+    if (normalized.startsWith('0001-')) return true;
+    if (normalized.includes('0001-01-01') && normalized.includes('0001-12-31')) return true;
+
+    return false;
   }
 
   private getRulesFiles(area: HejfishArea): Array<{ name: string; url: string }> {

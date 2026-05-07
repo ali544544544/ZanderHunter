@@ -107,7 +107,39 @@ function DetailRow({ label, value }: { label: string; value?: React.ReactNode })
   return (
     <div className="grid grid-cols-[92px_1fr] gap-3 border-t border-slate-800 py-2 first:border-t-0 first:pt-0 last:pb-0">
       <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
-      <span className="text-xs font-semibold leading-relaxed text-slate-300">{value}</span>
+      <div className="text-xs font-semibold leading-relaxed text-slate-300">{value}</div>
+    </div>
+  );
+}
+
+function CollapsibleText({
+  text,
+  limit = 360,
+  className = '',
+}: {
+  text: string;
+  limit?: number;
+  className?: string;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const normalized = text.trim();
+  const shouldCollapse = normalized.length > limit;
+  const visibleText = shouldCollapse && !expanded
+    ? `${normalized.slice(0, limit).trimEnd()}...`
+    : normalized;
+
+  return (
+    <div className={className}>
+      <p className="whitespace-pre-line">{visibleText}</p>
+      {shouldCollapse && (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-2 rounded-md border border-slate-700 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-blue-200 transition-colors hover:border-blue-400/50 hover:bg-blue-400/10"
+        >
+          {expanded ? 'Weniger anzeigen' : 'Mehr anzeigen'}
+        </button>
+      )}
     </div>
   );
 }
@@ -237,9 +269,11 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
       )}
 
       {profile.description && (
-        <p className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300">
-          {profile.description}
-        </p>
+        <CollapsibleText
+          text={profile.description}
+          limit={420}
+          className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300"
+        />
       )}
 
       <div className="space-y-2">
@@ -264,7 +298,10 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
         <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
           <DetailRow label="Saison" value={details?.season} />
           <DetailRow label="Hinweise" value={details?.properties && details.properties.length > 0 ? details.properties.join(', ') : undefined} />
-          <DetailRow label="Regeln" value={details?.rulesText} />
+          <DetailRow
+            label="Regeln"
+            value={details?.rulesText ? <CollapsibleText text={details.rulesText} limit={320} /> : undefined}
+          />
         </div>
       )}
 

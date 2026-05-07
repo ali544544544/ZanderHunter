@@ -123,6 +123,48 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('does not expose placeholder season dates from generated details', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 'hejfish-16000',
+      name: 'Platzhalter Saisonsee',
+      lat: 52.1,
+      lng: 10.1,
+      water_type: 'See',
+      platform: 'hejfish',
+      fish_count: 1,
+    };
+    const area: HejfishArea = {
+      id: 16000,
+      global_id: 'hejfish-16000',
+      source_platform: 'hejfish',
+      name: 'Platzhalter Saisonsee',
+      water_type: 'See',
+      fish: ['Zander'],
+      season_begin: '0001-01-01',
+      season_end: '0001-12-31',
+      lat: 52.1,
+      lng: 10.1,
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      return new Response(JSON.stringify(area));
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(52.1, 10.1);
+
+      expect(profile?.areaDetails?.season).toBeUndefined();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('keeps lite metadata when a matching geo index entry has no detail file', async () => {
     const liteArea: HejfishAreaLite = {
       id: 'hejfish-12004',
