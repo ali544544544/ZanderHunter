@@ -18,6 +18,7 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
   };
 
   const status = getStatus(score);
+  const isClosedSeason = Boolean(scoreDetails?.legal.schonzeitAktiv);
 
   if (loading) {
     return (
@@ -40,8 +41,24 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
       </div>
       
       <div className={`mt-6 px-4 py-2 rounded-full font-bold text-lg ${status.color} ${status.bg}`}>
-        {scoreDetails?.legal.schonzeitAktiv ? 'Schonzeit aktiv' : status.text}
+        {status.text}
       </div>
+
+      {isClosedSeason && (
+        <div className="mt-4 w-full rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-left shadow-[0_0_24px_rgba(239,68,68,0.12)]">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-sm font-black text-red-200">
+              !
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-widest text-red-300">Schonzeit aktiv</p>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-red-100">
+                {scoreDetails?.legal.hinweis || `Der ${fishLabel}-Score zeigt die aktuellen biologischen Bedingungen. Bitte nicht gezielt auf ${fishLabel} angeln.`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {scoreDetails && (
         <div className="mt-5 w-full grid grid-cols-2 gap-2 text-xs">
