@@ -10,7 +10,7 @@ type StoredProfile = {
 const DB_NAME = 'zanderhunter-water-data-cache';
 const STORE_NAME = 'profiles';
 const DB_VERSION = 1;
-const CACHE_KEY_VERSION = 'v18';
+const CACHE_KEY_VERSION = 'v19';
 
 function normalizeProfileCopy(profile: WaterBodyProfile): WaterBodyProfile {
   if (profile.name !== 'Kein Hejfish-Gewässer gefunden') return profile;

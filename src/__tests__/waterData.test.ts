@@ -290,6 +290,116 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('prefers nearby merged lake details over broad canal polygons', async () => {
+    const liteAreas: HejfishAreaLite[] = [
+      {
+        id: 'hejfish-15387',
+        name: 'Prüßsee',
+        lat: 53.529811766365256,
+        lng: 10.68531693338845,
+        water_type: 'Baggersee',
+        platform: 'merged',
+        fish_count: 15,
+      },
+      {
+        id: 'hejfish-12544',
+        name: 'Elbe-Lübeck-Kanal',
+        lat: 53.60619849155722,
+        lng: 10.625313520431519,
+        water_type: 'Kanal',
+        platform: 'hejfish',
+        fish_count: 16,
+      },
+    ];
+    const geoIndex: HejfishGeoIndexEntry[] = [
+      {
+        id: 12544,
+        name: 'Elbe-Lübeck-Kanal',
+        lat: 53.51854,
+        lng: 10.635424,
+        water_type: 'Kanal',
+        bounds: {
+          minLat: 53.5,
+          maxLat: 53.55,
+          minLng: 10.6,
+          maxLng: 10.7,
+        },
+        points: [{ lat: 53.51854, lng: 10.635424 }],
+      },
+    ];
+    const prueßsee: HejfishArea = {
+      id: 15387,
+      global_id: 'hejfish-15387',
+      source_platform: 'merged',
+      external_ids: { hejfish: 15387, alleangeln: 'prüßsee' },
+      name: 'Prüßsee',
+      water_type: 'Baggersee',
+      fish: ['Zander', 'Hecht', 'Flussbarsch'],
+      techniques: ['Spinnangeln'],
+      borders: 'Prüßsee: Angelbereich am Baggersee.',
+      tickets: [{ name: 'Tageskarte', price: '12,00 EUR' }],
+      lat: 53.529811766365256,
+      lng: 10.68531693338845,
+      map_data: {
+        locations: [{ lat: 53.534027, lng: 10.685797 }],
+      },
+      error: false,
+    };
+    const canal: HejfishArea = {
+      id: 12544,
+      global_id: 'hejfish-12544',
+      source_platform: 'hejfish',
+      name: 'Elbe-Lübeck-Kanal',
+      water_type: 'Kanal',
+      fish: ['Zander'],
+      lat: 53.60619849155722,
+      lng: 10.625313520431519,
+      map_data: {
+        geojson: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[
+              [10.6, 53.5],
+              [10.7, 53.5],
+              [10.7, 53.55],
+              [10.6, 53.55],
+              [10.6, 53.5],
+            ]],
+          },
+        },
+        locations: [{ lat: 53.51854, lng: 10.635424 }],
+      },
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const requestedDetails: string[] = [];
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify(liteAreas));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify(geoIndex));
+      requestedDetails.push(url);
+      if (url.includes('/details/merged/hejfish-15387.json')) return new Response(JSON.stringify(prueßsee));
+      if (url.includes('/details/hejfish/hejfish-12544.json')) return new Response(JSON.stringify(canal));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.5304, 10.6779);
+
+      expect(requestedDetails.some((url) => url.includes('/details/merged/hejfish-15387.json'))).toBe(true);
+      expect(profile?.id).toBe('hejfish-15387');
+      expect(profile?.name).toBe('Prüßsee');
+      expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/prüßsee')).toBe(true);
+      expect(profile?.areaDetails?.rulesText).toContain('Prüßsee');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('keeps lite metadata when a matching geo index entry has no detail file', async () => {
     const liteArea: HejfishAreaLite = {
       id: 'hejfish-12004',

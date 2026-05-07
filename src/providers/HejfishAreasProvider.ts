@@ -4,6 +4,7 @@ import type { DataQuality, DataSource, FishSpecies, WaterBodyProfile, WaterBodyT
 type Coordinate = { lat: number; lng: number };
 type AreaId = number | string;
 type AreaCandidate = { id: string; platform: string; area?: HejfishAreaLite; distance: number; regional?: boolean };
+type AreaDetailMatch = { area: HejfishArea; distance: number; candidateDistance: number; insidePolygon: boolean };
 type ProfileManager = NonNullable<WaterBodyProfile['areaDetails']>['manager'];
 type RelatedAreaLink = { source: DataSource; label: string; url: string };
 
@@ -61,18 +62,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const details = (await Promise.all(detailCandidates.map((candidate) => this.loadAreaDetail(candidate))))
       .filter((area): area is HejfishArea => Boolean(area));
 
-    const polygonMatch = details.find((area) => this.isInsideAreaPolygon(lat, lng, area));
-    if (polygonMatch) return this.mapAreaToProfile(polygonMatch, lat, lng, liteAreas);
-
-    const nearestDetail = details
-      .map((area) => ({
-        area,
-        distance: this.getNearestAreaDistanceMeters(lat, lng, area),
-      }))
-      .filter((match) => match.distance <= this.getRadiusMeters(match.area))
-      .sort((a, b) => a.distance - b.distance)[0]?.area;
-
-    if (nearestDetail) return this.mapAreaToProfile(nearestDetail, lat, lng, liteAreas);
+    const bestDetail = this.findBestDetailMatch(details, detailCandidates, lat, lng);
+    if (bestDetail) return this.mapAreaToProfile(bestDetail, lat, lng, liteAreas);
 
     const nearestLite = candidates.find((candidate) => (
       !candidate.regional
@@ -261,9 +252,11 @@ export class HejfishAreasProvider implements WaterDataProvider {
       }
 
       if (candidate.distance < existing.distance) {
+        const area = candidate.area || existing.area;
         unique.set(candidate.id, {
           ...candidate,
-          area: candidate.area || existing.area,
+          area,
+          platform: area ? this.getAreaPlatform(area) : candidate.platform,
         });
         continue;
       }
@@ -272,6 +265,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
         unique.set(candidate.id, {
           ...existing,
           area: candidate.area,
+          platform: this.getAreaPlatform(candidate.area),
         });
       }
     }
@@ -293,6 +287,48 @@ export class HejfishAreasProvider implements WaterDataProvider {
     }
 
     return Array.from(detailCandidates.values());
+  }
+
+  private findBestDetailMatch(
+    details: HejfishArea[],
+    candidates: AreaCandidate[],
+    lat: number,
+    lng: number
+  ): HejfishArea | null {
+    const candidateDistanceById = new Map<string, number>();
+    for (const candidate of candidates) {
+      candidateDistanceById.set(candidate.id, candidate.distance);
+    }
+
+    const matches = details
+      .map((area): AreaDetailMatch => {
+        const id = this.getAreaProfileId(area);
+        return {
+          area,
+          distance: this.getNearestAreaDistanceMeters(lat, lng, area),
+          candidateDistance: candidateDistanceById.get(id) ?? Number.POSITIVE_INFINITY,
+          insidePolygon: this.isInsideAreaPolygon(lat, lng, area),
+        };
+      })
+      .filter((match) => (
+        match.insidePolygon
+        || match.distance <= this.getRadiusMeters(match.area)
+        || match.candidateDistance <= this.getRadiusMeters(match.area)
+      ))
+      .sort((a, b) => this.getAreaMatchScore(a) - this.getAreaMatchScore(b));
+
+    return matches[0]?.area || null;
+  }
+
+  private getAreaMatchScore(match: AreaDetailMatch): number {
+    const nearestKnownDistance = Number.isFinite(match.distance) ? match.distance : match.candidateDistance;
+    const baseScore = Number.isFinite(nearestKnownDistance) ? nearestKnownDistance : Number.MAX_SAFE_INTEGER;
+
+    if (!match.insidePolygon) return baseScore;
+
+    const type = this.mapWaterType(match.area.water_type, match.area.name);
+    const polygonBonus = type === 'river' || type === 'canal' ? 0.95 : 0.75;
+    return baseScore * polygonBonus;
   }
 
   private findGeoIndexCandidates(index: HejfishGeoIndexEntry[], lat: number, lng: number): AreaCandidate[] {
