@@ -3,7 +3,7 @@ import type { DataQuality, DataSource, FishSpecies, WaterBodyProfile, WaterBodyT
 
 type Coordinate = { lat: number; lng: number };
 type AreaId = number | string;
-type AreaCandidate = { id: string; platform: string; area?: HejfishAreaLite; distance: number };
+type AreaCandidate = { id: string; platform: string; area?: HejfishAreaLite; distance: number; regional?: boolean };
 type ProfileManager = NonNullable<WaterBodyProfile['areaDetails']>['manager'];
 type RelatedAreaLink = { source: DataSource; label: string; url: string };
 
@@ -26,7 +26,9 @@ const knownSpeciesMap: Record<string, FishSpecies> = {
 
 const hamburgAreaKeywords = [
   'doveelbe',
+  'goseelbe',
   'stromelbe',
+  'altesuederelbe',
   'elbe',
   'hamburg',
   'hohendeicher',
@@ -55,7 +57,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const candidates = this.findAreaCandidates(liteAreas, geoIndex, lat, lng);
     if (candidates.length === 0) return null;
 
-    const details = (await Promise.all(candidates.slice(0, 32).map((candidate) => this.loadAreaDetail(candidate))))
+    const detailCandidates = this.getDetailCandidates(candidates);
+    const details = (await Promise.all(detailCandidates.map((candidate) => this.loadAreaDetail(candidate))))
       .filter((area): area is HejfishArea => Boolean(area));
 
     const polygonMatch = details.find((area) => this.isInsideAreaPolygon(lat, lng, area));
@@ -72,7 +75,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
     if (nearestDetail) return this.mapAreaToProfile(nearestDetail, lat, lng, liteAreas);
 
     const nearestLite = candidates.find((candidate) => (
-      candidate.area
+      !candidate.regional
+      && candidate.area
       && Number.isFinite(candidate.distance)
       && candidate.distance < Number.MAX_SAFE_INTEGER
     ))?.area;
@@ -87,7 +91,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const normalizedRegion = region ? this.normalize(region) : '';
     const liteAreas = await this.loadLiteAreas();
 
-    return liteAreas
+    const matches = liteAreas
       .filter((area) => {
         const haystack = this.normalize([
           area.name,
@@ -98,8 +102,20 @@ export class HejfishAreasProvider implements WaterDataProvider {
         return haystack.includes(normalizedQuery)
           && (!normalizedRegion || haystack.includes(normalizedRegion));
       })
-      .slice(0, 20)
-      .map((area) => this.mapLiteAreaToProfile(area));
+      .slice(0, 20);
+
+    return Promise.all(matches.map(async (area) => {
+      const candidate = {
+        id: this.getGlobalAreaId(area.id, area.platform),
+        platform: this.getAreaPlatform(area),
+        area,
+        distance: 0,
+      };
+      const detail = await this.loadAreaDetail(candidate);
+      return detail
+        ? this.mapAreaToProfile(detail, detail.lat ?? area.lat ?? 0, detail.lng ?? area.lng ?? 0, liteAreas)
+        : this.mapLiteAreaToProfile(area);
+    }));
   }
 
   private async loadLiteAreas(): Promise<HejfishAreaLite[]> {
@@ -263,6 +279,22 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return Array.from(unique.values()).sort((a, b) => a.distance - b.distance);
   }
 
+  private getDetailCandidates(candidates: AreaCandidate[]): AreaCandidate[] {
+    const detailCandidates = new Map<string, AreaCandidate>();
+
+    for (const candidate of candidates.slice(0, 32)) {
+      detailCandidates.set(`${candidate.platform}/${candidate.id}`, candidate);
+    }
+
+    for (const candidate of candidates) {
+      if (candidate.regional) {
+        detailCandidates.set(`${candidate.platform}/${candidate.id}`, candidate);
+      }
+    }
+
+    return Array.from(detailCandidates.values());
+  }
+
   private findGeoIndexCandidates(index: HejfishGeoIndexEntry[], lat: number, lng: number): AreaCandidate[] {
     return index
       .map((entry) => ({
@@ -289,8 +321,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
       .sort((a, b) => a.distance - b.distance);
 
     const regionalCandidates = areas
-      .filter((area) => (typeof area.lat !== 'number' || typeof area.lng !== 'number') && this.isRegionalNameCandidate(area, lat, lng))
-      .map((area) => ({ id: this.getGlobalAreaId(area.id, area.platform), platform: this.getAreaPlatform(area), area, distance: Number.MAX_SAFE_INTEGER }));
+      .filter((area) => this.isRegionalNameCandidate(area, lat, lng))
+      .map((area) => ({
+        id: this.getGlobalAreaId(area.id, area.platform),
+        platform: this.getAreaPlatform(area),
+        area,
+        distance: Number.MAX_SAFE_INTEGER,
+        regional: true,
+      }));
 
     return [...regionalCandidates, ...coordinateCandidates];
   }
@@ -655,6 +693,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
   private isRegionalNameCandidate(area: HejfishAreaLite, lat: number, lng: number): boolean {
     if (!this.isHamburgRegion(lat, lng)) return false;
+    if (this.getAreaPlatform(area) !== 'hejfish') return false;
+    if (typeof area.lat === 'number' && typeof area.lng === 'number' && !this.isHamburgRegion(area.lat, area.lng)) return false;
 
     const normalized = this.normalize(`${area.name} ${area.slug || ''}`);
     return hamburgAreaKeywords.some((keyword) => normalized.includes(keyword));

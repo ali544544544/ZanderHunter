@@ -228,6 +228,68 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('loads Strom-Elbe Hamburg details away from the lite midpoint', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 'hejfish-12190',
+      name: 'Strom-Elbe Hamburg (Kombi-Karte)',
+      lat: 53.397707,
+      lng: 10.178841,
+      water_type: 'Fluss',
+      platform: 'hejfish',
+      fish_count: 18,
+    };
+    const area: HejfishArea = {
+      id: 12190,
+      global_id: 'hejfish-12190',
+      source_platform: 'hejfish',
+      name: 'Strom-Elbe Hamburg (Kombi-Karte)',
+      url: 'https://www.hejfish.com/d/12190-strom-elbe-hamburg-kombi-karte',
+      water_type: 'Fluss',
+      description: '<p>Elbestrom</p>',
+      borders: '<p>Elbestrom: Rechtsseitig bis zur Strommitte.</p>',
+      fish: ['Hecht', 'Zander', 'Flussbarsch', 'Karpfen'],
+      techniques: ['Spinnangeln', 'Ansitzangeln'],
+      tickets: [{ name: 'Jahreskarte', price: '30,00 EUR' }],
+      manager: { name: 'Anglerverband Hamburg e.V.' },
+      lat: 53.397707,
+      lng: 10.178841,
+      map_data: {
+        locations: [
+          { lat: 53.397707, lng: 10.178841 },
+          { lat: 53.486067, lng: 10.053832 },
+          { lat: 53.528347, lng: 9.825725 },
+          { lat: 53.500185, lng: 9.886109 },
+        ],
+      },
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const requestedDetails: string[] = [];
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      requestedDetails.push(url);
+      if (url.includes('/details/hejfish/hejfish-12190.json')) return new Response(JSON.stringify(area));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.528347, 9.825725);
+
+      expect(requestedDetails.some((url) => url.includes('/details/hejfish/hejfish-12190.json'))).toBe(true);
+      expect(profile?.id).toBe('hejfish-12190');
+      expect(profile?.dataQuality).toBe('high');
+      expect(profile?.species.map((entry) => entry.species)).toContain('zander');
+      expect(profile?.areaDetails?.rulesText).toContain('Elbestrom');
+      expect(profile?.areaDetails?.tickets?.[0].name).toBe('Jahreskarte');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('keeps lite metadata when a matching geo index entry has no detail file', async () => {
     const liteArea: HejfishAreaLite = {
       id: 'hejfish-12004',
