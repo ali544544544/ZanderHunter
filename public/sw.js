@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zanderhunter-v9';
+const CACHE_NAME = 'zanderhunter-v10';
 const APP_SHELL = ['.', 'index.html', 'manifest.json'];
 
 self.addEventListener('install', (event) => {

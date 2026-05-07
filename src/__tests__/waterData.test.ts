@@ -450,10 +450,12 @@ describe('HejfishAreasProvider mapping', () => {
       error: false,
     };
     const originalFetch = globalThis.fetch;
+    const requestedDetails: string[] = [];
     const fetchMock: typeof fetch = async (input) => {
       const url = String(input);
       if (url.includes('areas_lite')) return new Response(JSON.stringify(liteAreas));
       if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      requestedDetails.push(url);
       if (url.includes('/details/alleangeln/alleangeln-außenalster.json')) return new Response(JSON.stringify(außenalster));
       if (url.includes('/details/hejfish/hejfish-12190.json')) return new Response(JSON.stringify(stromElbe));
       return new Response(null, { status: 404 });
@@ -464,6 +466,10 @@ describe('HejfishAreasProvider mapping', () => {
       const provider = new HejfishAreasProvider();
       const profile = await provider.getWaterBodyProfile(53.5637, 10.0028);
 
+      expect(requestedDetails).toEqual(expect.arrayContaining([
+        expect.stringContaining('/details/alleangeln/alleangeln-außenalster.json'),
+      ]));
+      expect(requestedDetails.some((url) => url.includes('/details/hejfish/hejfish-12190.json'))).toBe(false);
       expect(profile?.id).toBe('alleangeln-außenalster');
       expect(profile?.name).toBe('Außenalster');
       expect(profile?.sources).toEqual(['alleangeln']);

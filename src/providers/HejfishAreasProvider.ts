@@ -58,6 +58,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const candidates = this.findAreaCandidates(liteAreas, geoIndex, lat, lng);
     if (candidates.length === 0) return null;
 
+    const nearestCoordinateCandidate = this.getNearestCoordinateCandidate(candidates);
+    if (nearestCoordinateCandidate && nearestCoordinateCandidate.distance <= this.getNearestPreferredRadiusMeters(nearestCoordinateCandidate.area)) {
+      const detail = await this.loadAreaDetail(nearestCoordinateCandidate);
+      return detail
+        ? this.mapAreaToProfile(detail, lat, lng, liteAreas)
+        : this.mapLiteAreaToProfile(nearestCoordinateCandidate.area);
+    }
+
     const detailCandidates = this.getDetailCandidates(candidates);
     const details = (await Promise.all(detailCandidates.map((candidate) => this.loadAreaDetail(candidate))))
       .filter((area): area is HejfishArea => Boolean(area));
@@ -287,6 +295,21 @@ export class HejfishAreasProvider implements WaterDataProvider {
     }
 
     return Array.from(detailCandidates.values());
+  }
+
+  private getNearestCoordinateCandidate(candidates: AreaCandidate[]): (AreaCandidate & { area: HejfishAreaLite }) | null {
+    return candidates.find((candidate): candidate is AreaCandidate & { area: HejfishAreaLite } => (
+      !candidate.regional
+      && Boolean(candidate.area)
+      && Number.isFinite(candidate.distance)
+      && candidate.distance < Number.MAX_SAFE_INTEGER
+    )) || null;
+  }
+
+  private getNearestPreferredRadiusMeters(area: HejfishAreaLite): number {
+    const type = this.mapWaterType(area.water_type, area.name);
+    if (type === 'river' || type === 'canal') return 900;
+    return 1500;
   }
 
   private findBestDetailMatch(
