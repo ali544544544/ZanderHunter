@@ -244,7 +244,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const configured = import.meta.env.VITE_HEJFISH_DATA_BASE_URL;
     const baseUrls = configured
       ? [configured]
-      : [`${import.meta.env.BASE_URL}data/`, `${import.meta.env.BASE_URL}data/dist/`];
+      : [`${import.meta.env.BASE_URL}data/`];
 
     return baseUrls.map((baseUrl) => this.normalizeBaseUrl(baseUrl));
   }
