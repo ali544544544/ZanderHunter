@@ -642,7 +642,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     liteAreas: HejfishAreaLite[] = [],
     additionalDetails: HejfishArea[] = []
   ): WaterBodyProfile {
-"    const allSources = [
+    const allSources = [
       area,
       ...additionalDetails.filter(d => 
         d.global_id === area.global_id || 
@@ -716,7 +716,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       .flatMap(s => [s.description, s.intro, s.details])
       .map(t => this.cleanText(t))
       .filter((t): t is string => Boolean(t));
-    const description = descriptions.reduce((a, b) => (a.length > b.length ? a : b), '');"
+    const description = descriptions.reduce((a, b) => (a.length > b.length ? a : b), '');
 
     return {
       id: this.getAreaProfileId(area),
