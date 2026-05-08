@@ -65,9 +65,18 @@ export class HejfishAreasProvider implements WaterDataProvider {
       && !this.shouldInspectDetailCandidates(candidates, nearestCoordinateCandidate)
     ) {
       const detail = await this.loadAreaDetail(nearestCoordinateCandidate);
-      return detail
-        ? this.mapAreaToProfile(detail, lat, lng, liteAreas)
-        : this.mapLiteAreaToProfile(nearestCoordinateCandidate.area);
+      if (detail) {
+        // Also look for other nearby details to merge if available
+        const detailCandidates = this.getDetailCandidates(candidates);
+        const otherDetails = (await Promise.all(
+          detailCandidates
+            .filter(c => c.id !== nearestCoordinateCandidate.id)
+            .map(c => this.loadAreaDetail(c))
+        )).filter((d): d is HejfishArea => Boolean(d));
+
+        return this.mapAreaToProfile(detail, lat, lng, liteAreas, otherDetails);
+      }
+      return this.mapLiteAreaToProfile(nearestCoordinateCandidate.area);
     }
 
     const detailCandidates = this.getDetailCandidates(candidates);
@@ -75,7 +84,10 @@ export class HejfishAreasProvider implements WaterDataProvider {
       .filter((area): area is HejfishArea => Boolean(area));
 
     const bestDetail = this.findBestDetailMatch(details, detailCandidates, lat, lng);
-    if (bestDetail) return this.mapAreaToProfile(bestDetail, lat, lng, liteAreas);
+    if (bestDetail) {
+      const otherDetails = details.filter(d => d !== bestDetail);
+      return this.mapAreaToProfile(bestDetail, lat, lng, liteAreas, otherDetails);
+    }
 
     const nearestLite = candidates.find((candidate) => (
       !candidate.regional
@@ -623,10 +635,25 @@ export class HejfishAreasProvider implements WaterDataProvider {
     };
   }
 
-  private mapAreaToProfile(area: HejfishArea, lat: number, lng: number, liteAreas: HejfishAreaLite[] = []): WaterBodyProfile {
+  private mapAreaToProfile(
+    area: HejfishArea, 
+    lat: number, 
+    lng: number, 
+    liteAreas: HejfishAreaLite[] = [],
+    additionalDetails: HejfishArea[] = []
+  ): WaterBodyProfile {
+    const allSources = [
+      area,
+      ...additionalDetails,
+      ...Object.values(area.metadata?.sources || {}),
+      this.getSourceArea(area, 'hejfish'),
+      this.getSourceArea(area, 'alleangeln')
+    ].filter((s): s is HejfishArea => Boolean(s));
+
     const detailsArea = this.mergeSourceFields(
       area,
       this.getSourceFieldArea(area, 'description')
+      || allSources.find(s => s.source_platform === 'hejfish')
       || this.getSourceArea(area, area.source_platform || 'hejfish')
       || this.getSourceArea(area, 'hejfish')
       || this.getSourceArea(area, 'alleangeln')
@@ -634,12 +661,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const geometryArea = this.mergeSourceFields(area, this.getSourceFieldArea(area, 'geometry'));
     const center = this.getAreaCenter(area, { lat, lng }) || { lat, lng };
     const lastUpdated = new Date(area.last_updated || detailsArea.last_updated || Date.now());
-    const allFishSources = [
-      detailsArea,
-      ...Object.values(area.metadata?.sources || {}),
-      area
-    ];
-    const fishNames = Array.from(new Set(allFishSources.flatMap(s => this.getAreaFishNames(s))));
+    
+    const fishNames = Array.from(new Set(allSources.flatMap(s => this.getAreaFishNames(s))));
     const uniqueFish = Array.from(new Map(fishNames.map((name) => {
       const species = this.mapFishSpecies(name);
       return [species, { species, displayName: name }];
@@ -670,13 +693,11 @@ export class HejfishAreasProvider implements WaterDataProvider {
       : undefined;
     const name = this.cleanText(area.name) || area.name;
     const imageUrl = this.cleanText(
-      area.links?.image 
-      || detailsArea.links?.image 
-      || area.main_image 
-      || detailsArea.main_image 
-      || area.image 
-      || detailsArea.image
-      || Object.values(area.metadata?.sources || {}).find(s => s.links?.image || s.main_image || s.image)?.links?.image
+      allSources.find(s => s.links?.image || s.main_image || s.image)?.links?.image 
+      || allSources.find(s => s.links?.image || s.main_image || s.image)?.main_image 
+      || allSources.find(s => s.links?.image || s.main_image || s.image)?.image
+      || area.links?.image
+      || detailsArea.links?.image
     );
     const source = this.getAreaSource(area);
     const rulesFiles = this.getRulesFiles(detailsArea);
@@ -685,12 +706,12 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const links = this.getAreaLinks(area, manager, rulesFiles, relatedAreaLinks);
     const season = this.getSeasonText(detailsArea);
     const sources = this.getProfileSources(area, source, relatedAreaLinks);
-    const description = this.cleanText(
-      area.description
-      || detailsArea.description
-      || detailsArea.intro
-      || detailsArea.details
-    );
+    
+    const descriptions = allSources
+      .flatMap(s => [s.description, s.intro, s.details])
+      .map(t => this.cleanText(t))
+      .filter((t): t is string => Boolean(t));
+    const description = descriptions.reduce((a, b) => (a.length > b.length ? a : b), '');
 
     return {
       id: this.getAreaProfileId(area),
