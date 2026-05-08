@@ -626,12 +626,15 @@ export class HejfishAreasProvider implements WaterDataProvider {
   private mapAreaToProfile(area: HejfishArea, lat: number, lng: number, liteAreas: HejfishAreaLite[] = []): WaterBodyProfile {
     const detailsArea = this.mergeSourceFields(
       area,
-      this.getSourceFieldArea(area, 'description') || this.getSourceArea(area, 'hejfish') || this.getSourceArea(area, 'alleangeln')
+      this.getSourceFieldArea(area, 'description')
+      || this.getSourceArea(area, area.source_platform || 'hejfish')
+      || this.getSourceArea(area, 'hejfish')
+      || this.getSourceArea(area, 'alleangeln')
     );
     const geometryArea = this.mergeSourceFields(area, this.getSourceFieldArea(area, 'geometry'));
     const center = this.getAreaCenter(area, { lat, lng }) || { lat, lng };
     const lastUpdated = new Date(area.last_updated || detailsArea.last_updated || Date.now());
-    const fishNames = this.getAreaFishNames(area);
+    const fishNames = this.getAreaFishNames(detailsArea);
     const uniqueFish = Array.from(new Map(fishNames.map((name) => {
       const species = this.mapFishSpecies(name);
       return [species, { species, displayName: name }];
@@ -747,7 +750,17 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private getSourceArea(area: HejfishArea, source: string): Partial<HejfishArea> | undefined {
-    return area.metadata?.sources?.[source];
+    // 1. Check if the source is explicitly listed in metadata.sources
+    const fromSources = area.metadata?.sources?.[source];
+    if (fromSources) return fromSources;
+
+    // 2. Check if the top-level metadata object itself belongs to the requested platform
+    // This is common in scraped JSON files where the metadata object contains all raw fields.
+    if (area.metadata && (area.metadata as any).platform === source) {
+      return area.metadata as any;
+    }
+
+    return undefined;
   }
 
   private getSourceFieldArea(area: HejfishArea, field: string): Partial<HejfishArea> | undefined {
@@ -933,10 +946,10 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private getAreaFishNames(area: HejfishArea): string[] {
-    const primaryFish = this.normalizeFishList(area.fish || []);
+    const primaryFish = this.normalizeFishList(area.fish || (area.metadata as any)?.fish || []);
     if (primaryFish.length > 0) return primaryFish;
 
-    return this.normalizeFishList(area.most_caught_fish || [])
+    return this.normalizeFishList(area.most_caught_fish || (area.metadata as any)?.most_caught_fish || [])
       .filter((name) => !/^\d+\s+weitere/i.test(name));
   }
 
