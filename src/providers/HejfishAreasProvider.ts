@@ -642,9 +642,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
     liteAreas: HejfishAreaLite[] = [],
     additionalDetails: HejfishArea[] = []
   ): WaterBodyProfile {
-    const allSources = [
+"    const allSources = [
       area,
-      ...additionalDetails,
+      ...additionalDetails.filter(d => 
+        d.global_id === area.global_id || 
+        (d.source_ids?.hejfish && area.source_ids?.hejfish && d.source_ids.hejfish === area.source_ids.hejfish) ||
+        (d.source_ids?.alleangeln && area.source_ids?.alleangeln && d.source_ids.alleangeln === area.source_ids.alleangeln) ||
+        (this.normalize(d.name).includes(this.normalize(area.name)) || this.normalize(area.name).includes(this.normalize(d.name)))
+      ),
       ...Object.values(area.metadata?.sources || {}),
       this.getSourceArea(area, 'hejfish'),
       this.getSourceArea(area, 'alleangeln')
@@ -653,7 +658,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const detailsArea = this.mergeSourceFields(
       area,
       this.getSourceFieldArea(area, 'description')
-      || allSources.find(s => s.source_platform === 'hejfish')
+      || allSources.find(s => s.source_platform === 'hejfish' && (s.description || s.intro || s.details))
       || this.getSourceArea(area, area.source_platform || 'hejfish')
       || this.getSourceArea(area, 'hejfish')
       || this.getSourceArea(area, 'alleangeln')
@@ -692,12 +697,12 @@ export class HejfishAreasProvider implements WaterDataProvider {
         }
       : undefined;
     const name = this.cleanText(area.name) || area.name;
-    const imageUrl = this.cleanText(
-      allSources.find(s => s.links?.image || s.main_image || s.image)?.links?.image 
-      || allSources.find(s => s.links?.image || s.main_image || s.image)?.main_image 
-      || allSources.find(s => s.links?.image || s.main_image || s.image)?.image
-      || area.links?.image
-      || detailsArea.links?.image
+    // Strictly prioritize primary image, only fallback to confirmed matches if primary has none
+    const primaryImage = this.cleanText(area.links?.image || area.main_image || area.image);
+    const imageUrl = primaryImage || this.cleanText(
+      allSources.find(s => s !== area && (s.links?.image || s.main_image || s.image))?.links?.image 
+      || allSources.find(s => s !== area && (s.links?.image || s.main_image || s.image))?.main_image 
+      || allSources.find(s => s !== area && (s.links?.image || s.main_image || s.image))?.image
     );
     const source = this.getAreaSource(area);
     const rulesFiles = this.getRulesFiles(detailsArea);
@@ -711,7 +716,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       .flatMap(s => [s.description, s.intro, s.details])
       .map(t => this.cleanText(t))
       .filter((t): t is string => Boolean(t));
-    const description = descriptions.reduce((a, b) => (a.length > b.length ? a : b), '');
+    const description = descriptions.reduce((a, b) => (a.length > b.length ? a : b), '');"
 
     return {
       id: this.getAreaProfileId(area),
