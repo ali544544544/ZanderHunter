@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { HejfishAreaLite } from '../types/hejfishArea';
 
 interface LocationPickerMapProps {
   center: {
@@ -17,10 +18,19 @@ interface DragState {
   moved: boolean;
 }
 
+interface WaterCluster {
+  key: string;
+  lat: number;
+  lng: number;
+  count: number;
+  areas: HejfishAreaLite[];
+}
+
 const tileSize = 256;
 const minZoom = 5;
 const maxZoom = 17;
 const mapHeight = 280;
+const singleMarkerZoom = 13;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -57,6 +67,37 @@ function isControlTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest('button'));
 }
 
+function hasAreaCoordinate(area: HejfishAreaLite): area is HejfishAreaLite & { lat: number; lng: number } {
+  return typeof area.lat === 'number' && typeof area.lng === 'number' && Number.isFinite(area.lat) && Number.isFinite(area.lng);
+}
+
+function waterLabel(area: HejfishAreaLite) {
+  return area.name || `Gewaesser ${area.lat?.toFixed(4)}, ${area.lng?.toFixed(4)}`;
+}
+
+async function fetchWaterAreas() {
+  const basePath = import.meta.env.BASE_URL;
+  const paths = [`${basePath}data/areas_lite.json`, `${basePath}data/dist/areas_lite.json`];
+
+  for (const path of paths) {
+    try {
+      const response = await fetch(path, { cache: 'force-cache' });
+      if (!response.ok) {
+        continue;
+      }
+
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        return data.filter((area): area is HejfishAreaLite => Boolean(area) && hasAreaCoordinate(area));
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return [];
+}
+
 const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect }) => {
   const centerLat = center.lat;
   const centerLng = center.lng;
@@ -66,6 +107,8 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   const [zoom, setZoom] = useState(12);
   const [mapCenter, setMapCenter] = useState(center);
   const [selectedPoint, setSelectedPoint] = useState(center);
+  const [waterAreas, setWaterAreas] = useState<HejfishAreaLite[]>([]);
+  const [waterAreasLoading, setWaterAreasLoading] = useState(false);
 
   useEffect(() => {
     const nextCenter = { lat: centerLat, lng: centerLng };
@@ -110,6 +153,80 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     return nextTiles;
   }, [centerWorld.x, centerWorld.y, mapWidth, zoom]);
 
+  const visibleWaterAreas = useMemo(() => {
+    if (waterAreas.length === 0) {
+      return [];
+    }
+
+    const topLeftX = centerWorld.x - mapWidth / 2;
+    const topLeftY = centerWorld.y - mapHeight / 2;
+    const bottomRightX = centerWorld.x + mapWidth / 2;
+    const bottomRightY = centerWorld.y + mapHeight / 2;
+    const minLng = worldXToLng(topLeftX, zoom);
+    const maxLng = worldXToLng(bottomRightX, zoom);
+    const minLat = worldYToLat(bottomRightY, zoom);
+    const maxLat = worldYToLat(topLeftY, zoom);
+    const lngPadding = Math.abs(maxLng - minLng) * 0.12;
+    const latPadding = Math.abs(maxLat - minLat) * 0.12;
+
+    return waterAreas.filter((area) => {
+      if (!hasAreaCoordinate(area)) {
+        return false;
+      }
+
+      return area.lat >= minLat - latPadding
+        && area.lat <= maxLat + latPadding
+        && area.lng >= minLng - lngPadding
+        && area.lng <= maxLng + lngPadding;
+    });
+  }, [centerWorld.x, centerWorld.y, mapWidth, waterAreas, zoom]);
+
+  const waterClusters = useMemo(() => {
+    if (visibleWaterAreas.length === 0) {
+      return [];
+    }
+
+    const bucketSize = zoom >= singleMarkerZoom ? 1 : zoom >= 11 ? 56 : zoom >= 9 ? 72 : 96;
+    const clusters = new Map<string, {
+      areas: HejfishAreaLite[];
+      latSum: number;
+      lngSum: number;
+    }>();
+
+    for (const area of visibleWaterAreas) {
+      if (!hasAreaCoordinate(area)) {
+        continue;
+      }
+
+      const x = lngToWorldX(area.lng, zoom) - centerWorld.x + mapWidth / 2;
+      const y = latToWorldY(area.lat, zoom) - centerWorld.y + mapHeight / 2;
+      const key = zoom >= singleMarkerZoom
+        ? String(area.id)
+        : `${Math.floor(x / bucketSize)}:${Math.floor(y / bucketSize)}`;
+      const cluster = clusters.get(key);
+
+      if (cluster) {
+        cluster.areas.push(area);
+        cluster.latSum += area.lat;
+        cluster.lngSum += area.lng;
+      } else {
+        clusters.set(key, {
+          areas: [area],
+          latSum: area.lat,
+          lngSum: area.lng,
+        });
+      }
+    }
+
+    return Array.from(clusters.entries()).map(([key, cluster]): WaterCluster => ({
+      key,
+      areas: cluster.areas,
+      count: cluster.areas.length,
+      lat: cluster.latSum / cluster.areas.length,
+      lng: cluster.lngSum / cluster.areas.length,
+    }));
+  }, [centerWorld.x, centerWorld.y, mapWidth, visibleWaterAreas, zoom]);
+
   const selectedMarkerStyle = useMemo(() => {
     const selectedWorldX = lngToWorldX(selectedPoint.lng, zoom);
     const selectedWorldY = latToWorldY(selectedPoint.lat, zoom);
@@ -119,6 +236,11 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
       top: selectedWorldY - centerWorld.y + mapHeight / 2,
     };
   }, [centerWorld.x, centerWorld.y, mapWidth, selectedPoint.lat, selectedPoint.lng, zoom]);
+
+  const getMarkerStyle = (point: { lat: number; lng: number }) => ({
+    left: lngToWorldX(point.lng, zoom) - centerWorld.x + mapWidth / 2,
+    top: latToWorldY(point.lat, zoom) - centerWorld.y + mapHeight / 2,
+  });
 
   const pointToLocation = (clientX: number, clientY: number) => {
     const rect = mapRef.current?.getBoundingClientRect();
@@ -152,6 +274,27 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     setZoom((value) => clamp(value + direction, minZoom, maxZoom));
   };
 
+  const selectWaterArea = (area: HejfishAreaLite) => {
+    if (!hasAreaCoordinate(area)) {
+      return;
+    }
+
+    const nextPoint = { lat: area.lat, lng: area.lng };
+    setMapCenter(nextPoint);
+    setSelectedPoint(nextPoint);
+    onSelect({ ...nextPoint, label: waterLabel(area) });
+  };
+
+  const openWaterCluster = (cluster: WaterCluster) => {
+    if (cluster.count === 1) {
+      selectWaterArea(cluster.areas[0]);
+      return;
+    }
+
+    setMapCenter({ lat: cluster.lat, lng: cluster.lng });
+    setZoom((value) => clamp(Math.max(value + 2, singleMarkerZoom), minZoom, maxZoom));
+  };
+
   useEffect(() => {
     const mapElement = mapRef.current;
     if (!mapElement) {
@@ -172,6 +315,27 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     return () => {
       mapElement.removeEventListener('wheel', handleWheel);
       window.removeEventListener('resize', updateWidth);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setWaterAreasLoading(true);
+
+    fetchWaterAreas()
+      .then((areas) => {
+        if (active) {
+          setWaterAreas(areas);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setWaterAreasLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
     };
   }, []);
 
@@ -258,6 +422,42 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           />
         ))}
         <div className="pointer-events-none absolute inset-0 bg-slate-950/5"></div>
+        <div className="absolute inset-0">
+          {waterClusters.map((cluster) => {
+            const area = cluster.areas[0];
+            const isSingle = cluster.count === 1;
+            const markerStyle = getMarkerStyle(cluster);
+            const markerSize = isSingle ? 24 : clamp(30 + Math.log(cluster.count) * 6, 34, 58);
+
+            return (
+              <button
+                key={cluster.key}
+                type="button"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openWaterCluster(cluster);
+                }}
+                className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border font-black shadow-lg shadow-slate-950/50 transition-transform hover:scale-110 ${
+                  isSingle
+                    ? 'border-cyan-200/80 bg-cyan-400/90 text-slate-950'
+                    : 'border-blue-200/80 bg-blue-500/95 text-white'
+                }`}
+                style={{
+                  ...markerStyle,
+                  width: markerSize,
+                  height: markerSize,
+                }}
+                title={isSingle ? waterLabel(area) : `${cluster.count} Gewaesser`}
+                aria-label={isSingle ? `${waterLabel(area)} auswaehlen` : `${cluster.count} Gewaesser anzeigen`}
+              >
+                <span className={isSingle ? 'h-2.5 w-2.5 rounded-full bg-slate-950' : 'text-[11px] leading-none'}>
+                  {isSingle ? '' : cluster.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/85 bg-slate-950/20 shadow-lg shadow-slate-950/60">
           <span className="absolute left-1/2 top-1/2 h-0.5 w-10 -translate-x-1/2 -translate-y-1/2 bg-white/85"></span>
           <span className="absolute left-1/2 top-1/2 h-10 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-white/85"></span>
@@ -294,7 +494,9 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
         </div>
         <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="pointer-events-none rounded bg-slate-950/85 px-2 py-1 text-[9px] font-bold text-slate-300">
-            Ziehen, Mausrad, Doppelklick
+            {waterAreasLoading
+              ? 'Gewaesser laden...'
+              : `${visibleWaterAreas.length} sichtbar - ${zoom >= singleMarkerZoom ? 'Marker' : 'Cluster'}`}
           </div>
           <button
             type="button"
