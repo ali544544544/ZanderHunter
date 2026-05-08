@@ -78,11 +78,18 @@ function formatDate(value: Date) {
   }).format(date);
 }
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function SectionHeading({ children, source }: { children: React.ReactNode; source?: string }) {
   return (
-    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-      {children}
-    </p>
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+        {children}
+      </p>
+      {source && (
+        <span className="rounded border border-blue-400/20 bg-blue-400/10 px-1.5 py-0.5 text-[8px] font-black uppercase text-blue-300/70">
+          {source}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -316,7 +323,26 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
           <DetailRow label="Merkmale" value={details?.properties && details.properties.length > 0 ? details.properties.join(', ') : undefined} />
           <DetailRow
             label="Regeln"
-            value={details?.rulesText ? <CollapsibleText text={details.rulesText} limit={320} /> : undefined}
+            value={
+              <div className="space-y-2">
+                {details?.rulesText ? <CollapsibleText text={details.rulesText} limit={320} /> : undefined}
+                {details?.rulesFiles && details.rulesFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {details.rulesFiles.map((file) => (
+                      <a
+                        key={file.url}
+                        href={file.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[10px] font-bold text-blue-200 hover:bg-slate-700"
+                      >
+                        <span className="opacity-70">📄</span> {file.name}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            }
           />
         </div>
       )}
@@ -342,7 +368,7 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
 
       {details?.tickets && details.tickets.length > 0 && (
         <div className="space-y-2">
-          <SectionHeading>Tickets</SectionHeading>
+          <SectionHeading source="hejfish">Tickets</SectionHeading>
           <div className="divide-y divide-slate-800 rounded-lg border border-slate-800 bg-slate-950/25">
             {details.tickets.map((ticket) => (
               <div key={`${ticket.name}-${ticket.price}`} className="flex items-start justify-between gap-3 px-3 py-2 text-xs">
@@ -368,25 +394,27 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
       )}
 
       {hasManagerInfo && (
-        <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
-          <SectionHeading>Betreiber</SectionHeading>
-          <div className="mt-2 space-y-1 text-xs font-semibold leading-relaxed text-slate-300">
-            {details?.manager?.name && <p className="font-black text-slate-100">{details.manager.name}</p>}
-            {details?.manager?.phone && (
-              <a className="block text-blue-200" href={`tel:${details.manager.phone}`}>
-                Telefon: {details.manager.phone}
-              </a>
-            )}
-            {details?.manager?.email && (
-              <a className="block break-all text-blue-200" href={`mailto:${details.manager.email}`}>
-                {details.manager.email}
-              </a>
-            )}
-            {details?.manager?.website && (
-              <a className="block break-all text-blue-200" href={details.manager.website} target="_blank" rel="noreferrer">
-                {details.manager.website}
-              </a>
-            )}
+        <div className="space-y-2">
+          <SectionHeading source="hejfish">Betreiber</SectionHeading>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
+            <div className="space-y-1 text-xs font-semibold leading-relaxed text-slate-300">
+              {details?.manager?.name && <p className="font-black text-slate-100">{details.manager.name}</p>}
+              {details?.manager?.phone && (
+                <a className="block text-blue-200" href={`tel:${details.manager.phone}`}>
+                  Telefon: {details.manager.phone}
+                </a>
+              )}
+              {details?.manager?.email && (
+                <a className="block break-all text-blue-200" href={`mailto:${details.manager.email}`}>
+                  {details.manager.email}
+                </a>
+              )}
+              {details?.manager?.website && (
+                <a className="block break-all text-blue-200" href={details.manager.website} target="_blank" rel="noreferrer">
+                  {details.manager.website}
+                </a>
+              )}
+            </div>
           </div>
         </div>
       )}

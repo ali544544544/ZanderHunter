@@ -647,8 +647,9 @@ export class HejfishAreasProvider implements WaterDataProvider {
       .filter((entry) => !entry.toLowerCase().startsWith('techniken'))
       .filter((entry) => !techniqueKeys.has(this.normalize(entry)));
     const featureLabels = this.getFeatureLabels(detailsArea.features);
-    const tickets = detailsArea.tickets
-      ?.map((ticket) => ({
+    const rawTickets = detailsArea.tickets || (detailsArea as any).ticket_types || [];
+    const tickets = (Array.isArray(rawTickets) ? rawTickets : [])
+      .map((ticket: any) => ({
         name: this.cleanText(ticket.name) || ticket.name,
         price: this.cleanText(ticket.price),
       }))
@@ -1162,12 +1163,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
 
   private getAreaRulesText(area: HejfishArea): string | undefined {
     const borders = this.cleanText(area.borders);
-    if (borders) return borders;
+    const rawRulesText = this.cleanText(area.rules_text);
+    const extractedRules = rawRulesText ? (this.extractBoundaryRulesText(rawRulesText) || rawRulesText) : undefined;
 
-    const rulesText = this.cleanText(area.rules_text);
-    if (!rulesText) return undefined;
+    if (borders && extractedRules) {
+      return `Grenzen:\n${borders}\n\nRegeln:\n${extractedRules}`;
+    }
 
-    return this.extractBoundaryRulesText(rulesText) || rulesText;
+    return borders || extractedRules;
   }
 
   private extractBoundaryRulesText(value: string): string | undefined {
