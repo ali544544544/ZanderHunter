@@ -634,7 +634,12 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const geometryArea = this.mergeSourceFields(area, this.getSourceFieldArea(area, 'geometry'));
     const center = this.getAreaCenter(area, { lat, lng }) || { lat, lng };
     const lastUpdated = new Date(area.last_updated || detailsArea.last_updated || Date.now());
-    const fishNames = this.getAreaFishNames(detailsArea);
+    const allFishSources = [
+      detailsArea,
+      ...Object.values(area.metadata?.sources || {}),
+      area
+    ];
+    const fishNames = Array.from(new Set(allFishSources.flatMap(s => this.getAreaFishNames(s))));
     const uniqueFish = Array.from(new Map(fishNames.map((name) => {
       const species = this.mapFishSpecies(name);
       return [species, { species, displayName: name }];
@@ -664,7 +669,15 @@ export class HejfishAreasProvider implements WaterDataProvider {
         }
       : undefined;
     const name = this.cleanText(area.name) || area.name;
-    const imageUrl = this.cleanText(area.links?.image || detailsArea.main_image || detailsArea.image);
+    const imageUrl = this.cleanText(
+      area.links?.image 
+      || detailsArea.links?.image 
+      || area.main_image 
+      || detailsArea.main_image 
+      || area.image 
+      || detailsArea.image
+      || Object.values(area.metadata?.sources || {}).find(s => s.links?.image || s.main_image || s.image)?.links?.image
+    );
     const source = this.getAreaSource(area);
     const rulesFiles = this.getRulesFiles(detailsArea);
     const rulesText = this.getAreaRulesText(detailsArea);
@@ -1242,7 +1255,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
   }
 
   private normalizeFishList(fish: string[]): string[] {
-    return this.cleanList(fish);
+    return this.cleanList(fish)
+      .filter((name) => !/^\d+\s+weitere/i.test(name));
   }
 
   private cleanList(values: string[]): string[] {
