@@ -218,6 +218,11 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
     || details.manager.email
     || details.manager.website
   ));
+  const hasStats = Boolean(details?.stats && (
+    (details.stats.followers ?? 0) > 0
+    || (details.stats.catches ?? 0) > 0
+    || (details.stats.images ?? 0) > 0
+  ));
 
   return (
     <section className="card space-y-4 p-4">
@@ -256,7 +261,11 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
         <InfoTile label="Fischdaten" value={species.length > 0 ? `${species.length} Arten` : 'Keine Angabe'} tone={species.length > 0 ? 'good' : 'default'} />
         <InfoTile label="Erlaubnis" value={profile.regulations?.permit_required ? 'Nötig' : 'Keine Angabe'} tone={profile.regulations?.permit_required ? 'warn' : 'default'} />
         <InfoTile label="Ticket" value={details?.mobileTicket ? 'Online' : 'Vor Ort / extern'} tone={ticketTone} />
-        <InfoTile label="Stand" value={formattedUpdatedAt || 'Unbekannt'} />
+        {hasStats ? (
+          <InfoTile label="Community" value={`${details?.stats?.followers || 0} Follower`} />
+        ) : (
+          <InfoTile label="Stand" value={formattedUpdatedAt || 'Unbekannt'} />
+        )}
       </div>
 
       {profile.imageUrl && (
@@ -294,10 +303,17 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
         </div>
       )}
 
+      {details?.features && details.features.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeading>Ausstattung & Merkmale</SectionHeading>
+          <TagList items={details.features} tone="slate" />
+        </div>
+      )}
+
       {hasDetailRows && (
         <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
           <DetailRow label="Saison" value={details?.season} />
-          <DetailRow label="Hinweise" value={details?.properties && details.properties.length > 0 ? details.properties.join(', ') : undefined} />
+          <DetailRow label="Merkmale" value={details?.properties && details.properties.length > 0 ? details.properties.join(', ') : undefined} />
           <DetailRow
             label="Regeln"
             value={details?.rulesText ? <CollapsibleText text={details.rulesText} limit={320} /> : undefined}
@@ -334,6 +350,19 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
                 {ticket.price && <span className="shrink-0 font-black text-slate-100">{ticket.price}</span>}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {hasStats && (
+        <div className="grid grid-cols-2 gap-2 border-t border-slate-800 pt-4">
+          <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Fänge</p>
+            <p className="mt-1 text-lg font-black text-slate-100">{details?.stats?.catches || 0}</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bilder</p>
+            <p className="mt-1 text-lg font-black text-slate-100">{details?.stats?.images || 0}</p>
           </div>
         </div>
       )}

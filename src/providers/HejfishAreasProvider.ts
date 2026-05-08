@@ -722,6 +722,11 @@ export class HejfishAreasProvider implements WaterDataProvider {
         tickets,
         ticketTypes: detailsArea.ticket_types,
         features: featureLabels,
+        stats: {
+          followers: (detailsArea as any).followers ?? (detailsArea as any).follower_count,
+          catches: (detailsArea as any).catches_count ?? (detailsArea as any).catch_count,
+          images: (detailsArea as any).images_count ?? (detailsArea as any).image_count,
+        },
         manager,
       },
       lastUpdated,

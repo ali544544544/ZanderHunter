@@ -78,6 +78,11 @@ export interface WaterBodyProfile {
     tickets?: Array<{ name: string; price?: string }>;
     ticketTypes?: unknown[];
     features?: string[];
+    stats?: {
+      followers?: number;
+      catches?: number;
+      images?: number;
+    };
     manager?: {
       name?: string;
       phone?: string;
