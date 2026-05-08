@@ -1027,6 +1027,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     relatedAreaLinks: RelatedAreaLink[] = []
   ): WaterBodyProfile['links'] {
     const links: NonNullable<WaterBodyProfile['links']> = [];
+    const seenUrls = new Set<string>();
 
     const areaName = this.cleanText(area.name) || area.name;
     const sourceLabel = area.source_platform === 'alleangeln' ? `${areaName} bei Alle Angeln oeffnen` : `${areaName} bei hejfish oeffnen`;
@@ -1035,13 +1036,29 @@ export class HejfishAreasProvider implements WaterDataProvider {
       || area.links?.source
       || (area.source_platform === 'alleangeln' ? area.links?.alleangeln : area.links?.hejfish)
     );
-    if (sourceUrl) links.push({ label: sourceLabel, url: sourceUrl, kind: 'permit' });
-    for (const link of relatedAreaLinks) {
-      links.push({ label: link.label, url: link.url, kind: 'community' });
+
+    if (sourceUrl) {
+      links.push({ label: sourceLabel, url: sourceUrl, kind: 'permit' });
+      seenUrls.add(sourceUrl);
     }
-    if (manager?.website) links.push({ label: 'Betreiber', url: manager.website, kind: 'info' });
+
+    for (const link of relatedAreaLinks) {
+      if (!seenUrls.has(link.url)) {
+        links.push({ label: link.label, url: link.url, kind: 'community' });
+        seenUrls.add(link.url);
+      }
+    }
+
+    if (manager?.website && !seenUrls.has(manager.website)) {
+      links.push({ label: 'Betreiber', url: manager.website, kind: 'info' });
+      seenUrls.add(manager.website);
+    }
+
     for (const file of rulesFiles) {
-      links.push({ label: file.name || 'Regeln', url: file.url, kind: 'info' });
+      if (!seenUrls.has(file.url)) {
+        links.push({ label: file.name || 'Regeln', url: file.url, kind: 'info' });
+        seenUrls.add(file.url);
+      }
     }
 
     return links.length > 0 ? links : undefined;
