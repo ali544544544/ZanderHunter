@@ -1015,7 +1015,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
   ): WaterBodyProfile['links'] {
     const links: NonNullable<WaterBodyProfile['links']> = [];
 
-    const sourceLabel = area.source_platform === 'alleangeln' ? 'Bei Alle Angeln oeffnen' : 'Bei hejfish oeffnen';
+    const areaName = this.cleanText(area.name) || area.name;
+    const sourceLabel = area.source_platform === 'alleangeln' ? `${areaName} bei Alle Angeln oeffnen` : `${areaName} bei hejfish oeffnen`;
     const sourceUrl = this.cleanText(
       area.url
       || area.links?.source
@@ -1040,7 +1041,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       if (!slug) return null;
       return {
         source: 'alleangeln',
-        label: 'Bei Alle Angeln oeffnen',
+        label: `${area.name} bei Alle Angeln oeffnen`,
         url: `https://www.alleangeln.de/gewaesser/${slug}`,
       };
     }
@@ -1051,7 +1052,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const slug = area.slug ? `-${area.slug}` : '';
     return {
       source: 'hejfish',
-      label: 'Bei hejfish oeffnen',
+      label: `${area.name} bei hejfish oeffnen`,
       url: `https://www.hejfish.com/d/${hejfishNumericId}${slug}`,
     };
   }
@@ -1066,7 +1067,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
       const url = `https://www.alleangeln.de/gewaesser/${slug}`;
       links.set(`alleangeln:${url}`, {
         source: 'alleangeln',
-        label: 'Bei Alle Angeln oeffnen',
+        label: `${area.name} bei Alle Angeln oeffnen`,
         url,
       });
     }
