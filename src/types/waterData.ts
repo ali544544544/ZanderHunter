@@ -88,6 +88,7 @@ export interface WaterBodyProfile {
       phone?: string;
       email?: string;
       website?: string;
+      logoUrl?: string;
     };
   };
   lastUpdated: Date;

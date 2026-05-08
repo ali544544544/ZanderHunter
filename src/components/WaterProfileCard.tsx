@@ -397,9 +397,17 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
         <div className="space-y-2">
           <SectionHeading source="hejfish">Betreiber</SectionHeading>
           <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3">
-            <div className="space-y-1 text-xs font-semibold leading-relaxed text-slate-300">
-              {details?.manager?.name && <p className="font-black text-slate-100">{details.manager.name}</p>}
-              {details?.manager?.phone && (
+            <div className="flex items-start gap-3">
+              {details?.manager?.logoUrl && (
+                <img
+                  src={details.manager.logoUrl}
+                  alt=""
+                  className="h-10 w-10 shrink-0 rounded border border-slate-700 bg-white object-contain p-0.5"
+                />
+              )}
+              <div className="space-y-1 text-xs font-semibold leading-relaxed text-slate-300">
+                {details?.manager?.name && <p className="font-black text-slate-100">{details.manager.name}</p>}
+                {details?.manager?.phone && (
                 <a className="block text-blue-200" href={`tel:${details.manager.phone}`}>
                   Telefon: {details.manager.phone}
                 </a>

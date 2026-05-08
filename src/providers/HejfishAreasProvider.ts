@@ -660,6 +660,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
           phone: this.cleanText(detailsArea.manager.phone || detailsArea.manager.telephone),
           email: this.cleanText(detailsArea.manager.email),
           website: this.cleanText(detailsArea.manager.website),
+          logoUrl: this.cleanText(detailsArea.manager.logo),
         }
       : undefined;
     const name = this.cleanText(area.name) || area.name;
