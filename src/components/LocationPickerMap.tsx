@@ -81,7 +81,7 @@ async function fetchWaterAreas() {
 
   for (const path of paths) {
     try {
-      const response = await fetch(path, { cache: 'force-cache' });
+      const response = await fetch(path, { cache: 'no-cache' });
       if (!response.ok) {
         continue;
       }

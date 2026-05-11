@@ -154,7 +154,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     for (const baseUrl of this.getDataBaseUrls()) {
       try {
         const response = await fetch(`${baseUrl}areas_lite.json`, {
-          cache: 'force-cache',
+          cache: 'no-cache',
         });
 
         if (!response.ok) continue;
@@ -183,7 +183,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     for (const baseUrl of baseUrls) {
       try {
         const response = await fetch(`${baseUrl}areas_geo_index.json`, {
-          cache: 'force-cache',
+          cache: 'no-cache',
         });
 
         if (!response.ok) continue;
@@ -219,7 +219,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     for (const baseUrl of baseUrls) {
       try {
         const response = await fetch(`${baseUrl}${this.getCandidateDetailPath(candidate)}`, {
-          cache: 'force-cache',
+          cache: 'no-cache',
         });
 
         if (!response.ok) continue;

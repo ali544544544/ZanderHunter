@@ -18,13 +18,30 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
           registration.unregister();
         }
       });
+      if ('caches' in window) {
+        caches.keys().then(cacheNames => {
+          for (const cacheName of cacheNames) {
+            if (cacheName.startsWith('zanderhunter-')) {
+              caches.delete(cacheName);
+            }
+          }
+        });
+      }
       console.log('Service Worker manually disabled via URL');
       return;
     }
 
-    const serviceWorkerUrl = `${import.meta.env.BASE_URL}sw.js`
+    let reloadedForServiceWorkerUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloadedForServiceWorkerUpdate) return;
+      reloadedForServiceWorkerUpdate = true;
+      window.location.reload();
+    });
+
+    const serviceWorkerUrl = `${import.meta.env.BASE_URL}sw.js?v=14`
     navigator.serviceWorker.register(serviceWorkerUrl)
       .then(reg => {
+        reg.update();
         console.log('Service Worker registered successfully:', reg.scope);
       })
       .catch((error) => {
