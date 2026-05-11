@@ -51,6 +51,11 @@ describe('HejfishAreasProvider mapping', () => {
           { lat: 48.02, lng: 9.35 },
         ]],
       },
+      metadata: {
+        followers: 1234,
+        catches_count: 56,
+        images_count: 7,
+      },
       error: false,
     };
     const geoIndexEntry: HejfishGeoIndexEntry = {
@@ -84,6 +89,8 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.species.map((entry) => entry.species)).toContain('forelle');
       expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
       expect(profile?.areaDetails?.tickets?.[0].name).toBe('Tageskarte');
+      expect(profile?.areaDetails?.stats?.followers).toBe(1234);
+      expect(profile?.areaDetails?.stats?.catches).toBe(56);
       expect(profile?.links?.[0].url).toBe(area.url);
       expect(detailUrls[0]).toContain('/details/hejfish/hejfish-12071.json');
     } finally {

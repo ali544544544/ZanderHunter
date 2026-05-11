@@ -713,6 +713,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const links = this.getAreaLinks(area, manager, rulesFiles, relatedAreaLinks);
     const season = this.getSeasonText(detailsArea);
     const sources = this.getProfileSources(area, source, relatedAreaLinks);
+    const stats = this.getAreaStats([detailsArea, area, ...allSources]);
     
     const descriptions = allSources
       .flatMap(s => [s.description, s.intro, s.details])
@@ -765,11 +766,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
         tickets,
         ticketTypes: detailsArea.ticket_types,
         features: featureLabels,
-        stats: {
-          followers: (detailsArea as any).followers ?? (detailsArea as any).follower_count,
-          catches: (detailsArea as any).catches_count ?? (detailsArea as any).catch_count,
-          images: (detailsArea as any).images_count ?? (detailsArea as any).image_count,
-        },
+        stats,
         manager,
       },
       lastUpdated,
@@ -857,6 +854,31 @@ export class HejfishAreasProvider implements WaterDataProvider {
     for (const source of sources) {
       const imageUrl = this.cleanText(source.links?.image || source.main_image || source.image);
       if (imageUrl) return imageUrl;
+    }
+
+    return undefined;
+  }
+
+  private getAreaStats(sources: Array<Partial<HejfishArea>>): NonNullable<WaterBodyProfile['areaDetails']>['stats'] {
+    const stats = sources
+      .flatMap((source) => [source, source.metadata])
+      .filter((source): source is Record<string, unknown> => Boolean(source))
+      .reduce<{ followers?: number; catches?: number; images?: number }>((best, source) => ({
+        followers: Math.max(best.followers ?? 0, this.toCount(source.followers ?? source.follower_count) ?? 0),
+        catches: Math.max(best.catches ?? 0, this.toCount(source.catches_count ?? source.catch_count) ?? 0),
+        images: Math.max(best.images ?? 0, this.toCount(source.images_count ?? source.image_count) ?? 0),
+      }), {});
+
+    return stats && ((stats.followers ?? 0) > 0 || (stats.catches ?? 0) > 0 || (stats.images ?? 0) > 0)
+      ? stats
+      : undefined;
+  }
+
+  private toCount(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace(/\./g, '').replace(',', '.'));
+      if (Number.isFinite(parsed)) return parsed;
     }
 
     return undefined;

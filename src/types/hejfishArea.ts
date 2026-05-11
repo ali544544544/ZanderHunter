@@ -119,6 +119,12 @@ export interface HejfishArea {
       source_last_updated?: string;
       seo_name?: string;
     }>;
+    followers?: number;
+    follower_count?: number;
+    catches_count?: number;
+    catch_count?: number;
+    images_count?: number;
+    image_count?: number;
   };
   error?: boolean;
 }

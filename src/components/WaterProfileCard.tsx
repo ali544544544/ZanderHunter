@@ -228,7 +228,6 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
   const hasStats = Boolean(details?.stats && (
     (details.stats.followers ?? 0) > 0
     || (details.stats.catches ?? 0) > 0
-    || (details.stats.images ?? 0) > 0
   ));
 
   return (
@@ -381,14 +380,10 @@ export function WaterProfileCard({ profile, loading = false, error = null, onRef
       )}
 
       {hasStats && (
-        <div className="grid grid-cols-2 gap-2 border-t border-slate-800 pt-4">
+        <div className="border-t border-slate-800 pt-4">
           <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-center">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Fänge</p>
             <p className="mt-1 text-lg font-black text-slate-100">{details?.stats?.catches || 0}</p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bilder</p>
-            <p className="mt-1 text-lg font-black text-slate-100">{details?.stats?.images || 0}</p>
           </div>
         </div>
       )}
