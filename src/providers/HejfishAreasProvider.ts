@@ -698,13 +698,14 @@ export class HejfishAreasProvider implements WaterDataProvider {
         }
       : undefined;
     const name = this.cleanText(area.name) || area.name;
-    // Strictly prioritize primary image, only fallback to confirmed matches if primary has none
-    const primaryImage = this.cleanText(area.links?.image || area.main_image || area.image);
-    const imageUrl = primaryImage || this.cleanText(
-      allSources.find(s => s !== area && (s.links?.image || s.main_image || s.image))?.links?.image 
-      || allSources.find(s => s !== area && (s.links?.image || s.main_image || s.image))?.main_image 
-      || allSources.find(s => s !== area && (s.links?.image || s.main_image || s.image))?.image
-    );
+    const trustedImageSources = [
+      area,
+      ...additionalDetails.filter(d => this.isSameAreaIdentity(area, d)),
+      ...Object.values(area.metadata?.sources || {}),
+      this.getSourceArea(area, 'hejfish'),
+      this.getSourceArea(area, 'alleangeln')
+    ].filter((source): source is Partial<HejfishArea> => Boolean(source));
+    const imageUrl = this.getProfileImageUrl(trustedImageSources);
     const source = this.getAreaSource(area);
     const rulesFiles = this.getRulesFiles(detailsArea);
     const rulesText = this.getAreaRulesText(detailsArea);
@@ -850,6 +851,31 @@ export class HejfishAreasProvider implements WaterDataProvider {
     if (sourceIds.alleangeln !== undefined || area.metadata?.sources?.alleangeln) sources.add('alleangeln');
 
     return Array.from(sources);
+  }
+
+  private getProfileImageUrl(sources: Array<Partial<HejfishArea>>): string | undefined {
+    for (const source of sources) {
+      const imageUrl = this.cleanText(source.links?.image || source.main_image || source.image);
+      if (imageUrl) return imageUrl;
+    }
+
+    return undefined;
+  }
+
+  private isSameAreaIdentity(area: HejfishArea, candidate: HejfishArea): boolean {
+    const areaId = this.getAreaProfileId(area);
+    const candidateId = this.getAreaProfileId(candidate);
+    if (areaId && candidateId && areaId === candidateId) return true;
+    if (area.global_id && candidate.global_id && area.global_id === candidate.global_id) return true;
+
+    const sourceIds = { ...area.external_ids, ...area.source_ids };
+    const candidateSourceIds = { ...candidate.external_ids, ...candidate.source_ids };
+
+    return Object.entries(sourceIds).some(([source, id]) => (
+      id !== undefined
+      && candidateSourceIds[source] !== undefined
+      && String(candidateSourceIds[source]) === String(id)
+    ));
   }
 
   private getAreaMapGeometry(area: HejfishArea): WaterMapGeometry | undefined {

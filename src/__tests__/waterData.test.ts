@@ -939,4 +939,72 @@ describe('HejfishAreasProvider mapping', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('does not reuse images from loosely matched nearby water details', async () => {
+    const liteAreas: HejfishAreaLite[] = [
+      {
+        id: 1,
+        name: 'Wohra Altarm',
+        lat: 51.3807,
+        lng: 9.3447,
+        water_type: 'See',
+        platform: 'hejfish',
+        fish_count: 2,
+      },
+      {
+        id: 15212,
+        name: 'Wohra',
+        lat: 51.381,
+        lng: 9.345,
+        water_type: 'Fluss',
+        platform: 'hejfish',
+        fish_count: 7,
+      },
+    ];
+    const primaryArea: HejfishArea = {
+      id: 1,
+      global_id: 'hejfish-1',
+      source_platform: 'hejfish',
+      name: 'Wohra Altarm',
+      water_type: 'See',
+      lat: 51.3807,
+      lng: 9.3447,
+      fish: ['Zander'],
+      error: false,
+    };
+    const nearbyAreaWithImage: HejfishArea = {
+      id: 15212,
+      global_id: 'hejfish-15212',
+      source_platform: 'hejfish',
+      name: 'Wohra',
+      water_type: 'Fluss',
+      lat: 51.381,
+      lng: 9.345,
+      links: {
+        image: 'https://file.hejfish.com/image/cc1200x900/6a/07/6a0774e71d67b879fba6bbf112d18ef2b921e1dd.jpg',
+      },
+      fish: ['Bachforelle'],
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify(liteAreas));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      if (url.includes('/details/hejfish/hejfish-1.json')) return new Response(JSON.stringify(primaryArea));
+      if (url.includes('/details/hejfish/hejfish-15212.json')) return new Response(JSON.stringify(nearbyAreaWithImage));
+      return new Response(null, { status: 404 });
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(51.3807, 9.3447);
+
+      expect(profile?.id).toBe('hejfish-1');
+      expect(profile?.imageUrl).toBeUndefined();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
