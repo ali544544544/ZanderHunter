@@ -71,6 +71,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
         const otherDetails = (await Promise.all(
           detailCandidates
             .filter(c => c.id !== nearestCoordinateCandidate.id)
+            .filter(c => !c.regional)
             .map(c => this.loadAreaDetail(c))
         )).filter((d): d is HejfishArea => Boolean(d));
 

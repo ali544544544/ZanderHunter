@@ -67,6 +67,7 @@ export interface HejfishArea {
     telephone?: string;
     email?: string;
     website?: string;
+    logo?: string;
   };
   main_image?: string;
   image?: string;
