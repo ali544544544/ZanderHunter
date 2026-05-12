@@ -358,6 +358,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
             return;
           }
 
+          event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
           dragRef.current = {
             pointerId: event.pointerId,
@@ -420,6 +421,9 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           changeZoom(1);
           onSelect({ ...location, label: locationLabel(location.lat, location.lng) });
         }}
+        onDragStart={(event) => {
+          event.preventDefault();
+        }}
         role="button"
         tabIndex={0}
         aria-label="Standort auf Karte auswählen"
@@ -434,7 +438,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
             key={tile.key}
             src={tile.src}
             alt=""
-            className="absolute h-64 w-64 select-none"
+            className="pointer-events-none absolute h-64 w-64 select-none"
             draggable={false}
             loading="eager"
             style={{ left: tile.left, top: tile.top }}
