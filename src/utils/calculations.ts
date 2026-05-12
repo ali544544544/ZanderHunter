@@ -250,22 +250,6 @@ function getPopulationConfidence(profile: WaterBodyProfile | null | undefined, f
   return profile?.species.find((entry) => entry.species === fish)?.confidence ?? null;
 }
 
-function adjustScoreForWaterProfile(total: number, profile: WaterBodyProfile | null | undefined, fish: TargetFish) {
-  if (!profile) return total;
-
-  const confidence = getPopulationConfidence(profile, fish);
-  if (confidence === null) {
-    if (profile.dataQuality === 'high' || profile.dataQuality === 'medium') {
-      return Math.round(clamp(total * 0.82));
-    }
-    return total;
-  }
-
-  const multiplier = 0.86 + confidence * 0.28;
-  const directBonus = (confidence - 0.5) * 10;
-  return Math.round(clamp(total * multiplier + directBonus));
-}
-
 function getProfileLegalOverride(profile: WaterBodyProfile | null | undefined, fish: TargetFish, date: Date) {
   if (!profile?.regulations) return null;
 
@@ -302,7 +286,6 @@ function applyWaterProfileContext(
     };
   }
 
-  const adjustedTotal = adjustScoreForWaterProfile(total, profile, fish);
   const populationConfidence = getPopulationConfidence(profile, fish);
   const legalOverride = getProfileLegalOverride(profile, fish, input.date || new Date());
   const qualityAdjustment = profile.dataQuality === 'high' ? -1 : profile.dataQuality === 'unknown' ? 1 : 0;
@@ -322,7 +305,7 @@ function applyWaterProfileContext(
   };
 
   return {
-    total: adjustedTotal,
+    total,
     confidence: confidenceMargin,
     legal: profileLegal,
     waterProfile: {
@@ -538,12 +521,9 @@ export function calculateZanderIndex(input: HechtScoreInput): PredatorScoreDetai
   const confidence = Math.round(clamp(9 - 0.05 * total, 5, 9));
   const waterContext = applyWaterProfileContext(input, 'zander', total, confidence, rules);
   const biologicalProbability = Math.round(clamp(14 + waterContext.total * 0.62, 5, 78));
-  const populationSuffix = waterContext.populationConfidence !== null
-    ? `, Bestand ${Math.round(waterContext.populationConfidence * 100)}%`
-    : '';
   const probability = waterContext.legal.schonzeitAktiv
     ? `${biologicalProbability}% biologisch, Schonzeit beachten`
-    : `${biologicalProbability}% für Zanderkontakt${populationSuffix}`;
+    : `${biologicalProbability}% für Zanderkontakt`;
 
   return {
     total: waterContext.total,
@@ -597,10 +577,7 @@ export function calculateBarschIndex(input: HechtScoreInput): PredatorScoreDetai
   const total = Math.round(clamp(raw * multiplier));
   const confidence = Math.round(clamp(7 - 0.04 * total, 3, 7));
   const waterContext = applyWaterProfileContext(input, 'barsch', total, confidence, rules);
-  const populationSuffix = waterContext.populationConfidence !== null
-    ? `, Bestand ${Math.round(waterContext.populationConfidence * 100)}%`
-    : '';
-  const probability = `${Math.round(clamp(10 + waterContext.total * 0.75, 5, 85))}% für Barschkontakt${populationSuffix}`;
+  const probability = `${Math.round(clamp(10 + waterContext.total * 0.75, 5, 85))}% für Barschkontakt`;
   const activity = getBarschActivity(waterContext.total);
 
   return {
@@ -774,12 +751,9 @@ export function calculateHechtIndex(input: HechtScoreInput): HechtScoreDetails {
   const confidence = Math.round(clamp(8 - 0.05 * total, 4, 8));
   const waterContext = applyWaterProfileContext(input, 'hecht', total, confidence, rules);
   const biologicalProbability = Math.round(clamp(18 + waterContext.total * 0.67, 5, 85));
-  const populationSuffix = waterContext.populationConfidence !== null
-    ? `, Bestand ${Math.round(waterContext.populationConfidence * 100)}%`
-    : '';
   const probability = waterContext.legal.schonzeitAktiv
     ? `${biologicalProbability}% biologisch, Schonzeit beachten`
-    : `${biologicalProbability}% für Hecht >60cm${populationSuffix}`;
+    : `${biologicalProbability}% für Hecht >60cm`;
 
   return {
     total: waterContext.total,

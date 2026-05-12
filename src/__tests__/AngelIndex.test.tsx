@@ -45,6 +45,23 @@ describe('AngelIndex Component', () => {
     expect(screen.getByText(/gezieltes Angeln aussetzen/)).toBeInTheDocument();
   });
 
+  it('zeigt Gewaesserhinweis unter dem Score', () => {
+    render(
+      <AngelIndex
+        score={72}
+        loading={false}
+        fishPresenceHint={{
+          tone: 'good',
+          title: 'Zander gelistet',
+          text: 'Zander kommt laut Gewaesserdaten in Testsee vor.',
+        }}
+      />
+    );
+
+    expect(screen.getByText('Zander gelistet')).toBeInTheDocument();
+    expect(screen.getByText(/Testsee/)).toBeInTheDocument();
+  });
+
   it('zeigt Loading State an', () => {
     render(<AngelIndex score={0} loading={true} />);
     expect(screen.getByText(/Berechne Angel-Index/)).toBeInTheDocument();

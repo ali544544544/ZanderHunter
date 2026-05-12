@@ -3,7 +3,7 @@ import { useAngelIndex } from './hooks/useAngelIndex';
 import { getKoderEmpfehlung, generateBriefing } from './data/koderLogik';
 import { SPOTS, calculateSpotScoreForFish } from './data/spots';
 
-import AngelIndex from './components/AngelIndex';
+import AngelIndex, { type FishPresenceHint } from './components/AngelIndex';
 import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
@@ -21,6 +21,7 @@ import { useLocationSearch } from './hooks/useLocationSearch';
 import { useUserSpots } from './hooks/useUserSpots';
 import type { TargetFish } from './utils/calculations';
 import type { SearchLocation } from './hooks/useLocationSearch';
+import type { WaterBodyProfile } from './types/waterData';
 
 type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast' | 'guides';
 
@@ -42,6 +43,55 @@ const navItems: { id: ActiveTab; label: string; icon: string }[] = [
 
 const defaultLocation = { lat: 53.55, lng: 9.99 };
 const normalizeCoordinate = (value: number) => Number(value.toFixed(4));
+
+function getFishPresenceHint(
+  profile: WaterBodyProfile | null,
+  loading: boolean,
+  error: string | null,
+  targetFish: TargetFish,
+  fishLabel: string
+): FishPresenceHint {
+  if (loading && !profile) {
+    return {
+      tone: 'neutral',
+      title: 'Gewässerdaten werden geprüft',
+      text: `Ich prüfe, ob ${fishLabel} am ausgewählten Gewässer in den Daten gelistet ist.`,
+    };
+  }
+
+  if (!profile) {
+    return {
+      tone: 'neutral',
+      title: 'Keine Gewässerdaten',
+      text: error || `Für den ausgewählten Punkt liegen keine Fischarten vor. Der Score bleibt ein reiner Aktivitätswert.`,
+    };
+  }
+
+  const targetEntry = profile.species.find((entry) => entry.species === targetFish);
+
+  if (targetEntry) {
+    const confidence = Math.round(targetEntry.confidence * 100);
+    return {
+      tone: 'good',
+      title: `${fishLabel} gelistet`,
+      text: `${fishLabel} kommt laut Gewässerdaten in ${profile.name} vor. Fangbarkeit: möglich, lokale Erlaubnis und Regeln trotzdem prüfen. Datenvertrauen: ${confidence}%.`,
+    };
+  }
+
+  if (profile.species.length > 0) {
+    return {
+      tone: 'warn',
+      title: `${fishLabel} nicht gelistet`,
+      text: `${fishLabel} ist in den Gewässerdaten für ${profile.name} nicht als Fischart hinterlegt. Fangbarkeit: nicht belegt; der Score bleibt nur der Wetter- und Aktivitätswert.`,
+    };
+  }
+
+  return {
+    tone: 'neutral',
+    title: 'Keine Fischarten hinterlegt',
+    text: `Für ${profile.name} liegen keine Fischarten in den Gewässerdaten vor. Der Score wird dadurch nicht verändert.`,
+  };
+}
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('jetzt');
@@ -92,6 +142,10 @@ const App: React.FC = () => {
   const fishLabel = useMemo(
     () => fishOptions.find((fish) => fish.value === targetFish)?.label ?? 'Zander',
     [targetFish]
+  );
+  const fishPresenceHint = useMemo(
+    () => getFishPresenceHint(waterProfile, waterProfileLoading, waterProfileError, targetFish, fishLabel),
+    [fishLabel, targetFish, waterProfile, waterProfileError, waterProfileLoading]
   );
   const allSpots = useMemo(() => [...SPOTS, ...userSpots], [userSpots]);
   const koder = useMemo(
@@ -310,7 +364,13 @@ const App: React.FC = () => {
       <main className="space-y-5">
         {activeTab === 'jetzt' && (
           <>
-            <AngelIndex score={score} loading={loading} fishLabel={fishLabel} scoreDetails={scoreDetails} />
+            <AngelIndex
+              score={score}
+              loading={loading}
+              fishLabel={fishLabel}
+              scoreDetails={scoreDetails}
+              fishPresenceHint={fishPresenceHint}
+            />
             <WaterProfileCard
               profile={waterProfile}
               loading={waterProfileLoading}

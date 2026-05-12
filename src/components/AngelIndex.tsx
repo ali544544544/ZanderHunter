@@ -2,14 +2,39 @@ import React from 'react';
 import InfoTooltip from './InfoTooltip';
 import type { HechtScoreDetails } from '../utils/calculations';
 
+export type FishPresenceHint = {
+  tone: 'good' | 'warn' | 'neutral';
+  title: string;
+  text: string;
+};
+
 interface AngelIndexProps {
   score: number;
   loading: boolean;
   fishLabel?: string;
   scoreDetails?: HechtScoreDetails | null;
+  fishPresenceHint?: FishPresenceHint | null;
 }
 
-const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Zander', scoreDetails }) => {
+const hintToneClasses: Record<FishPresenceHint['tone'], string> = {
+  good: 'border-emerald-500/35 bg-emerald-500/10 text-emerald-100',
+  warn: 'border-yellow-500/35 bg-yellow-500/10 text-yellow-100',
+  neutral: 'border-slate-700 bg-slate-950/35 text-slate-200',
+};
+
+const hintBadgeClasses: Record<FishPresenceHint['tone'], string> = {
+  good: 'bg-emerald-500/20 text-emerald-200',
+  warn: 'bg-yellow-500/20 text-yellow-100',
+  neutral: 'bg-slate-700/70 text-slate-200',
+};
+
+const AngelIndex: React.FC<AngelIndexProps> = ({
+  score,
+  loading,
+  fishLabel = 'Zander',
+  scoreDetails,
+  fishPresenceHint,
+}) => {
   const getStatus = (s: number) => {
     if (s >= 75) return { color: 'text-angel-green', bg: 'bg-angel-green/20', text: 'Sehr gut — raus gehen!' };
     if (s >= 55) return { color: 'text-angel-light', bg: 'bg-angel-light/20', text: 'Gut — lohnender Ausflug' };
@@ -43,6 +68,22 @@ const AngelIndex: React.FC<AngelIndexProps> = ({ score, loading, fishLabel = 'Za
       <div className={`mt-6 px-4 py-2 rounded-full font-bold text-lg ${status.color} ${status.bg}`}>
         {status.text}
       </div>
+
+      {fishPresenceHint && (
+        <div className={`mt-4 w-full rounded-xl border p-3 text-left ${hintToneClasses[fishPresenceHint.tone]}`}>
+          <div className="flex items-start gap-3">
+            <span className={`mt-0.5 shrink-0 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-wider ${hintBadgeClasses[fishPresenceHint.tone]}`}>
+              Gewässer
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-widest">{fishPresenceHint.title}</p>
+              <p className="mt-1 text-xs font-semibold leading-relaxed opacity-90">
+                {fishPresenceHint.text}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isClosedSeason && (
         <div className="mt-4 w-full rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-left shadow-[0_0_24px_rgba(239,68,68,0.12)]">

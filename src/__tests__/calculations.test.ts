@@ -120,12 +120,15 @@ describe('water profile score context', () => {
     };
   }
 
-  it('bewertet guten Bestand hoeher als schwachen Bestand', () => {
+  it('veraendert den Score nicht durch Gewaesserbestand', () => {
+    const base = calculateZanderIndex(baseInput);
     const strong = calculateZanderIndex({ ...baseInput, waterProfile: createProfile(0.9) });
     const weak = calculateZanderIndex({ ...baseInput, waterProfile: createProfile(0.1) });
 
-    expect(strong.total).toBeGreaterThan(weak.total);
-    expect(strong.probability).toContain('Bestand 90%');
+    expect(strong.total).toBe(base.total);
+    expect(weak.total).toBe(base.total);
+    expect(strong.waterProfile?.populationConfidence).toBe(0.9);
+    expect(strong.probability).not.toContain('Bestand');
   });
 
   it('uebernimmt Schonzeit aus dem Gewaesserprofil', () => {
