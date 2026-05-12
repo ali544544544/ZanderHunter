@@ -713,7 +713,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const links = this.getAreaLinks(area, manager, rulesFiles, relatedAreaLinks);
     const season = this.getSeasonText(detailsArea);
     const sources = this.getProfileSources(area, source, relatedAreaLinks);
-    const stats = this.getAreaStats([detailsArea, area, ...allSources]);
+    const stats = this.getAreaStats(area);
     
     const descriptions = allSources
       .flatMap(s => [s.description, s.intro, s.details])
@@ -859,19 +859,29 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return undefined;
   }
 
-  private getAreaStats(sources: Array<Partial<HejfishArea>>): NonNullable<WaterBodyProfile['areaDetails']>['stats'] {
-    const stats = sources
-      .flatMap((source) => [source, source.metadata])
-      .filter((source): source is Record<string, unknown> => Boolean(source))
-      .reduce<{ followers?: number; catches?: number; images?: number }>((best, source) => ({
-        followers: Math.max(best.followers ?? 0, this.toCount(source.followers ?? source.follower_count) ?? 0),
-        catches: Math.max(best.catches ?? 0, this.toCount(source.catches_count ?? source.catch_count) ?? 0),
-        images: Math.max(best.images ?? 0, this.toCount(source.images_count ?? source.image_count) ?? 0),
-      }), {});
+  private getAreaStats(source: Partial<HejfishArea>): NonNullable<WaterBodyProfile['areaDetails']>['stats'] {
+    const sourceStats = this.readAreaStats(source);
+    const metadataStats = this.readAreaStats(source.metadata);
+    const stats = {
+      followers: sourceStats.followers ?? metadataStats.followers,
+      catches: sourceStats.catches ?? metadataStats.catches,
+      images: sourceStats.images ?? metadataStats.images,
+    };
 
     return stats && ((stats.followers ?? 0) > 0 || (stats.catches ?? 0) > 0 || (stats.images ?? 0) > 0)
       ? stats
       : undefined;
+  }
+
+  private readAreaStats(source?: Partial<HejfishArea> | Record<string, unknown>): { followers?: number; catches?: number; images?: number } {
+    if (!source) return {};
+    const raw = source as Record<string, unknown>;
+
+    return {
+      followers: this.toCount(raw.followers ?? raw.follower_count),
+      catches: this.toCount(raw.catches_count ?? raw.catch_count),
+      images: this.toCount(raw.images_count ?? raw.image_count),
+    };
   }
 
   private toCount(value: unknown): number | undefined {

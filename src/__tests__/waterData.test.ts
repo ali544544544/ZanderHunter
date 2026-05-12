@@ -98,6 +98,68 @@ describe('HejfishAreasProvider mapping', () => {
     }
   });
 
+  it('uses community stats from the selected water detail json only', async () => {
+    const liteArea: HejfishAreaLite = {
+      id: 'alleangeln-isebekkanal-hamburg',
+      name: 'Isebekkanal (Hamburg)',
+      lat: 53.577553,
+      lng: 9.973584,
+      water_type: 'Kanal',
+      platform: 'alleangeln',
+      fish_count: 6,
+    };
+    const area: HejfishArea = {
+      id: 'alleangeln-isebekkanal-hamburg',
+      global_id: 'alleangeln-isebekkanal-hamburg',
+      source_platform: 'alleangeln',
+      source_ids: { alleangeln: 'isebekkanal-hamburg' },
+      name: 'Isebekkanal (Hamburg)',
+      water_type: 'Kanal',
+      fish: ['Flussbarsch', 'Brachse', 'Hecht'],
+      followers: 381,
+      catches_count: 86,
+      images_count: 5,
+      lat: 53.577553,
+      lng: 9.973584,
+      metadata: {
+        sources: {
+          alleangeln: {
+            id: 'alleangeln-außenalster',
+            global_id: 'alleangeln-außenalster',
+            source_platform: 'alleangeln',
+            name: 'Außenalster',
+            followers: 3999,
+            catches_count: 1146,
+            images_count: 28,
+          },
+        },
+      },
+      error: false,
+    };
+    const originalFetch = globalThis.fetch;
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('areas_lite')) return new Response(JSON.stringify([liteArea]));
+      if (url.includes('areas_geo_index')) return new Response(JSON.stringify([]));
+      return new Response(JSON.stringify(area));
+    };
+    globalThis.fetch = fetchMock;
+
+    try {
+      const provider = new HejfishAreasProvider();
+      const profile = await provider.getWaterBodyProfile(53.577553, 9.973584);
+
+      expect(profile?.name).toBe('Isebekkanal (Hamburg)');
+      expect(profile?.areaDetails?.stats).toEqual({
+        followers: 381,
+        catches: 86,
+        images: 5,
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('prefers the bundled public data index before stale dist data', async () => {
     const publicLiteArea: HejfishAreaLite = {
       id: 'alleangeln-außenalster',
