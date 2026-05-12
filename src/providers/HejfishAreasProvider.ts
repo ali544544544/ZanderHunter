@@ -631,7 +631,11 @@ export class HejfishAreasProvider implements WaterDataProvider {
     lat: number, 
     lng: number
   ): WaterBodyProfile {
-    const detailsArea = this.mergeSourceFields(area, this.getFlatMetadataArea(area));
+    const combinedSources = this.getExplicitCombinedSourceAreas(area);
+    const detailsArea = this.mergeCombinationFields(
+      this.mergeSourceFields(area, this.getFlatMetadataArea(area)),
+      combinedSources
+    );
     const center = this.getAreaCenter(area, { lat, lng }) || { lat, lng };
     const lastUpdated = new Date(area.last_updated || detailsArea.last_updated || Date.now());
     
@@ -671,8 +675,8 @@ export class HejfishAreasProvider implements WaterDataProvider {
     const rulesText = this.getAreaRulesText(detailsArea);
     const links = this.getAreaLinks(area, manager, rulesFiles);
     const season = this.getSeasonText(detailsArea);
-    const sources = [source];
-    const stats = this.getAreaStats(area);
+    const sources = this.getProfileSources(source, combinedSources);
+    const stats = this.getCombinedAreaStats(area, combinedSources);
     const description = this.cleanText(detailsArea.description)
       || this.cleanText(detailsArea.intro)
       || this.cleanText(detailsArea.details);
@@ -760,6 +764,82 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return metadataFields as Partial<HejfishArea>;
   }
 
+  private getExplicitCombinedSourceAreas(area: HejfishArea): Array<Partial<HejfishArea>> {
+    if (area.source_platform !== 'merged') return [];
+
+    const sources = area.metadata?.sources;
+    if (!sources) return [];
+
+    const sourceIds = { ...area.external_ids, ...area.source_ids };
+    const hasHejfish = sourceIds.hejfish !== undefined || Boolean(sources.hejfish);
+    const hasAlleAngeln = sourceIds.alleangeln !== undefined || Boolean(sources.alleangeln);
+    if (!hasHejfish || !hasAlleAngeln) return [];
+
+    return [sources.hejfish, sources.alleangeln]
+      .filter((source): source is Partial<HejfishArea> => Boolean(source));
+  }
+
+  private mergeCombinationFields(base: HejfishArea, sources: Array<Partial<HejfishArea>>): HejfishArea {
+    if (sources.length === 0) return base;
+
+    const merged = sources.reduce<HejfishArea>((current, source) => this.mergeMissingSourceFields(current, source), base);
+    const links = sources.reduce<Record<string, string | undefined>>(
+      (best, source) => ({ ...best, ...source.links }),
+      {}
+    );
+
+    return {
+      ...merged,
+      links: { ...links, ...base.links },
+      fish: this.cleanList([
+        ...(base.fish || []),
+        ...sources.flatMap((source) => this.getAreaFishNames(source)),
+      ]),
+      most_caught_fish: this.cleanList([
+        ...(base.most_caught_fish || []),
+        ...sources.flatMap((source) => source.most_caught_fish || []),
+      ]),
+      techniques: this.cleanList([
+        ...(base.techniques || []),
+        ...sources.flatMap((source) => source.techniques || []),
+      ]),
+      properties: this.cleanList([
+        ...(base.properties || []),
+        ...sources.flatMap((source) => source.properties || []),
+      ]),
+      features: sources.reduce<HejfishArea['features']>(
+        (features, source) => ({ ...features, ...source.features }),
+        base.features || {}
+      ),
+    } as HejfishArea;
+  }
+
+  private mergeMissingSourceFields(base: HejfishArea, source: Partial<HejfishArea>): HejfishArea {
+    return {
+      ...base,
+      description: base.description ?? source.description,
+      intro: base.intro ?? source.intro,
+      details: base.details ?? source.details,
+      borders: base.borders ?? source.borders,
+      rules_text: base.rules_text ?? source.rules_text,
+      rules_files: base.rules_files ?? source.rules_files,
+      tickets: base.tickets ?? source.tickets,
+      ticket_types: base.ticket_types ?? source.ticket_types,
+      manager: base.manager ?? source.manager,
+      location: base.location ?? source.location,
+      location_info: base.location_info ?? source.location_info,
+      season: base.season ?? source.season,
+      season_begin: base.season_begin ?? source.season_begin,
+      season_end: base.season_end ?? source.season_end,
+      best_method: base.best_method ?? source.best_method,
+      mobile_ticket: base.mobile_ticket ?? source.mobile_ticket,
+      print_required: base.print_required ?? source.print_required,
+      water_size_ha: base.water_size_ha ?? source.water_size_ha,
+      main_image: base.main_image ?? source.main_image,
+      image: base.image ?? source.image,
+    };
+  }
+
   private mergeSourceFields(area: HejfishArea, source?: Partial<HejfishArea>): HejfishArea {
     if (!source) return area;
 
@@ -790,6 +870,22 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return undefined;
   }
 
+  private getProfileSources(primarySource: DataSource, sources: Array<Partial<HejfishArea>>): DataSource[] {
+    const profileSources = new Set<DataSource>([primarySource]);
+
+    for (const source of sources) {
+      const raw = source as Record<string, unknown>;
+      if (raw.platform === 'alleangeln' || source.source_platform === 'alleangeln') {
+        profileSources.add('alleangeln');
+      }
+      if (raw.platform === 'hejfish' || source.source_platform === 'hejfish') {
+        profileSources.add('hejfish');
+      }
+    }
+
+    return Array.from(profileSources);
+  }
+
   private getAreaStats(source: Partial<HejfishArea>): NonNullable<WaterBodyProfile['areaDetails']>['stats'] {
     const sourceStats = this.readAreaStats(source);
     const metadataStats = this.readAreaStats(source.metadata);
@@ -802,6 +898,15 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return stats && ((stats.followers ?? 0) > 0 || (stats.catches ?? 0) > 0 || (stats.images ?? 0) > 0)
       ? stats
       : undefined;
+  }
+
+  private getCombinedAreaStats(
+    area: Partial<HejfishArea>,
+    sources: Array<Partial<HejfishArea>>
+  ): NonNullable<WaterBodyProfile['areaDetails']>['stats'] {
+    return [area, ...sources]
+      .map((source) => this.getAreaStats(source))
+      .find((stats) => Boolean(stats));
   }
 
   private readAreaStats(source?: Partial<HejfishArea> | Record<string, unknown>): { followers?: number; catches?: number; images?: number } {
@@ -965,7 +1070,7 @@ export class HejfishAreasProvider implements WaterDataProvider {
     return knownSpeciesMap[normalized] || normalized || name;
   }
 
-  private getAreaFishNames(area: HejfishArea): string[] {
+  private getAreaFishNames(area: Partial<HejfishArea>): string[] {
     const primaryFish = this.normalizeFishList(area.fish || (area.metadata as any)?.fish || []);
     if (primaryFish.length > 0) return primaryFish;
 

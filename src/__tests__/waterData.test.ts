@@ -662,10 +662,29 @@ describe('HejfishAreasProvider mapping', () => {
       techniques: ['Spinnangeln'],
       borders: 'Dove-Elbe: Angelstrecke der Kombi-Karte.',
       tickets: [{ name: 'Jahreskarte', price: '30,00 EUR' }],
+      links: {
+        source: 'https://www.hejfish.com/d/12189-dove-elbe-kombi-karte',
+        hejfish: 'https://www.hejfish.com/d/12189-dove-elbe-kombi-karte',
+        alleangeln: 'https://www.alleangeln.de/gewaesser/dove-elbe-krapphofschleuse',
+      },
       lat: 53.469139,
       lng: 10.189977,
       map_data: {
         locations: [{ lat: 53.498851, lng: 10.078256 }],
+      },
+      metadata: {
+        sources: {
+          hejfish: {
+            platform: 'hejfish',
+            techniques: ['Ansitzangeln'],
+          },
+          alleangeln: {
+            platform: 'alleangeln',
+            followers: 329,
+            catches_count: 49,
+            best_method: 'Spinnfischen',
+          },
+        },
       },
       error: false,
     };
@@ -703,7 +722,9 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.id).toBe('hejfish-12189');
       expect(profile?.dataQuality).toBe('high');
       expect(profile?.species.map((entry) => entry.species)).toContain('zander');
-      expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/dove-elbe-krapphofschleuse')).not.toBe(true);
+      expect(profile?.sources).toEqual(['hejfish', 'alleangeln']);
+      expect(profile?.areaDetails?.stats?.followers).toBe(329);
+      expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/dove-elbe-krapphofschleuse')).toBe(true);
 
       const mapClickProfile = await provider.getWaterBodyProfile(53.4831, 10.1016);
       expect(mapClickProfile?.id).toBe('hejfish-12189');
@@ -996,14 +1017,14 @@ describe('HejfishAreasProvider mapping', () => {
       expect(profile?.id).toBe('hejfish-12046');
       expect(profile?.latitude).toBe(50.789989);
       expect(profile?.longitude).toBe(10.30387);
-      expect(profile?.sources).toEqual(['hejfish']);
-      expect(profile?.description).toBeUndefined();
+      expect(profile?.sources).toEqual(['hejfish', 'alleangeln']);
+      expect(profile?.description).toContain('Kleiner Kiessee');
       expect(profile?.imageUrl).toBe('https://example.test/hecht.jpg');
       expect(profile?.species.map((entry) => entry.species)).toEqual(expect.arrayContaining(['hecht', 'barsch', 'aal', 'forelle']));
       expect(profile?.areaDetails?.mapGeometry?.points).toEqual([{ lat: 50.790017, lng: 10.30405 }]);
       expect(profile?.areaDetails?.mapGeometry?.polygons).toHaveLength(1);
-      expect(profile?.areaDetails?.tickets).toBeUndefined();
-      expect(profile?.areaDetails?.mobileTicket).toBe(false);
+      expect(profile?.areaDetails?.tickets?.[0].name).toBe('Tageskarte');
+      expect(profile?.areaDetails?.mobileTicket).toBe(true);
       expect(profile?.links?.some((link) => link.url === 'https://www.alleangeln.de/gewaesser/kiesgrube-schwarzer-hecht')).toBe(true);
     } finally {
       globalThis.fetch = originalFetch;
