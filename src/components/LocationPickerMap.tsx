@@ -64,7 +64,11 @@ function locationLabel(lat: number, lng: number) {
 }
 
 function isControlTarget(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest('button'));
+  return target instanceof Element && Boolean(target.closest('[data-map-control="true"]'));
+}
+
+function isWaterMarkerTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest('[data-water-marker="true"]'));
 }
 
 function hasAreaCoordinate(area: HejfishAreaLite): area is HejfishAreaLite & { lat: number; lng: number } {
@@ -103,6 +107,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   const centerLng = center.lng;
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const suppressClusterClickRef = useRef(false);
   const [mapWidth, setMapWidth] = useState(360);
   const [zoom, setZoom] = useState(12);
   const [mapCenter, setMapCenter] = useState(center);
@@ -386,12 +391,26 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
 
           dragRef.current = null;
           if (drag.moved) {
+            suppressClusterClickRef.current = true;
+            window.setTimeout(() => {
+              suppressClusterClickRef.current = false;
+            }, 0);
+            return;
+          }
+
+          if (isWaterMarkerTarget(event.target)) {
             return;
           }
 
           const location = pointToLocation(event.clientX, event.clientY);
           setSelectedPoint(location);
           onSelect({ ...location, label: locationLabel(location.lat, location.lng) });
+        }}
+        onPointerCancel={(event) => {
+          const drag = dragRef.current;
+          if (drag?.pointerId === event.pointerId) {
+            dragRef.current = null;
+          }
         }}
         onDoubleClick={(event) => {
           event.preventDefault();
@@ -427,18 +446,23 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
             const area = cluster.areas[0];
             const isSingle = cluster.count === 1;
             const markerStyle = getMarkerStyle(cluster);
-            const markerSize = isSingle ? 24 : clamp(30 + Math.log(cluster.count) * 6, 34, 58);
+            const markerSize = isSingle ? 18 : clamp(22 + Math.log10(cluster.count + 1) * 10, 24, 38);
 
             return (
               <button
                 key={cluster.key}
                 type="button"
-                onPointerDown={(event) => event.stopPropagation()}
+                data-water-marker="true"
                 onClick={(event) => {
                   event.stopPropagation();
+                  if (suppressClusterClickRef.current) {
+                    suppressClusterClickRef.current = false;
+                    return;
+                  }
+
                   openWaterCluster(cluster);
                 }}
-                className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border font-black shadow-lg shadow-slate-950/50 transition-transform hover:scale-110 ${
+                className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border font-black shadow-md shadow-slate-950/40 transition-transform hover:scale-110 ${
                   isSingle
                     ? 'border-cyan-200/80 bg-cyan-400/90 text-slate-950'
                     : 'border-blue-200/80 bg-blue-500/95 text-white'
@@ -451,7 +475,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
                 title={isSingle ? waterLabel(area) : `${cluster.count} Gewaesser`}
                 aria-label={isSingle ? `${waterLabel(area)} auswaehlen` : `${cluster.count} Gewaesser anzeigen`}
               >
-                <span className={isSingle ? 'h-2.5 w-2.5 rounded-full bg-slate-950' : 'text-[11px] leading-none'}>
+                <span className={isSingle ? 'h-1.5 w-1.5 rounded-full bg-slate-950' : 'text-[10px] leading-none'}>
                   {isSingle ? '' : cluster.count}
                 </span>
               </button>
@@ -469,6 +493,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
         <div className="absolute right-2 top-2 flex flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950/90 shadow-lg shadow-slate-950/40">
           <button
             type="button"
+            data-map-control="true"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -481,6 +506,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           </button>
           <button
             type="button"
+            data-map-control="true"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -500,6 +526,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           </div>
           <button
             type="button"
+            data-map-control="true"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
