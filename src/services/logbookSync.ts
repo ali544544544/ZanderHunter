@@ -34,6 +34,22 @@ interface CatchRow {
   updated_at?: string;
 }
 
+function getSupabaseErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object') {
+    const maybeError = error as { code?: unknown; message?: unknown };
+    const message = typeof maybeError.message === 'string' ? maybeError.message : '';
+    const code = typeof maybeError.code === 'string' ? maybeError.code : '';
+
+    if (code === 'PGRST205' || message.toLowerCase().includes('could not find the table')) {
+      return 'Supabase-Tabellen fehlen. Bitte SQL für logbook_spots und logbook_catches im Supabase SQL Editor ausführen.';
+    }
+
+    if (message) return message;
+  }
+
+  return fallback;
+}
+
 function toSpotRow(trip: LogbookTrip, user: User): SpotRow {
   return {
     id: trip.id,
@@ -150,8 +166,8 @@ export async function loadRemoteLogbook(user: User) {
       .order('caught_at', { ascending: false }),
   ]);
 
-  if (spotsError) throw spotsError;
-  if (catchesError) throw catchesError;
+  if (spotsError) throw new Error(getSupabaseErrorMessage(spotsError, 'Spots konnten nicht aus Supabase geladen werden'));
+  if (catchesError) throw new Error(getSupabaseErrorMessage(catchesError, 'Fänge konnten nicht aus Supabase geladen werden'));
 
   return rowsToTrips((spots ?? []) as SpotRow[], (catches ?? []) as CatchRow[]);
 }
@@ -164,12 +180,12 @@ export async function syncLogbook(user: User, trips: LogbookTrip[]) {
 
   if (spotRows.length > 0) {
     const { error } = await supabase.from('logbook_spots').upsert(spotRows, { onConflict: 'id' });
-    if (error) throw error;
+    if (error) throw new Error(getSupabaseErrorMessage(error, 'Spots konnten nicht synchronisiert werden'));
   }
 
   if (catchRows.length > 0) {
     const { error } = await supabase.from('logbook_catches').upsert(catchRows, { onConflict: 'id' });
-    if (error) throw error;
+    if (error) throw new Error(getSupabaseErrorMessage(error, 'Fänge konnten nicht synchronisiert werden'));
   }
 }
 
@@ -182,7 +198,7 @@ export async function deleteRemoteSpot(user: User, spotId: string) {
     .eq('user_id', user.id)
     .eq('id', spotId);
 
-  if (error) throw error;
+  if (error) throw new Error(getSupabaseErrorMessage(error, 'Spot konnte nicht gelöscht werden'));
 }
 
 export async function deleteRemoteCatch(user: User, catchId: string) {
@@ -194,5 +210,5 @@ export async function deleteRemoteCatch(user: User, catchId: string) {
     .eq('user_id', user.id)
     .eq('id', catchId);
 
-  if (error) throw error;
+  if (error) throw new Error(getSupabaseErrorMessage(error, 'Fang konnte nicht gelöscht werden'));
 }
