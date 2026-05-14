@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAngelIndex } from './hooks/useAngelIndex';
 import { getKoderEmpfehlung, generateBriefing } from './data/koderLogik';
 import { SPOTS, calculateSpotScoreForFish } from './data/spots';
@@ -16,6 +16,8 @@ import GuidesView from './components/GuidesView';
 import LocationPickerMap from './components/LocationPickerMap';
 import { WaterProfileCard } from './components/WaterProfileCard';
 import { WaterAreaMap } from './components/WaterAreaMap';
+import LogbookView from './components/LogbookView';
+import AuthMenu from './components/AuthMenu';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useLocationSearch } from './hooks/useLocationSearch';
 import { useUserSpots } from './hooks/useUserSpots';
@@ -23,7 +25,7 @@ import type { TargetFish } from './utils/calculations';
 import type { SearchLocation } from './hooks/useLocationSearch';
 import type { WaterBodyProfile } from './types/waterData';
 
-type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast' | 'guides';
+type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast' | 'logbuch' | 'guides';
 
 const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 
@@ -38,6 +40,7 @@ const navItems: { id: ActiveTab; label: string; icon: string }[] = [
   { id: 'spots', label: 'Spots', icon: '📍' },
   { id: 'koder', label: 'Taktik', icon: '🐟' },
   { id: 'forecast', label: 'Kalender', icon: '📅' },
+  { id: 'logbuch', label: 'Log', icon: '📝' },
   { id: 'guides', label: 'Guides', icon: '📚' },
 ];
 
@@ -102,6 +105,7 @@ const App: React.FC = () => {
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationMapOpen, setLocationMapOpen] = useState(false);
   const [locationRevision, setLocationRevision] = useState(0);
+  const [logbookQuickAddRequest, setLogbookQuickAddRequest] = useState(0);
   const { position: gpsPosition, loading: gpsLoading, error: gpsError } = useGeolocation(gpsEnabled);
   const {
     results: locationResults,
@@ -205,6 +209,22 @@ const App: React.FC = () => {
     clearLocationSearch();
   };
 
+  useEffect(() => {
+    if (activeTab === 'logbuch') {
+      setGpsEnabled(true);
+    }
+  }, [activeTab]);
+
+  const logbookLocation = gpsPosition
+    ? { lat: normalizeCoordinate(gpsPosition.lat), lng: normalizeCoordinate(gpsPosition.lng) }
+    : activeLocation;
+
+  const openLogbookQuickAdd = () => {
+    setGpsEnabled(true);
+    setLogbookQuickAddRequest((request) => request + 1);
+    setActiveTab('logbuch');
+  };
+
   return (
     <div className="min-h-screen pb-32 max-w-lg mx-auto px-4 pt-5">
       <header className="mb-6 space-y-4">
@@ -215,6 +235,7 @@ const App: React.FC = () => {
             </p>
             <h1 className="text-3xl font-black text-white tracking-tight">ZanderHunter</h1>
           </div>
+          <AuthMenu />
         </div>
 
         <section className="card p-3">
@@ -430,13 +451,39 @@ const App: React.FC = () => {
           <ForecastView spots={allSpots} initialSpot={topSpot} targetFish={targetFish} />
         )}
 
+        {activeTab === 'logbuch' && (
+          <LogbookView
+            currentLocation={logbookLocation}
+            gpsPosition={gpsPosition}
+            gpsLoading={gpsLoading}
+            gpsError={gpsError}
+            locationLabel={locationLabel}
+            weather={weather}
+            waterName={waterProfile?.name}
+            baseUrl={import.meta.env.BASE_URL}
+            quickAddRequest={logbookQuickAddRequest}
+          />
+        )}
+
         {activeTab === 'guides' && (
           <GuidesView />
         )}
       </main>
 
+      {activeTab !== 'logbuch' && (
+        <button
+          type="button"
+          onClick={openLogbookQuickAdd}
+          className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-400 text-3xl font-black leading-none text-slate-950 shadow-2xl shadow-slate-950/60 transition-transform active:scale-95"
+          aria-label="Fang hinzufügen"
+          title="Fang hinzufügen"
+        >
+          +
+        </button>
+      )}
+
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 px-3 pt-2 pb-7 z-40">
-        <div className="max-w-lg mx-auto grid grid-cols-5 gap-1">
+        <div className="max-w-lg mx-auto grid grid-cols-6 gap-1">
           {navItems.map((item) => (
             <button
               key={item.id}
