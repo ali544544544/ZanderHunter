@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js';
 import type { GeoPosition } from '../hooks/useGeolocation';
 import type { WeatherData } from '../hooks/useWeather';
+import { waterDataService } from '../services/WaterDataService';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import { deleteRemoteCatch, deleteRemoteSpot, loadRemoteLogbook, mergeTrips, syncLogbook } from '../services/logbookSync';
+import LocationPickerMap from './LocationPickerMap';
 
 export type FishSpecies =
   | 'zander'
@@ -57,6 +59,13 @@ export interface LogbookTrip {
     current: string;
   };
   catches: CatchEntry[];
+}
+
+interface PendingSpot {
+  name: string;
+  lat: number;
+  lng: number;
+  accuracy?: number;
 }
 
 interface LogbookViewProps {
@@ -196,6 +205,20 @@ function getWeatherSnapshot(weather: WeatherData | null): LogbookTrip['weather']
   };
 }
 
+function getCurrentSpotSnapshot(
+  name: string,
+  currentLocation: { lat: number; lng: number },
+  gpsPosition: GeoPosition | null,
+): PendingSpot {
+  const liveLocation = gpsPosition ?? { ...currentLocation, accuracy: undefined };
+  return {
+    name,
+    lat: Number(liveLocation.lat.toFixed(5)),
+    lng: Number(liveLocation.lng.toFixed(5)),
+    accuracy: gpsPosition?.accuracy,
+  };
+}
+
 const getMarkerTone = (catchCount: number, bestLength: number) => {
   if (catchCount >= 4 || bestLength >= 70) return 'bg-emerald-400 shadow-emerald-500/40';
   if (catchCount >= 2 || bestLength >= 45) return 'bg-amber-300 shadow-amber-500/40';
@@ -206,6 +229,13 @@ const getFishLabel = (id: FishSpecies, customName?: string) =>
   id === OTHER_FISH_VALUE && customName?.trim()
     ? customName.trim()
     : fishLabels.get(id) ?? 'Fisch';
+
+const isNamedWater = (name: string) => {
+  const normalized = name.toLowerCase();
+  return !normalized.includes('kartenpunkt')
+    && !normalized.includes('keine gewässerdaten')
+    && !normalized.includes('unbekanntes gewässer');
+};
 
 const getDefaultLength = (id: FishSpecies) =>
   primaryFishOptions.find((fish) => fish.id === id)?.defaultLength
@@ -275,6 +305,9 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   const [spotDraftName, setSpotDraftName] = useState(suggestedSpotName);
   const [editingCatch, setEditingCatch] = useState<{ tripId: string; catchId: string } | null>(null);
   const [spotFeedback, setSpotFeedback] = useState('');
+  const [pendingSpot, setPendingSpot] = useState<PendingSpot | null>(null);
+  const [quickAddMapOpen, setQuickAddMapOpen] = useState(false);
+  const [quickAddMapLoading, setQuickAddMapLoading] = useState(false);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [syncStatus, setSyncStatus] = useState<'local' | 'loading' | 'synced' | 'error'>('local');
   const [syncMessage, setSyncMessage] = useState('Lokal gespeichert');
@@ -445,8 +478,11 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     [trips],
   );
 
-  const createTrip = useCallback((name = spotDraftName) => {
-    const liveLocation = gpsPosition ?? { ...currentLocation, accuracy: undefined };
+  const createTrip = useCallback((
+    name = spotDraftName,
+    selectedLocation?: { lat: number; lng: number; accuracy?: number },
+  ) => {
+    const liveLocation = selectedLocation ?? gpsPosition ?? { ...currentLocation, accuracy: undefined };
     const cleanedName = name.trim() || suggestedSpotName;
     const nextLat = Number(liveLocation.lat.toFixed(5));
     const nextLng = Number(liveLocation.lng.toFixed(5));
@@ -458,6 +494,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     if (duplicate) {
       setActiveTripId(duplicate.id);
       setSpotDraftName(duplicate.spotName);
+      setPendingSpot(null);
       return duplicate.id;
     }
 
@@ -467,7 +504,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       spotName: cleanedName,
       lat: nextLat,
       lng: nextLng,
-      accuracy: gpsPosition?.accuracy,
+      accuracy: selectedLocation?.accuracy ?? gpsPosition?.accuracy,
       weather: getWeatherSnapshot(weather),
       water: {
         temperature: undefined,
@@ -482,6 +519,41 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     setSpotDraftName(cleanedName);
     return trip.id;
   }, [currentLocation, gpsPosition, spotDraftName, suggestedSpotName, trips, weather]);
+
+  const getOrCreateTripForSpot = useCallback((spot: PendingSpot) => {
+    const duplicate = trips.find((trip) => (
+      normalizeSpotName(trip.spotName) === normalizeSpotName(spot.name)
+      || getSpotCoordinateKey(trip.lat, trip.lng) === getSpotCoordinateKey(spot.lat, spot.lng)
+    ));
+
+    if (duplicate) {
+      setActiveTripId(duplicate.id);
+      setSpotDraftName(duplicate.spotName);
+      return duplicate.id;
+    }
+
+    const trip: LogbookTrip = {
+      id: createId('trip'),
+      startedAt: new Date().toISOString(),
+      spotName: spot.name,
+      lat: Number(spot.lat.toFixed(5)),
+      lng: Number(spot.lng.toFixed(5)),
+      accuracy: spot.accuracy,
+      weather: getWeatherSnapshot(weather),
+      water: {
+        temperature: undefined,
+        clarity: 'mittel',
+        current: 'unbekannt',
+      },
+      catches: [],
+    };
+
+    setTrips((current) => [trip, ...current]);
+    setActiveTripId(trip.id);
+    setSpotDraftName(trip.spotName);
+    setPendingSpot(null);
+    return trip.id;
+  }, [trips, weather]);
 
   const renameActiveTrip = () => {
     if (!activeTrip) return;
@@ -540,12 +612,51 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   }, [recentBaits]);
 
   const openQuickAdd = useCallback(() => {
-    if (!activeTrip) {
-      createTrip();
-    }
+    setPendingSpot(activeTrip
+      ? {
+          name: activeTrip.spotName,
+          lat: activeTrip.lat,
+          lng: activeTrip.lng,
+          accuracy: activeTrip.accuracy,
+        }
+      : getCurrentSpotSnapshot(spotDraftName || suggestedSpotName, currentLocation, gpsPosition));
     resetDraftForNewCatch();
+    setQuickAddMapOpen(false);
     setQuickAddOpen(true);
-  }, [activeTrip, createTrip, resetDraftForNewCatch]);
+  }, [activeTrip, currentLocation, gpsPosition, resetDraftForNewCatch, spotDraftName, suggestedSpotName]);
+
+  const selectMapWaterForCatch = async (location: { lat: number; lng: number; label: string }) => {
+    setQuickAddMapLoading(true);
+    setSpotFeedback('Suche nächstes Gewässer...');
+
+    try {
+      const profile = await waterDataService.getWaterProfile(location.lat, location.lng);
+      const waterName = isNamedWater(profile.name)
+        ? profile.name
+        : isNamedWater(location.label)
+          ? location.label
+          : '';
+
+      if (!waterName) {
+        setSpotFeedback('Kein Gewässer in der Nähe gefunden. Bitte näher an ein Gewässer tippen.');
+        return;
+      }
+
+      const nextSpot = {
+        name: waterName,
+        lat: Number((profile.dataQuality === 'unknown' ? location.lat : profile.latitude).toFixed(5)),
+        lng: Number((profile.dataQuality === 'unknown' ? location.lng : profile.longitude).toFixed(5)),
+      };
+
+      setPendingSpot(nextSpot);
+      setSpotDraftName(waterName);
+      setSpotFeedback(`${waterName} für diesen Fang ausgewählt. Historie entsteht erst beim Speichern.`);
+    } catch (error) {
+      setSpotFeedback(error instanceof Error ? error.message : 'Gewässer konnte nicht ermittelt werden.');
+    } finally {
+      setQuickAddMapLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!quickAddRequest || quickAddRequest === handledQuickAddRequest.current) return;
@@ -571,6 +682,12 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       photoDataUrl: undefined,
     });
     setEditingCatch(null);
+    setPendingSpot({
+      name: lastCatch.trip.spotName,
+      lat: lastCatch.trip.lat,
+      lng: lastCatch.trip.lng,
+      accuracy: lastCatch.trip.accuracy,
+    });
     setQuickAddOpen(true);
   };
 
@@ -594,6 +711,12 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     setActiveTripId(tripId);
     if (trip) {
       setSpotDraftName(trip.spotName);
+      setPendingSpot({
+        name: trip.spotName,
+        lat: trip.lat,
+        lng: trip.lng,
+        accuracy: trip.accuracy,
+      });
     }
     setCatchDraft({
       fishSpecies: entry.fishSpecies,
@@ -639,7 +762,16 @@ const LogbookView: React.FC<LogbookViewProps> = ({
 
   const saveCatch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const tripId = editingCatch?.tripId ?? activeTrip?.id ?? createTrip();
+    const spotForSave = pendingSpot
+      ?? (activeTrip
+        ? {
+            name: activeTrip.spotName,
+            lat: activeTrip.lat,
+            lng: activeTrip.lng,
+            accuracy: activeTrip.accuracy,
+          }
+        : getCurrentSpotSnapshot(spotDraftName || suggestedSpotName, currentLocation, gpsPosition));
+    const tripId = editingCatch?.tripId ?? getOrCreateTripForSpot(spotForSave);
     const entry: CatchEntry = {
       id: editingCatch?.catchId ?? createId('catch'),
       ...catchDraft,
@@ -668,6 +800,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
 
     setCatchDraft(emptyCatch());
     setEditingCatch(null);
+    setPendingSpot(null);
+    setQuickAddMapOpen(false);
     setQuickAddOpen(false);
   };
 
@@ -1053,6 +1187,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                   onClick={() => {
                     setQuickAddOpen(false);
                     setEditingCatch(null);
+                    setPendingSpot(null);
+                    setQuickAddMapOpen(false);
                   }}
                   className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 bg-slate-800 text-lg font-black text-slate-200"
                   aria-label="Schließen"
@@ -1065,31 +1201,77 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Spot für diesen Fang</p>
-                    <p className="mt-1 text-sm font-black text-white">{activeTrip?.spotName ?? spotDraftName}</p>
+                    <p className="mt-1 text-sm font-black text-white">{pendingSpot?.name ?? activeTrip?.spotName ?? spotDraftName}</p>
+                    {pendingSpot && !editingCatch && (
+                      <p className="mt-1 text-[10px] font-semibold text-emerald-300">Historie entsteht erst beim Speichern</p>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => createTrip()}
-                    className="min-h-[44px] rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-emerald-200"
-                  >
-                    Neuer GPS-Spot
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQuickAddMapOpen((open) => !open)}
+                      className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border px-3 py-2 text-lg font-black ${
+                        quickAddMapOpen
+                          ? 'border-emerald-300 bg-emerald-400/15 text-emerald-100'
+                          : 'border-slate-700 bg-slate-800 text-slate-100'
+                      }`}
+                      aria-label="Gewässer auf Karte auswählen"
+                      title="Gewässer auf Karte auswählen"
+                    >
+                      🗺️
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextSpot = getCurrentSpotSnapshot(spotDraftName || suggestedSpotName, currentLocation, gpsPosition);
+                        setPendingSpot(nextSpot);
+                        setSpotDraftName(nextSpot.name);
+                        setSpotFeedback(`${nextSpot.name} per GPS für diesen Fang ausgewählt. Historie entsteht erst beim Speichern.`);
+                      }}
+                      className="min-h-[44px] rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-emerald-200"
+                    >
+                      GPS
+                    </button>
+                  </div>
                 </div>
                 <select
-                  value={activeTripId ?? ''}
+                  value={pendingSpot ? '' : activeTripId ?? ''}
                   onChange={(event) => {
                     if (event.target.value) {
                       selectTrip(event.target.value);
+                      const trip = trips.find((candidate) => candidate.id === event.target.value);
+                      setPendingSpot(trip
+                        ? {
+                            name: trip.spotName,
+                            lat: trip.lat,
+                            lng: trip.lng,
+                            accuracy: trip.accuracy,
+                          }
+                        : null);
                     }
                   }}
                   className="mt-3 h-12 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none focus:border-emerald-300"
                 >
+                  <option value="">Neuer Spot für diesen Fang</option>
                   {trips.map((trip) => (
                     <option key={trip.id} value={trip.id}>
                       {trip.spotName} · {trip.catches.length} Fänge
                     </option>
                   ))}
                 </select>
+                {quickAddMapOpen && (
+                  <div className="mt-3 space-y-2">
+                    <LocationPickerMap
+                      center={activeTrip ? { lat: activeTrip.lat, lng: activeTrip.lng } : currentLocation}
+                      onSelect={selectMapWaterForCatch}
+                    />
+                    <p className="text-[10px] font-semibold text-slate-500">
+                      {quickAddMapLoading
+                        ? 'Nächstes Gewässer wird ermittelt...'
+                        : 'Gewässer oder Kartenbereich antippen. Gespeichert wird das nächste erkannte Gewässer, nicht der rohe Kartenpunkt.'}
+                    </p>
+                  </div>
+                )}
               </section>
 
               <div className="grid grid-cols-4 gap-2">
