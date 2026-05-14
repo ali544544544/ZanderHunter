@@ -39,6 +39,8 @@ jobs:
           # Vite braucht den base-Pfad für GitHub Pages
           # Ersetze 'zander-app' mit deinem tatsächlichen Repo-Namen
           VITE_BASE_URL: /ZanderHunter/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
