@@ -46,6 +46,7 @@ const AuthMenu: React.FC = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [passwordChangeOpen, setPasswordChangeOpen] = useState(false);
   const [accountSummary, setAccountSummary] = useState<AccountStorageSummary>(emptySummary);
 
   useEffect(() => {
@@ -64,6 +65,7 @@ const AuthMenu: React.FC = () => {
       setEmail(session?.user?.email ?? '');
       if (session?.user) {
         setMode('password');
+        setPasswordChangeOpen(false);
       }
     });
 
@@ -144,6 +146,7 @@ const AuthMenu: React.FC = () => {
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw error;
         setNewPassword('');
+        setPasswordChangeOpen(false);
         setMessage('Passwort geändert.');
       }
     } catch (error) {
@@ -163,6 +166,7 @@ const AuthMenu: React.FC = () => {
       if (error) throw error;
       setPassword('');
       setNewPassword('');
+      setPasswordChangeOpen(false);
       setMode('login');
       setOpen(false);
     } catch (error) {
@@ -189,6 +193,7 @@ const AuthMenu: React.FC = () => {
       setEmail('');
       setPassword('');
       setNewPassword('');
+      setPasswordChangeOpen(false);
       setAccountSummary(emptySummary);
       setMode('login');
       setOpen(false);
@@ -290,6 +295,20 @@ const AuthMenu: React.FC = () => {
                 </label>
               )}
 
+              {user && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordChangeOpen((current) => !current);
+                    setNewPassword('');
+                    setMessage('');
+                  }}
+                  className="text-left text-[11px] font-black uppercase tracking-wide text-emerald-300 underline-offset-4 hover:underline"
+                >
+                  {passwordChangeOpen ? 'Passwort-Änderung abbrechen' : 'Passwort ändern'}
+                </button>
+              )}
+
               {(mode === 'login' || mode === 'signup') && !user && (
                 <label className="block">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Passwort</span>
@@ -305,14 +324,14 @@ const AuthMenu: React.FC = () => {
                 </label>
               )}
 
-              {(mode === 'password' || user) && (
+              {user && passwordChangeOpen && (
                 <label className="block">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Neues Passwort</span>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
-                    required={mode === 'password'}
+                    required
                     minLength={6}
                     className="mt-1 h-12 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-emerald-300"
                     placeholder="neues Passwort"
@@ -320,6 +339,7 @@ const AuthMenu: React.FC = () => {
                 </label>
               )}
 
+              {(!user || passwordChangeOpen) && (
               <button
                 type="submit"
                 disabled={loading}
@@ -335,6 +355,7 @@ const AuthMenu: React.FC = () => {
                         ? 'Reset-Link senden'
                         : 'Einloggen'}
               </button>
+              )}
 
               {message && (
                 <p className={`text-xs font-semibold ${message.includes('fehl') || message.includes('Invalid') ? 'text-red-300' : 'text-slate-300'}`}>
@@ -384,7 +405,7 @@ const AuthMenu: React.FC = () => {
                     type="button"
                     onClick={deleteAccount}
                     disabled={loading || deleteLoading}
-                    className="col-span-2 min-h-[40px] rounded-lg border border-red-500/50 bg-red-500/20 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-red-100 disabled:opacity-60"
+                    className="col-span-2 text-center text-[10px] font-black uppercase tracking-wide text-red-300 underline-offset-4 hover:underline disabled:opacity-60"
                   >
                     {deleteLoading ? 'Loesche Account...' : 'Account loeschen'}
                   </button>
