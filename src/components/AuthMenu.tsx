@@ -1,10 +1,40 @@
 import React, { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
+import {
+  ACCOUNT_DATA_CHANGED_EVENT,
+  deleteCurrentAccount,
+  getLocalAccountSummary,
+  getRemoteAccountSummary,
+  type AccountStorageSummary,
+} from '../services/accountData';
 
 type AuthMode = 'login' | 'signup' | 'reset' | 'password';
 
 const getRedirectUrl = () => window.location.href.split('#')[0];
+
+const emptySummary: AccountStorageSummary = {
+  customSpots: 0,
+  logbookSpots: 0,
+  catches: 0,
+  totalItems: 0,
+  lastSavedAt: null,
+};
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return 'Noch nicht vorhanden';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Noch nicht vorhanden';
+
+  return new Intl.DateTimeFormat('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
 
 const AuthMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -15,6 +45,8 @@ const AuthMenu: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [accountSummary, setAccountSummary] = useState<AccountStorageSummary>(emptySummary);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -40,6 +72,35 @@ const AuthMenu: React.FC = () => {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshSummary = async () => {
+      const localSummary = getLocalAccountSummary();
+      if (!cancelled) {
+        setAccountSummary(localSummary);
+      }
+
+      if (!user) return;
+
+      const remoteSummary = await getRemoteAccountSummary(user);
+      if (!cancelled) {
+        setAccountSummary(remoteSummary);
+      }
+    };
+
+    void refreshSummary();
+
+    window.addEventListener(ACCOUNT_DATA_CHANGED_EVENT, refreshSummary);
+    window.addEventListener('storage', refreshSummary);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ACCOUNT_DATA_CHANGED_EVENT, refreshSummary);
+      window.removeEventListener('storage', refreshSummary);
+    };
+  }, [user]);
 
   const runAuthAction = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -94,12 +155,48 @@ const AuthMenu: React.FC = () => {
 
   const signOut = async () => {
     if (!supabase) return;
-    await supabase.auth.signOut();
-    setPassword('');
-    setNewPassword('');
+    setLoading(true);
     setMessage('');
-    setMode('login');
-    setOpen(false);
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setPassword('');
+      setNewPassword('');
+      setMode('login');
+      setOpen(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Logout fehlgeschlagen.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!user) return;
+
+    const shouldDelete = window.confirm(
+      'Account wirklich loeschen? Deine Supabase-Anmeldung und gespeicherten Account-Daten werden entfernt.',
+    );
+    if (!shouldDelete) return;
+
+    setDeleteLoading(true);
+    setMessage('');
+
+    try {
+      await deleteCurrentAccount();
+      setUser(null);
+      setEmail('');
+      setPassword('');
+      setNewPassword('');
+      setAccountSummary(emptySummary);
+      setMode('login');
+      setOpen(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Account konnte nicht geloescht werden.');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const title = user
@@ -149,9 +246,35 @@ const AuthMenu: React.FC = () => {
           ) : (
             <form onSubmit={runAuthAction} className="space-y-3">
               {user ? (
-                <div className="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Eingeloggt</p>
-                  <p className="mt-1 break-all text-sm font-bold text-slate-100">{user.email}</p>
+                <div className="space-y-3 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Gespeichert</p>
+                    <p className="mt-1 text-2xl font-black text-white">{accountSummary.totalItems}</p>
+                    <p className="mt-1 text-[10px] font-bold text-slate-400">
+                      {accountSummary.logbookSpots} Spots, {accountSummary.catches} Faenge, {accountSummary.customSpots} eigene Spots
+                    </p>
+                  </div>
+
+                  <dl className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="rounded-md border border-slate-800 bg-slate-900/70 p-2">
+                      <dt className="text-[9px] font-black uppercase tracking-widest text-slate-500">Letzter Speichervorgang</dt>
+                      <dd className="mt-1 font-bold text-slate-100">{formatDateTime(accountSummary.lastSavedAt)}</dd>
+                    </div>
+                    <div className="rounded-md border border-slate-800 bg-slate-900/70 p-2">
+                      <dt className="text-[9px] font-black uppercase tracking-widest text-slate-500">E-Mail</dt>
+                      <dd className="mt-1 break-all font-bold text-slate-100">{user.email ?? 'Keine E-Mail'}</dd>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-md border border-slate-800 bg-slate-900/70 p-2">
+                        <dt className="text-[9px] font-black uppercase tracking-widest text-slate-500">Registriert</dt>
+                        <dd className="mt-1 font-bold text-slate-100">{formatDateTime(user.created_at)}</dd>
+                      </div>
+                      <div className="rounded-md border border-slate-800 bg-slate-900/70 p-2">
+                        <dt className="text-[9px] font-black uppercase tracking-widest text-slate-500">Letzter Login</dt>
+                        <dd className="mt-1 font-bold text-slate-100">{formatDateTime(user.last_sign_in_at)}</dd>
+                      </div>
+                    </div>
+                  </dl>
                 </div>
               ) : (
                 <label className="block">
@@ -248,13 +371,24 @@ const AuthMenu: React.FC = () => {
                 </>
               )}
               {user && (
-                <button
-                  type="button"
-                  onClick={signOut}
-                  className="col-span-2 min-h-[40px] rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-red-200"
-                >
-                  Logout
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={signOut}
+                    disabled={loading || deleteLoading}
+                    className="col-span-2 min-h-[40px] rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-red-200 disabled:opacity-60"
+                  >
+                    {loading ? 'Logout...' : 'Logout'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deleteAccount}
+                    disabled={loading || deleteLoading}
+                    className="col-span-2 min-h-[40px] rounded-lg border border-red-500/50 bg-red-500/20 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-red-100 disabled:opacity-60"
+                  >
+                    {deleteLoading ? 'Loesche Account...' : 'Account loeschen'}
+                  </button>
+                </>
               )}
             </div>
           )}

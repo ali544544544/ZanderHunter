@@ -5,6 +5,7 @@ import type { WeatherData } from '../hooks/useWeather';
 import { waterDataService } from '../services/WaterDataService';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import { deleteRemoteCatch, deleteRemoteSpot, loadRemoteLogbook, mergeTrips, syncLogbook } from '../services/logbookSync';
+import { ACCOUNT_DATA_CLEARED_EVENT, LOGBOOK_STORAGE_KEY, markAccountDataSaved } from '../services/accountData';
 import LocationPickerMap from './LocationPickerMap';
 
 export type FishSpecies =
@@ -80,7 +81,6 @@ interface LogbookViewProps {
   quickAddRequest?: number;
 }
 
-const STORAGE_KEY = 'zanderhunter-logbook-v1';
 const OTHER_FISH_VALUE = 'sonstiges';
 
 const primaryFishOptions: { id: FishSpecies; label: string; icon: string; defaultLength: number }[] = [
@@ -186,7 +186,7 @@ function dedupeTrips(trips: LogbookTrip[]) {
 
 function readStoredTrips(): LogbookTrip[] {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(LOGBOOK_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? dedupeTrips(parsed) : [];
@@ -314,10 +314,37 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   const handledQuickAddRequest = useRef(0);
   const remoteLoadedForUser = useRef<string | null>(null);
   const syncDebounce = useRef<number | null>(null);
+  const didPersistInitialTrips = useRef(false);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+    window.localStorage.setItem(LOGBOOK_STORAGE_KEY, JSON.stringify(trips));
+
+    if (didPersistInitialTrips.current) {
+      markAccountDataSaved();
+      return;
+    }
+
+    didPersistInitialTrips.current = true;
   }, [trips]);
+
+  useEffect(() => {
+    const clearLogbookState = () => {
+      didPersistInitialTrips.current = false;
+      setTrips([]);
+      setActiveTripId(null);
+      setSpotDraftName(suggestedSpotName);
+      setEditingCatch(null);
+      setPendingSpot(null);
+      setQuickAddOpen(false);
+      setQuickAddMapOpen(false);
+    };
+
+    window.addEventListener(ACCOUNT_DATA_CLEARED_EVENT, clearLogbookState);
+
+    return () => {
+      window.removeEventListener(ACCOUNT_DATA_CLEARED_EVENT, clearLogbookState);
+    };
+  }, [suggestedSpotName]);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -383,6 +410,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     syncDebounce.current = window.setTimeout(() => {
       syncLogbook(authUser, trips)
         .then(() => {
+          markAccountDataSaved();
           setSyncStatus('synced');
           setSyncMessage('Synchronisiert');
         })
