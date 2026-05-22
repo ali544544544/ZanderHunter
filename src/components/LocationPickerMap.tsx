@@ -27,6 +27,19 @@ interface DragState {
   moved: boolean;
 }
 
+interface PointerPosition {
+  x: number;
+  y: number;
+}
+
+interface PinchState {
+  pointerIds: [number, number];
+  startDistance: number;
+  startFocusWorldX: number;
+  startFocusWorldY: number;
+  startZoom: number;
+}
+
 interface WaterCluster {
   key: string;
   lat: number;
@@ -84,6 +97,17 @@ function isControlTarget(target: EventTarget | null) {
 
 function isWaterMarkerTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest('[data-water-marker="true"]'));
+}
+
+function getPointerDistance(first: PointerPosition, second: PointerPosition) {
+  return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
+function getPointerMidpoint(first: PointerPosition, second: PointerPosition) {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
 }
 
 function hasAreaCoordinate(area: HejfishAreaLite): area is HejfishAreaLite & { lat: number; lng: number } {
@@ -167,6 +191,8 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   const centerLng = center.lng;
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const activePointersRef = useRef<Map<number, PointerPosition>>(new Map());
+  const pinchRef = useRef<PinchState | null>(null);
   const suppressClusterClickRef = useRef(false);
   const [mapWidth, setMapWidth] = useState(360);
   const [zoom, setZoom] = useState(12);
@@ -192,6 +218,13 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     }),
     [mapCenter.lat, mapCenter.lng, zoom]
   );
+  const centerWorldRef = useRef(centerWorld);
+  const zoomRef = useRef(zoom);
+
+  useEffect(() => {
+    centerWorldRef.current = centerWorld;
+    zoomRef.current = zoom;
+  }, [centerWorld, zoom]);
 
   const tiles = useMemo(() => {
     const topLeftX = centerWorld.x - mapWidth / 2;
@@ -354,13 +387,83 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     return { lat, lng };
   };
 
-  const moveCenterByPixels = (worldX: number, worldY: number) => {
-    const tileCount = Math.pow(2, zoom);
+  const moveCenterByPixels = (worldX: number, worldY: number, targetZoom = zoom) => {
+    const tileCount = Math.pow(2, targetZoom);
     const maxWorld = tileSize * tileCount;
-    const lat = clamp(worldYToLat(worldY, zoom), -85, 85);
-    const lng = worldXToLng(((worldX % maxWorld) + maxWorld) % maxWorld, zoom);
+    const lat = clamp(worldYToLat(worldY, targetZoom), -85, 85);
+    const lng = worldXToLng(((worldX % maxWorld) + maxWorld) % maxWorld, targetZoom);
 
     setMapCenter({ lat, lng });
+  };
+
+  const startPinch = () => {
+    const mapElement = mapRef.current;
+    const pointers = Array.from(activePointersRef.current.entries());
+    if (!mapElement || pointers.length < 2) {
+      return;
+    }
+
+    const [firstEntry, secondEntry] = pointers;
+    const first = firstEntry[1];
+    const second = secondEntry[1];
+    const startDistance = getPointerDistance(first, second);
+    if (startDistance < 10) {
+      return;
+    }
+
+    const rect = mapElement.getBoundingClientRect();
+    const midpoint = getPointerMidpoint(first, second);
+    const currentCenterWorld = centerWorldRef.current;
+
+    dragRef.current = null;
+    pinchRef.current = {
+      pointerIds: [firstEntry[0], secondEntry[0]],
+      startDistance,
+      startFocusWorldX: currentCenterWorld.x + midpoint.x - rect.left - rect.width / 2,
+      startFocusWorldY: currentCenterWorld.y + midpoint.y - rect.top - rect.height / 2,
+      startZoom: zoomRef.current,
+    };
+  };
+
+  const updatePinch = () => {
+    const mapElement = mapRef.current;
+    const pinch = pinchRef.current;
+    if (!mapElement || !pinch) {
+      return;
+    }
+
+    const first = activePointersRef.current.get(pinch.pointerIds[0]);
+    const second = activePointersRef.current.get(pinch.pointerIds[1]);
+    if (!first || !second) {
+      return;
+    }
+
+    const nextDistance = getPointerDistance(first, second);
+    if (nextDistance < 10) {
+      return;
+    }
+
+    const rect = mapElement.getBoundingClientRect();
+    const midpoint = getPointerMidpoint(first, second);
+    const zoomDelta = Math.log2(nextDistance / pinch.startDistance);
+    const nextZoom = clamp(Math.round(pinch.startZoom + zoomDelta), minZoom, maxZoom);
+    const focusLat = worldYToLat(pinch.startFocusWorldY, pinch.startZoom);
+    const focusLng = worldXToLng(pinch.startFocusWorldX, pinch.startZoom);
+    const nextFocusWorldX = lngToWorldX(focusLng, nextZoom);
+    const nextFocusWorldY = latToWorldY(focusLat, nextZoom);
+    const nextCenterWorldX = nextFocusWorldX - (midpoint.x - rect.left - rect.width / 2);
+    const nextCenterWorldY = nextFocusWorldY - (midpoint.y - rect.top - rect.height / 2);
+
+    setZoom(nextZoom);
+    zoomRef.current = nextZoom;
+    moveCenterByPixels(nextCenterWorldX, nextCenterWorldY, nextZoom);
+  };
+
+  const clearPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    activePointersRef.current.delete(event.pointerId);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
 
   const selectCenter = () => {
@@ -486,6 +589,13 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
 
           event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
+          activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+          if (activePointersRef.current.size >= 2) {
+            startPinch();
+            suppressClusterClickRef.current = true;
+            return;
+          }
+
           dragRef.current = {
             pointerId: event.pointerId,
             startX: event.clientX,
@@ -496,6 +606,16 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           };
         }}
         onPointerMove={(event) => {
+          if (activePointersRef.current.has(event.pointerId)) {
+            activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+          }
+
+          if (pinchRef.current) {
+            event.preventDefault();
+            updatePinch();
+            return;
+          }
+
           const drag = dragRef.current;
           if (!drag || drag.pointerId !== event.pointerId) {
             return;
@@ -511,11 +631,24 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
             return;
           }
 
-          const drag = dragRef.current;
-          if (!drag || drag.pointerId !== event.pointerId) {
+          if (pinchRef.current) {
+            clearPointer(event);
+            pinchRef.current = null;
+            dragRef.current = null;
+            suppressClusterClickRef.current = true;
+            window.setTimeout(() => {
+              suppressClusterClickRef.current = false;
+            }, 0);
             return;
           }
 
+          const drag = dragRef.current;
+          if (!drag || drag.pointerId !== event.pointerId) {
+            clearPointer(event);
+            return;
+          }
+
+          clearPointer(event);
           dragRef.current = null;
           if (drag.moved) {
             suppressClusterClickRef.current = true;
@@ -534,6 +667,11 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           onSelect({ ...location, label: locationLabel(location.lat, location.lng) });
         }}
         onPointerCancel={(event) => {
+          clearPointer(event);
+          if (pinchRef.current) {
+            pinchRef.current = null;
+          }
+
           const drag = dragRef.current;
           if (drag?.pointerId === event.pointerId) {
             dragRef.current = null;
