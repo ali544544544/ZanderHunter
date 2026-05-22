@@ -8,7 +8,7 @@ interface WaterAreaMapProps {
 const tileSize = 256;
 const minZoom = 5;
 const maxZoom = 17;
-const mapHeight = 220;
+const mapHeight = 300;
 const mapPadding = 32;
 
 function lngToWorldX(lng: number, zoom: number) {
@@ -202,7 +202,7 @@ export function WaterAreaMap({ profile }: WaterAreaMapProps) {
       </div>
       <div
         ref={mapRef}
-        className="relative h-[220px] overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
+        className="relative h-[300px] overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
       >
         {tiles.map((tile) => (
           <img

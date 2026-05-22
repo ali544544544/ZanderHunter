@@ -57,7 +57,7 @@ interface ProjectedOverlayPath {
 const tileSize = 256;
 const minZoom = 5;
 const maxZoom = 17;
-const mapHeight = 280;
+const mapHeight = 420;
 const singleMarkerZoom = 13;
 
 function clamp(value: number, min: number, max: number) {
@@ -577,7 +577,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     <div className="space-y-2">
       <div
         ref={mapRef}
-        className="relative h-[280px] touch-none overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
+        className="relative h-[420px] touch-none overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
         onPointerDown={(event) => {
           if (isControlTarget(event.target)) {
             return;
