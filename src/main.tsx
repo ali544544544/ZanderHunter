@@ -38,7 +38,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       window.location.reload();
     });
 
-    const serviceWorkerUrl = `${import.meta.env.BASE_URL}sw.js?v=14`
+    const serviceWorkerUrl = `${import.meta.env.BASE_URL}sw.js?v=15`
     navigator.serviceWorker.register(serviceWorkerUrl)
       .then(reg => {
         reg.update();

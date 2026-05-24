@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Spot } from '../data/spots';
 import type { LogbookTrip } from '../components/LogbookView';
 import { supabase } from './supabase';
+import { readJson, removeStorageItem, writeJson } from './storage';
 
 export const LOGBOOK_STORAGE_KEY = 'zanderhunter-logbook-v1';
 export const USER_SPOTS_STORAGE_KEY = 'zanderhunter_user_spots';
@@ -21,15 +22,7 @@ interface AccountActivity {
   lastSavedAt?: string;
 }
 
-function readJson<T>(key: string, fallback: T): T {
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
+const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 
 function getStoredLastSavedAt() {
   return readJson<AccountActivity>(ACCOUNT_ACTIVITY_STORAGE_KEY, {}).lastSavedAt ?? null;
@@ -49,16 +42,13 @@ function dispatchAccountDataChanged() {
 }
 
 export function markAccountDataSaved() {
-  window.localStorage.setItem(
-    ACCOUNT_ACTIVITY_STORAGE_KEY,
-    JSON.stringify({ lastSavedAt: new Date().toISOString() }),
-  );
+  writeJson<AccountActivity>(ACCOUNT_ACTIVITY_STORAGE_KEY, { lastSavedAt: new Date().toISOString() });
   dispatchAccountDataChanged();
 }
 
 export function getLocalAccountSummary(): AccountStorageSummary {
-  const trips = readJson<LogbookTrip[]>(LOGBOOK_STORAGE_KEY, []);
-  const customSpots = readJson<Spot[]>(USER_SPOTS_STORAGE_KEY, []);
+  const trips = readJson<LogbookTrip[]>(LOGBOOK_STORAGE_KEY, [], isArray as (value: unknown) => value is LogbookTrip[]);
+  const customSpots = readJson<Spot[]>(USER_SPOTS_STORAGE_KEY, [], isArray as (value: unknown) => value is Spot[]);
   const logbookSpots = Array.isArray(trips) ? trips.length : 0;
   const catches = Array.isArray(trips)
     ? trips.reduce((sum, trip) => sum + (Array.isArray(trip.catches) ? trip.catches.length : 0), 0)
@@ -77,17 +67,22 @@ export function getLocalAccountSummary(): AccountStorageSummary {
 export async function getRemoteAccountSummary(user: User): Promise<AccountStorageSummary> {
   if (!supabase) return getLocalAccountSummary();
 
-  const [{ data: spots, error: spotsError }, { data: catches, error: catchesError }] = await Promise.all([
+  const [
+    { data: latestSpot, count: spotCount, error: spotsError },
+    { data: latestCatch, count: catchCount, error: catchesError },
+  ] = await Promise.all([
     supabase
       .from('logbook_spots')
-      .select('updated_at')
+      .select('updated_at', { count: 'exact' })
       .eq('user_id', user.id)
-      .order('updated_at', { ascending: false }),
+      .order('updated_at', { ascending: false })
+      .limit(1),
     supabase
       .from('logbook_catches')
-      .select('updated_at')
+      .select('updated_at', { count: 'exact' })
       .eq('user_id', user.id)
-      .order('updated_at', { ascending: false }),
+      .order('updated_at', { ascending: false })
+      .limit(1),
   ]);
 
   if (spotsError || catchesError) {
@@ -95,28 +90,28 @@ export async function getRemoteAccountSummary(user: User): Promise<AccountStorag
   }
 
   const local = getLocalAccountSummary();
-  const remoteSpots = spots ?? [];
-  const remoteCatches = catches ?? [];
+  const remoteSpots = spotCount ?? 0;
+  const remoteCatches = catchCount ?? 0;
 
   return {
     customSpots: local.customSpots,
-    logbookSpots: Math.max(local.logbookSpots, remoteSpots.length),
-    catches: Math.max(local.catches, remoteCatches.length),
+    logbookSpots: Math.max(local.logbookSpots, remoteSpots),
+    catches: Math.max(local.catches, remoteCatches),
     totalItems: local.customSpots
-      + Math.max(local.logbookSpots, remoteSpots.length)
-      + Math.max(local.catches, remoteCatches.length),
+      + Math.max(local.logbookSpots, remoteSpots)
+      + Math.max(local.catches, remoteCatches),
     lastSavedAt: getLatestDate([
       local.lastSavedAt,
-      remoteSpots[0]?.updated_at,
-      remoteCatches[0]?.updated_at,
+      latestSpot?.[0]?.updated_at,
+      latestCatch?.[0]?.updated_at,
     ]),
   };
 }
 
 export function clearLocalAccountData() {
-  window.localStorage.removeItem(LOGBOOK_STORAGE_KEY);
-  window.localStorage.removeItem(USER_SPOTS_STORAGE_KEY);
-  window.localStorage.removeItem(ACCOUNT_ACTIVITY_STORAGE_KEY);
+  removeStorageItem(LOGBOOK_STORAGE_KEY);
+  removeStorageItem(USER_SPOTS_STORAGE_KEY);
+  removeStorageItem(ACCOUNT_ACTIVITY_STORAGE_KEY);
   window.dispatchEvent(new CustomEvent(ACCOUNT_DATA_CLEARED_EVENT));
   dispatchAccountDataChanged();
 }

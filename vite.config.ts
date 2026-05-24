@@ -10,7 +10,16 @@ export default defineConfig({
   base: process.env.VITE_BASE_URL || '/ZanderHunter/',
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',

@@ -51,16 +51,30 @@ const AuthMenu: React.FC = () => {
 
   useEffect(() => {
     if (!supabase) return undefined;
+    const client = supabase;
 
     let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
+    const hydrateSession = async () => {
+      const { data: sessionData } = await client.auth.getSession();
+      if (!cancelled && sessionData.session?.user) {
+        setUser(sessionData.session.user);
+        setEmail(sessionData.session.user.email ?? '');
+      }
+
+      const { data: userData } = await client.auth.getUser();
       if (!cancelled) {
-        setUser(data.user ?? null);
-        setEmail(data.user?.email ?? '');
+        setUser(userData.user ?? null);
+        setEmail(userData.user?.email ?? sessionData.session?.user.email ?? '');
+      }
+    };
+
+    hydrateSession().catch(() => {
+      if (!cancelled) {
+        setUser(null);
       }
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setEmail(session?.user?.email ?? '');
       if (session?.user) {
@@ -86,9 +100,15 @@ const AuthMenu: React.FC = () => {
 
       if (!user) return;
 
-      const remoteSummary = await getRemoteAccountSummary(user);
-      if (!cancelled) {
-        setAccountSummary(remoteSummary);
+      try {
+        const remoteSummary = await getRemoteAccountSummary(user);
+        if (!cancelled) {
+          setAccountSummary(remoteSummary);
+        }
+      } catch {
+        if (!cancelled) {
+          setAccountSummary(localSummary);
+        }
       }
     };
 
@@ -106,7 +126,23 @@ const AuthMenu: React.FC = () => {
 
   const runAuthAction = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!supabase) return;
+    if (!supabase || loading) return;
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!user && !normalizedEmail) {
+      setMessage('Bitte E-Mail eintragen.');
+      return;
+    }
+
+    if ((mode === 'login' || mode === 'signup') && password.length < 6) {
+      setMessage('Passwort muss mindestens 6 Zeichen haben.');
+      return;
+    }
+
+    if (mode === 'password' && newPassword.length < 6) {
+      setMessage('Neues Passwort muss mindestens 6 Zeichen haben.');
+      return;
+    }
 
     setLoading(true);
     setMessage('');
@@ -114,7 +150,7 @@ const AuthMenu: React.FC = () => {
     try {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
         if (error) throw error;
@@ -124,7 +160,7 @@ const AuthMenu: React.FC = () => {
 
       if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
           options: {
             emailRedirectTo: getRedirectUrl(),
@@ -135,7 +171,7 @@ const AuthMenu: React.FC = () => {
       }
 
       if (mode === 'reset') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
           redirectTo: getRedirectUrl(),
         });
         if (error) throw error;
@@ -152,6 +188,9 @@ const AuthMenu: React.FC = () => {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Aktion fehlgeschlagen.');
     } finally {
+      if (mode === 'login' || mode === 'signup') {
+        setPassword('');
+      }
       setLoading(false);
     }
   };
@@ -289,6 +328,8 @@ const AuthMenu: React.FC = () => {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     required
+                    autoComplete="email"
+                    spellCheck={false}
                     className="mt-1 h-12 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-emerald-300"
                     placeholder="deine@email.de"
                   />
@@ -318,6 +359,7 @@ const AuthMenu: React.FC = () => {
                     onChange={(event) => setPassword(event.target.value)}
                     required
                     minLength={6}
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                     className="mt-1 h-12 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-emerald-300"
                     placeholder="mind. 6 Zeichen"
                   />
@@ -333,6 +375,7 @@ const AuthMenu: React.FC = () => {
                     onChange={(event) => setNewPassword(event.target.value)}
                     required
                     minLength={6}
+                    autoComplete="new-password"
                     className="mt-1 h-12 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-emerald-300"
                     placeholder="neues Passwort"
                   />

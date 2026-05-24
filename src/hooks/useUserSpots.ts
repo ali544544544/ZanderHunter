@@ -5,24 +5,14 @@ import {
   markAccountDataSaved,
   USER_SPOTS_STORAGE_KEY,
 } from '../services/accountData';
+import { readJson, writeJson } from '../services/storage';
 
 export function useUserSpots() {
   const [userSpots, setUserSpots] = useState<Spot[]>([]);
 
   useEffect(() => {
     const loadUserSpots = () => {
-      const saved = localStorage.getItem(USER_SPOTS_STORAGE_KEY);
-      if (!saved) {
-        setUserSpots([]);
-        return;
-      }
-
-      try {
-        setUserSpots(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load user spots', e);
-        setUserSpots([]);
-      }
+      setUserSpots(readJson<Spot[]>(USER_SPOTS_STORAGE_KEY, [], Array.isArray as (value: unknown) => value is Spot[]));
     };
 
     loadUserSpots();
@@ -36,14 +26,14 @@ export function useUserSpots() {
   const addUserSpot = (spot: Spot) => {
     const updated = [...userSpots, spot];
     setUserSpots(updated);
-    localStorage.setItem(USER_SPOTS_STORAGE_KEY, JSON.stringify(updated));
+    writeJson(USER_SPOTS_STORAGE_KEY, updated);
     markAccountDataSaved();
   };
 
   const deleteUserSpot = (id: string) => {
     const updated = userSpots.filter(s => s.id !== id);
     setUserSpots(updated);
-    localStorage.setItem(USER_SPOTS_STORAGE_KEY, JSON.stringify(updated));
+    writeJson(USER_SPOTS_STORAGE_KEY, updated);
     markAccountDataSaved();
   };
 

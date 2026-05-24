@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useAngelIndex } from './hooks/useAngelIndex';
 import { getKoderEmpfehlung, generateBriefing } from './data/koderLogik';
 import { SPOTS, calculateSpotScoreForFish } from './data/spots';
@@ -9,15 +9,6 @@ import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
 import Briefing from './components/Briefing';
 import HechtInfo from './components/HechtInfo';
-import ForecastView from './components/ForecastView';
-import DailyForecastChart from './components/DailyForecastChart';
-import HechtTaktikView from './components/HechtTaktikView';
-import GuidesView from './components/GuidesView';
-import LocationPickerMap from './components/LocationPickerMap';
-import { WaterProfileCard } from './components/WaterProfileCard';
-import { WaterAreaMap } from './components/WaterAreaMap';
-import LogbookView from './components/LogbookView';
-import AuthMenu from './components/AuthMenu';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useLocationSearch } from './hooks/useLocationSearch';
 import { useUserSpots } from './hooks/useUserSpots';
@@ -28,6 +19,28 @@ import type { WaterBodyProfile } from './types/waterData';
 type ActiveTab = 'jetzt' | 'spots' | 'koder' | 'forecast' | 'logbuch' | 'guides';
 
 const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+const ForecastView = lazy(() => import('./components/ForecastView'));
+const DailyForecastChart = lazy(() => import('./components/DailyForecastChart'));
+const HechtTaktikView = lazy(() => import('./components/HechtTaktikView'));
+const GuidesView = lazy(() => import('./components/GuidesView'));
+const LocationPickerMap = lazy(() => import('./components/LocationPickerMap'));
+const WaterProfileCard = lazy(() => import('./components/WaterProfileCard').then((module) => ({ default: module.WaterProfileCard })));
+const WaterAreaMap = lazy(() => import('./components/WaterAreaMap').then((module) => ({ default: module.WaterAreaMap })));
+const LogbookView = lazy(() => import('./components/LogbookView'));
+const AuthMenu = lazy(() => import('./components/AuthMenu'));
+
+const LoadingPanel = () => (
+  <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-4 text-center text-xs font-bold text-slate-400">
+    Lade Ansicht...
+  </div>
+);
+
+const AuthMenuFallback = () => (
+  <div
+    className="h-11 w-11 rounded-lg border border-slate-800 bg-slate-900"
+    aria-hidden="true"
+  />
+);
 
 const fishOptions: { value: TargetFish; label: string; iconSrc: string }[] = [
   { value: 'zander', label: 'Zander', iconSrc: assetPath('icons/zander.svg') },
@@ -235,7 +248,9 @@ const App: React.FC = () => {
             </p>
             <h1 className="text-3xl font-black text-white tracking-tight">ZanderHunter</h1>
           </div>
-          <AuthMenu />
+          <Suspense fallback={<AuthMenuFallback />}>
+            <AuthMenu />
+          </Suspense>
         </div>
 
         <section className="card p-3">
@@ -331,20 +346,22 @@ const App: React.FC = () => {
               </div>
             )}
             {locationMapOpen && (
-              <LocationPickerMap
-                center={activeLocation}
-                onSelect={(location) => {
-                  selectManualLocation(
-                    {
-                      id: `map-${location.lat}-${location.lng}`,
-                      label: location.label,
-                      lat: location.lat,
-                      lng: location.lng,
-                    },
-                    false
-                  );
-                }}
-              />
+              <Suspense fallback={<LoadingPanel />}>
+                <LocationPickerMap
+                  center={activeLocation}
+                  onSelect={(location) => {
+                    selectManualLocation(
+                      {
+                        id: `map-${location.lat}-${location.lng}`,
+                        label: location.label,
+                        lat: location.lat,
+                        lng: location.lng,
+                      },
+                      false
+                    );
+                  }}
+                />
+              </Suspense>
             )}
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -383,91 +400,93 @@ const App: React.FC = () => {
       </header>
 
       <main className="space-y-5">
-        {activeTab === 'jetzt' && (
-          <>
-            <AngelIndex
-              score={score}
-              loading={loading}
-              fishLabel={fishLabel}
-              scoreDetails={scoreDetails}
-              fishPresenceHint={fishPresenceHint}
-            />
-            <WaterProfileCard
-              profile={waterProfile}
-              loading={waterProfileLoading}
-              error={waterProfileError}
-              onRefresh={refreshWaterProfile}
-            />
-            <WaterAreaMap profile={waterProfile} />
-            {!loading && briefingText && (
-              <Briefing
-                text={briefingText}
+        <Suspense fallback={<LoadingPanel />}>
+          {activeTab === 'jetzt' && (
+            <>
+              <AngelIndex
+                score={score}
+                loading={loading}
                 fishLabel={fishLabel}
-                koder={primaryKoder}
-                tactic={quickTactic}
-                hotspot={quickHotspot}
-              />
-            )}
-            {!loading && hourlyScores && hourlyScores.length > 0 && startHour !== undefined && (
-              <DailyForecastChart
-                hourlyScores={hourlyScores}
-                startHour={startHour}
-                liveScore={score}
-                sunrises={weather?.sunrises}
-                sunsets={weather?.sunsets}
-              />
-            )}
-            {!loading && <TideTimeline events={tide || []} />}
-            {!loading && (
-              <ConditionGrid
-                conditions={conditions}
-                pegel={pegel}
-                weather={weather}
-                moon={moon}
-                targetFish={targetFish}
                 scoreDetails={scoreDetails}
+                fishPresenceHint={fishPresenceHint}
               />
-            )}
-            <HechtInfo scoreDetails={scoreDetails} fishLabel={fishLabel} targetFish={targetFish} />
-          </>
-        )}
+              <WaterProfileCard
+                profile={waterProfile}
+                loading={waterProfileLoading}
+                error={waterProfileError}
+                onRefresh={refreshWaterProfile}
+              />
+              <WaterAreaMap profile={waterProfile} />
+              {!loading && briefingText && (
+                <Briefing
+                  text={briefingText}
+                  fishLabel={fishLabel}
+                  koder={primaryKoder}
+                  tactic={quickTactic}
+                  hotspot={quickHotspot}
+                />
+              )}
+              {!loading && hourlyScores && hourlyScores.length > 0 && startHour !== undefined && (
+                <DailyForecastChart
+                  hourlyScores={hourlyScores}
+                  startHour={startHour}
+                  liveScore={score}
+                  sunrises={weather?.sunrises}
+                  sunsets={weather?.sunsets}
+                />
+              )}
+              {!loading && <TideTimeline events={tide || []} />}
+              {!loading && (
+                <ConditionGrid
+                  conditions={conditions}
+                  pegel={pegel}
+                  weather={weather}
+                  moon={moon}
+                  targetFish={targetFish}
+                  scoreDetails={scoreDetails}
+                />
+              )}
+              <HechtInfo scoreDetails={scoreDetails} fishLabel={fishLabel} targetFish={targetFish} />
+            </>
+          )}
 
-        {activeTab === 'spots' && (
-          <SpotList conditions={conditions} targetFish={targetFish} />
-        )}
+          {activeTab === 'spots' && (
+            <SpotList conditions={conditions} targetFish={targetFish} />
+          )}
 
-        {activeTab === 'koder' && (
-          <HechtTaktikView
-            conditions={conditions}
-            weather={weather}
-            koder={koder}
-            scoreDetails={scoreDetails}
-            fishLabel={fishLabel}
-            targetFish={targetFish}
-          />
-        )}
+          {activeTab === 'koder' && (
+            <HechtTaktikView
+              conditions={conditions}
+              weather={weather}
+              koder={koder}
+              scoreDetails={scoreDetails}
+              fishLabel={fishLabel}
+              targetFish={targetFish}
+            />
+          )}
 
-        {activeTab === 'forecast' && (
-          <ForecastView spots={allSpots} initialSpot={topSpot} targetFish={targetFish} />
-        )}
+          {activeTab === 'forecast' && (
+            <ForecastView spots={allSpots} initialSpot={topSpot} targetFish={targetFish} />
+          )}
 
-        {activeTab === 'logbuch' && (
-          <LogbookView
-            currentLocation={logbookLocation}
-            gpsPosition={gpsPosition}
-            gpsLoading={gpsLoading}
-            gpsError={gpsError}
-            locationLabel={locationLabel}
-            weather={weather}
-            waterName={waterProfile?.name}
-            baseUrl={import.meta.env.BASE_URL}
-            quickAddRequest={logbookQuickAddRequest}
-          />
-        )}
+          {activeTab === 'logbuch' && (
+            <LogbookView
+              currentLocation={logbookLocation}
+              gpsPosition={gpsPosition}
+              gpsLoading={gpsLoading}
+              gpsError={gpsError}
+              locationLabel={locationLabel}
+              weather={weather}
+              waterName={waterProfile?.name}
+              baseUrl={import.meta.env.BASE_URL}
+              quickAddRequest={logbookQuickAddRequest}
+            />
+          )}
 
-        {activeTab === 'guides' && (
-          <GuidesView />
-        )}
+          {activeTab === 'guides' && (
+            <GuidesView />
+          )}
+        </Suspense>
       </main>
 
       {activeTab !== 'logbuch' && (

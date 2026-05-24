@@ -6,6 +6,7 @@ import { waterDataService } from '../services/WaterDataService';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import { deleteRemoteCatch, deleteRemoteSpot, loadRemoteLogbook, mergeTrips, syncLogbook } from '../services/logbookSync';
 import { ACCOUNT_DATA_CLEARED_EVENT, LOGBOOK_STORAGE_KEY, markAccountDataSaved } from '../services/accountData';
+import { readJson, writeJson } from '../services/storage';
 import LocationPickerMap from './LocationPickerMap';
 
 export type FishSpecies =
@@ -185,14 +186,29 @@ function dedupeTrips(trips: LogbookTrip[]) {
 }
 
 function readStoredTrips(): LogbookTrip[] {
-  try {
-    const raw = window.localStorage.getItem(LOGBOOK_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? dedupeTrips(parsed) : [];
-  } catch {
-    return [];
+  const parsed = readJson<LogbookTrip[]>(LOGBOOK_STORAGE_KEY, [], Array.isArray as (value: unknown) => value is LogbookTrip[]);
+  return dedupeTrips(parsed);
+}
+
+function stripPersistedPhotoData(trips: LogbookTrip[]): LogbookTrip[] {
+  return trips.map((trip) => ({
+    ...trip,
+    catches: trip.catches.map((entry) => ({
+      ...entry,
+      photoDataUrl: undefined,
+    })),
+  }));
+}
+
+function persistTrips(trips: LogbookTrip[]) {
+  const result = writeJson(LOGBOOK_STORAGE_KEY, trips);
+
+  if (!result.persisted && result.error instanceof DOMException) {
+    const leanResult = writeJson(LOGBOOK_STORAGE_KEY, stripPersistedPhotoData(trips));
+    return { ...leanResult, strippedPhotos: leanResult.persisted };
   }
+
+  return { ...result, strippedPhotos: false };
 }
 
 function getWeatherSnapshot(weather: WeatherData | null): LogbookTrip['weather'] | undefined {
@@ -317,7 +333,12 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   const didPersistInitialTrips = useRef(false);
 
   useEffect(() => {
-    window.localStorage.setItem(LOGBOOK_STORAGE_KEY, JSON.stringify(trips));
+    const persistResult = persistTrips(trips);
+
+    if (persistResult.strippedPhotos) {
+      setSyncStatus('error');
+      setSyncMessage('Lokaler Speicher voll: Fotos bleiben nur bis zum Neuladen erhalten.');
+    }
 
     if (didPersistInitialTrips.current) {
       markAccountDataSaved();
