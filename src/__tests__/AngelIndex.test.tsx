@@ -44,7 +44,8 @@ describe('AngelIndex Component', () => {
     );
 
     expect(screen.getByText('68')).toBeInTheDocument();
-    expect(screen.getByText(/Schonzeit - nicht gezielt befischen/)).toBeInTheDocument();
+    expect(screen.getByText(/Gut/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Schonzeit beachten/).length).toBeGreaterThan(0);
     expect(screen.getByText('Schonzeit aktiv')).toBeInTheDocument();
     expect(screen.getByText(/gezieltes Angeln aussetzen/)).toBeInTheDocument();
   });

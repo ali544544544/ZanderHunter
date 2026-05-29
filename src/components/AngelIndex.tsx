@@ -43,9 +43,14 @@ const AngelIndex: React.FC<AngelIndexProps> = ({
   };
 
   const isClosedSeason = Boolean(scoreDetails?.legal.schonzeitAktiv);
+  const biologicalStatus = getStatus(score);
   const status = isClosedSeason
-    ? { color: 'text-angel-red', bg: 'bg-angel-red/20', text: 'Schonzeit - nicht gezielt befischen' }
-    : getStatus(score);
+    ? {
+        color: 'text-angel-red',
+        bg: 'bg-angel-red/20',
+        text: `${biologicalStatus.text} - Schonzeit beachten`,
+      }
+    : biologicalStatus;
 
   if (loading) {
     return (
