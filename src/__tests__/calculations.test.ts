@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateAngelIndex, calculateZanderIndex, getMoonPhase, getStromPhase } from '../utils/calculations';
+import { getLocalFishRules } from '../data/fishRegulations';
 import type { HechtScoreInput } from '../utils/calculations';
 import type { WaterBodyProfile } from '../types/waterData';
 
@@ -142,5 +143,31 @@ describe('water profile score context', () => {
 
     expect(result.legal.schonzeitAktiv).toBe(true);
     expect(result.legal.hinweis).toContain('SCHONZEIT AKTIV');
+  });
+});
+
+describe('local fish regulations', () => {
+  it('erkennt Schleswig-Holstein am Elbe-Luebeck-Kanal als Binnengewaesser', () => {
+    const profile = {
+      id: 'el',
+      name: 'Elbe-Luebeck-Kanal',
+      type: 'canal',
+      latitude: 53.84,
+      longitude: 10.7,
+      region: 'Luebeck, Schleswig-Holstein, Deutschland',
+      dataQuality: 'high',
+      sources: ['hejfish'],
+      lastUpdated: new Date('2026-05-01'),
+      species: [],
+    } as WaterBodyProfile;
+
+    const rules = getLocalFishRules(profile, 53.84, 10.7, new Date('2026-04-01'));
+    const zander = rules.find((rule) => rule.fish === 'zander');
+    const hecht = rules.find((rule) => rule.fish === 'hecht');
+
+    expect(zander?.sourceLabel).toBe('Schleswig-Holstein');
+    expect(zander?.closedNow).toBe(true);
+    expect(zander?.sizeText).toBe('ab 45 cm');
+    expect(hecht?.closedNow).toBe(true);
   });
 });

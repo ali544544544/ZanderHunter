@@ -42,8 +42,10 @@ const AngelIndex: React.FC<AngelIndexProps> = ({
     return { color: 'text-angel-red', bg: 'bg-angel-red/20', text: 'Schlecht — besser morgen' };
   };
 
-  const status = getStatus(score);
   const isClosedSeason = Boolean(scoreDetails?.legal.schonzeitAktiv);
+  const status = isClosedSeason
+    ? { color: 'text-angel-red', bg: 'bg-angel-red/20', text: 'Schonzeit - nicht gezielt befischen' }
+    : getStatus(score);
 
   if (loading) {
     return (
@@ -58,7 +60,9 @@ const AngelIndex: React.FC<AngelIndexProps> = ({
     <div className="card flex flex-col items-center justify-center py-8 relative overflow-visible">
       <div className={`absolute top-0 left-0 w-full h-1 ${status.bg.replace('/20', '')}`}></div>
       
-      <h3 className="text-slate-400 font-medium mb-2 uppercase tracking-wider text-sm">{fishLabel}-Index Hamburg</h3>
+      <h3 className="text-slate-400 font-medium mb-2 uppercase tracking-wider text-sm">
+        {fishLabel}-Index {scoreDetails?.legal.bundesland || 'lokal'}
+      </h3>
       
       <div className={`relative flex items-center justify-center w-40 h-40 rounded-full border-8 border-slate-700/50 ${status.color}`}>
         <div className="text-6xl font-black">{score}</div>

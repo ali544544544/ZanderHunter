@@ -115,7 +115,9 @@ export function useAngelIndex(
     secchiCm,
     structureType: 'Spundwand',
     waterProfile: waterProfile.profile,
-    targetFish
+    targetFish,
+    lat,
+    lng
   };
 
   const scoreDetails = getScoreDetails(targetFish, baseScoreInput);
@@ -178,7 +180,9 @@ export function useAngelIndex(
       secchiCm,
       structureType: 'Spundwand',
       waterProfile: waterProfile.profile,
-      targetFish
+      targetFish,
+      lat,
+      lng
     };
     hourlyScores.push(getScoreDetails(targetFish, hScoreInput).total);
   }

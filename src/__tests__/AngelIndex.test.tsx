@@ -30,6 +30,10 @@ describe('AngelIndex Component', () => {
             entnahmefenster: '45-75 cm',
             baglimit: 2,
             hinweis: 'SCHONZEIT AKTIV: gezieltes Angeln aussetzen.',
+            bundesland: 'Hamburg',
+            schonzeit: '01.02.-31.05.',
+            quelle: 'Hamburg',
+            sourceUrl: 'https://angelmagazin.de/schonzeiten/hamburg/',
           },
           primeWindow: 'Dämmerung',
           topTactic: 'Langsam führen',
@@ -40,7 +44,7 @@ describe('AngelIndex Component', () => {
     );
 
     expect(screen.getByText('68')).toBeInTheDocument();
-    expect(screen.getByText(/Gut/)).toBeInTheDocument();
+    expect(screen.getByText(/Schonzeit - nicht gezielt befischen/)).toBeInTheDocument();
     expect(screen.getByText('Schonzeit aktiv')).toBeInTheDocument();
     expect(screen.getByText(/gezieltes Angeln aussetzen/)).toBeInTheDocument();
   });

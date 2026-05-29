@@ -9,6 +9,8 @@ import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
 import Briefing from './components/Briefing';
 import HechtInfo from './components/HechtInfo';
+import { LocalRegulationsCard } from './components/LocalRegulationsCard';
+import { getLocalFishRules } from './data/fishRegulations';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useLocationSearch } from './hooks/useLocationSearch';
 import { useUserSpots } from './hooks/useUserSpots';
@@ -163,6 +165,10 @@ const App: React.FC = () => {
   const fishPresenceHint = useMemo(
     () => getFishPresenceHint(waterProfile, waterProfileLoading, waterProfileError, targetFish, fishLabel),
     [fishLabel, targetFish, waterProfile, waterProfileError, waterProfileLoading]
+  );
+  const localFishRules = useMemo(
+    () => getLocalFishRules(waterProfile, activeLocation.lat, activeLocation.lng),
+    [activeLocation.lat, activeLocation.lng, waterProfile]
   );
   const allSpots = useMemo(() => [...SPOTS, ...userSpots], [userSpots]);
   const koder = useMemo(
@@ -410,6 +416,7 @@ const App: React.FC = () => {
                 scoreDetails={scoreDetails}
                 fishPresenceHint={fishPresenceHint}
               />
+              <LocalRegulationsCard rules={localFishRules} targetFish={targetFish} />
               <WaterProfileCard
                 profile={waterProfile}
                 loading={waterProfileLoading}
