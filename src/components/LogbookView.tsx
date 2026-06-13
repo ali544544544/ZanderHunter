@@ -254,12 +254,6 @@ function getCurrentSpotSnapshot(
   };
 }
 
-const getMarkerSize = (catchCount: number) => {
-  if (catchCount >= 4) return 'h-9 w-9 text-sm';
-  if (catchCount >= 2) return 'h-8 w-8 text-xs';
-  return 'h-7 w-7 text-[11px]';
-};
-
 const getFishLabel = (id: FishSpecies, customName?: string) =>
   id === OTHER_FISH_VALUE && customName?.trim()
     ? customName.trim()
@@ -422,6 +416,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   const [formError, setFormError] = useState('');
   const [photoMessage, setPhotoMessage] = useState('');
   const [photoProcessing, setPhotoProcessing] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ src: string; title: string } | null>(null);
   const handledQuickAddRequest = useRef(0);
   const remoteLoadedForUser = useRef<string | null>(null);
   const syncDebounce = useRef<number | null>(null);
@@ -1175,81 +1170,42 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       <section className="card space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-black uppercase tracking-wider text-slate-300">Meine Angel-Spots</h3>
-          <span className="text-[10px] font-bold text-slate-500">{spotSummaries.length || 'keine'} Marker</span>
+          <span className="text-[10px] font-bold text-slate-500">{spotSummaries.length || 'keine'} Spots</span>
         </div>
-        <div className="relative min-h-[180px] overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
-          <div className="absolute inset-0 opacity-70">
-            <div className="h-full w-full bg-[linear-gradient(135deg,rgba(15,23,42,1)_0%,rgba(20,83,45,0.55)_48%,rgba(8,47,73,0.9)_100%)]" />
-            <div className="absolute left-[-10%] top-[44%] h-12 w-[120%] rotate-[-8deg] bg-cyan-400/20 blur-sm" />
-            <div className="absolute left-[8%] top-[20%] h-[1px] w-[86%] rotate-12 bg-slate-500/25" />
-            <div className="absolute left-[18%] top-[72%] h-[1px] w-[78%] rotate-[-16deg] bg-slate-500/20" />
+        {spotSummaries.length === 0 ? (
+          <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-4 text-center text-xs font-bold text-slate-400">
+            Der erste gespeicherte Fang erscheint hier als Spot.
           </div>
-          {spotSummaries.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-xs font-bold text-slate-400">
-              Der erste gespeicherte Fang setzt deinen ersten Spot-Marker.
-            </div>
-          )}
-          {spotSummaries.map((spot, index) => (
-            <button
-              key={spot.id}
-              type="button"
-              onClick={() => selectTrip(spot.id)}
-              className={`absolute flex items-center justify-center rounded-full border-2 border-cyan-100 bg-cyan-300 font-black text-slate-950 shadow-lg shadow-cyan-500/30 ${getMarkerSize(spot.catches)}`}
-              style={{
-                left: `${18 + (index * 17) % 66}%`,
-                top: `${22 + (index * 23) % 54}%`,
-              }}
-              title={`${spot.name}: ${spot.catches} Fänge, bester ${spot.bestLength} cm, Top-Köder ${spot.topBait}`}
-            >
-              {spot.catches}
-            </button>
-          ))}
-        </div>
-        <div className="hidden">
-          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-2 py-2">
-            <p className="text-[9px] font-black uppercase text-emerald-300">Grün</p>
-            <p className="text-[10px] font-semibold text-slate-400">stark</p>
-          </div>
-          <div className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2 py-2">
-            <p className="text-[9px] font-black uppercase text-amber-200">Gelb</p>
-            <p className="text-[10px] font-semibold text-slate-400">mittel</p>
-          </div>
-          <div className="rounded-lg border border-red-400/20 bg-red-400/10 px-2 py-2">
-            <p className="text-[9px] font-black uppercase text-red-300">Rot</p>
-            <p className="text-[10px] font-semibold text-slate-400">wenig</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-2 py-2">
-            <p className="text-[9px] font-black uppercase text-cyan-200">Markerzahl</p>
-            <p className="text-[10px] font-semibold text-slate-400">Faenge</p>
-          </div>
-          <div className="rounded-lg border border-slate-600 bg-slate-900/70 px-2 py-2">
-            <p className="text-[9px] font-black uppercase text-slate-200">Groesse</p>
-            <p className="text-[10px] font-semibold text-slate-400">Aktivitaet</p>
-          </div>
-          <div className="rounded-lg border border-slate-600 bg-slate-900/70 px-2 py-2">
-            <p className="text-[9px] font-black uppercase text-slate-200">Bestmass</p>
-            <p className="text-[10px] font-semibold text-slate-400">Liste</p>
-          </div>
-        </div>
-        {spotSummaries.length > 0 && (
-          <div className="grid gap-2">
-            {spotSummaries.slice(0, 3).map((spot) => (
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {spotSummaries.map((spot) => (
               <button
                 key={spot.id}
                 type="button"
                 onClick={() => selectTrip(spot.id)}
-                className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-left"
+                className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-left transition-colors hover:border-cyan-300/50"
               >
-                <span className="min-w-0">
-                  <span className="block truncate text-xs font-black text-slate-100">{spot.name}</span>
-                  <span className="mt-0.5 block truncate text-[10px] font-semibold text-slate-500">{spot.topBait}</span>
-                </span>
-                <span className="text-right">
-                  <span className="block text-xs font-black text-cyan-200">{spot.catches} Faenge</span>
-                  <span className="mt-0.5 block text-[10px] font-semibold text-slate-500">Bestmass {spot.bestLength} cm</span>
-                </span>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-slate-100">{spot.name}</p>
+                    <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                      {spot.lat}, {spot.lng}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-2 py-1 text-xs font-black text-cyan-200">
+                    {spot.catches}x
+                  </span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1.5">
+                    <p className="text-[9px] font-black uppercase text-slate-500">Bestmass</p>
+                    <p className="text-sm font-black text-white">{spot.bestLength} cm</p>
+                  </div>
+                  <div className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1.5">
+                    <p className="text-[9px] font-black uppercase text-slate-500">Top-Koeder</p>
+                    <p className="truncate text-sm font-black text-white">{spot.topBait}</p>
+                  </div>
+                </div>
               </button>
             ))}
           </div>
@@ -1282,9 +1238,14 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-sm font-black uppercase tracking-wider text-slate-400">Logbuch-Historie</h3>
-          <span className="text-[10px] font-bold text-slate-500">bearbeitbar</span>
+        <div className="flex items-end justify-between gap-3 px-1">
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-300">Logbuch</h3>
+            <p className="mt-1 text-xs font-semibold text-slate-500">Fänge nach Spot sortiert. Fotos antippen zum Vergrößern.</p>
+          </div>
+          <span className="shrink-0 rounded-lg border border-slate-700 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-black text-slate-300">
+            {stats.catches} Fänge
+          </span>
         </div>
         {trips.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-700 bg-slate-800/25 px-5 py-8 text-center">
@@ -1293,11 +1254,11 @@ const LogbookView: React.FC<LogbookViewProps> = ({
           </div>
         ) : (
           trips.map((trip) => (
-            <article key={trip.id} className="card space-y-3">
+            <article key={trip.id} className="overflow-hidden rounded-lg border border-slate-700 bg-slate-900/70 shadow-lg shadow-slate-950/20">
               <button
                 type="button"
                 onClick={() => selectTrip(trip.id)}
-                className="block w-full text-left"
+                className="block w-full border-b border-slate-700 bg-slate-950/45 p-3 text-left"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -1307,12 +1268,12 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                       {trip.lat}, {trip.lng}{trip.accuracy ? ` · +/-${Math.round(trip.accuracy)} m` : ''}
                     </p>
                   </div>
-                  <span className="rounded-lg bg-slate-950/70 px-3 py-2 text-sm font-black text-emerald-300">
-                    {trip.catches.length}
+                  <span className="rounded-lg border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-sm font-black text-emerald-200">
+                    {trip.catches.length}x
                   </span>
                 </div>
               </button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 p-3">
                 <button
                   type="button"
                   onClick={() => selectTrip(trip.id)}
@@ -1331,27 +1292,52 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                 </button>
               </div>
               {trip.catches.length > 0 && (
-                <div className="space-y-2">
+                <div className="divide-y divide-slate-800">
                   {trip.catches.map((entry) => (
-                    <div key={entry.id} className="rounded-lg border border-slate-700 bg-slate-900/70 p-2.5">
-                      <div className="flex items-center justify-between gap-3">
+                    <div key={entry.id} className="p-3">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-black text-slate-100">{getFishLabel(entry.fishSpecies, entry.customFishName)} · {entry.lengthCm} cm</p>
                           <p className="truncate text-[11px] font-semibold text-slate-500">{formatTime(entry.caughtAt)} · {entry.bait}</p>
                         </div>
                         {entry.photoDataUrl && (
-                          <img
-                            src={entry.photoDataUrl}
-                            alt=""
-                            className="h-11 w-11 rounded-md object-cover"
-                            loading="lazy"
-                          />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPhoto({
+                              src: entry.photoDataUrl as string,
+                              title: `${getFishLabel(entry.fishSpecies, entry.customFishName)} ${entry.lengthCm} cm`,
+                            })}
+                            className="group h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 sm:h-28 sm:w-28"
+                            aria-label="Fangfoto vergrößern"
+                          >
+                            <img
+                              src={entry.photoDataUrl}
+                              alt={`${getFishLabel(entry.fishSpecies, entry.customFishName)} ${entry.lengthCm} cm`}
+                              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                              loading="lazy"
+                            />
+                          </button>
                         )}
                         <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-black uppercase ${entry.released ? 'bg-cyan-400/10 text-cyan-300' : 'bg-amber-300/10 text-amber-200'}`}>
                           {entry.released ? 'Released' : 'Mitgenommen'}
                         </span>
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                          <p className="text-[9px] font-black uppercase text-slate-500">Gewicht</p>
+                          <p className="text-sm font-black text-white">{entry.weight ? `${entry.weight} ${entry.weightUnit}` : '--'}</p>
+                        </div>
+                        <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                          <p className="text-[9px] font-black uppercase text-slate-500">Methode</p>
+                          <p className="truncate text-sm font-black text-white">{entry.method}</p>
+                        </div>
+                      </div>
+                      {entry.notes && (
+                        <p className="mt-3 rounded-md border border-slate-700 bg-slate-950/45 px-2 py-2 text-xs font-semibold leading-relaxed text-slate-300">
+                          {entry.notes}
+                        </p>
+                      )}
+                      <div className="mt-3 grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => editCatchEntry(trip.id, entry)}
@@ -1384,6 +1370,29 @@ const LogbookView: React.FC<LogbookViewProps> = ({
         <span className="text-2xl leading-none">+</span>
         Fang hinzufügen
       </button>
+
+      {selectedPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-3xl overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-3 py-2">
+              <p className="truncate text-sm font-black text-white">{selectedPhoto.title}</p>
+              <button
+                type="button"
+                onClick={() => setSelectedPhoto(null)}
+                className="min-h-[40px] min-w-[40px] rounded-lg border border-slate-700 bg-slate-800 text-lg font-black text-slate-200"
+                aria-label="Foto schließen"
+              >
+                ×
+              </button>
+            </div>
+            <img
+              src={selectedPhoto.src}
+              alt={selectedPhoto.title}
+              className="max-h-[78vh] w-full bg-slate-950 object-contain"
+            />
+          </div>
+        </div>
+      )}
 
       {quickAddOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-slate-950/75 backdrop-blur-sm">
