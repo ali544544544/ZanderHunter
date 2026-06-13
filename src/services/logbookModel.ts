@@ -105,6 +105,28 @@ function normalizeWater(value: unknown): LogbookTrip['water'] | undefined {
   };
 }
 
+function normalizeCatchWeather(value: unknown): CatchEntry['weather'] | undefined {
+  if (!isRecord(value)) return undefined;
+  return {
+    temperature: Math.round(clamp(finiteNumber(value.temperature, 0), -60, 60)),
+    windSpeed: Math.round(clamp(finiteNumber(value.windSpeed, 0), 0, 250)),
+    windDirection: Math.round(clamp(finiteNumber(value.windDirection, 0), 0, 360)),
+    cloudCover: Math.round(clamp(finiteNumber(value.cloudCover, 0), 0, 100)),
+  };
+}
+
+function normalizeCatchScore(value: unknown): CatchEntry['score'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const score = Math.round(clamp(finiteNumber(value.value, 0), 0, 100));
+  if (score <= 0) return undefined;
+
+  return {
+    value: score,
+    fishLabel: text(value.fishLabel, 'Fisch', 80),
+    recordedAt: normalizeIsoDate(value.recordedAt),
+  };
+}
+
 export function normalizeCatchEntry(
   value: unknown,
   fallbackId: string,
@@ -132,6 +154,8 @@ export function normalizeCatchEntry(
     notes: multilineText(value.notes),
     photoName: text(value.photoName, '', 120) || undefined,
     photoDataUrl,
+    weather: normalizeCatchWeather(value.weather),
+    score: normalizeCatchScore(value.score),
   };
 }
 

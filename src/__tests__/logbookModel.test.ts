@@ -71,4 +71,36 @@ describe('logbook model normalization', () => {
     expect(normalizeWeight('abc')).toBe('');
     expect(normalizeWeight('-3')).toBe('');
   });
+
+  it('keeps catch weather and score snapshots within safe bounds', () => {
+    const entry = normalizeCatchEntry({
+      id: 'catch-context',
+      fishSpecies: 'barsch',
+      lengthCm: 32,
+      caughtAt: '2026-05-01T12:00:00.000Z',
+      weather: {
+        temperature: 21.4,
+        windSpeed: 12.6,
+        windDirection: 725,
+        cloudCover: 45.2,
+      },
+      score: {
+        value: 87.4,
+        fishLabel: 'Barsch',
+        recordedAt: '2026-05-01T11:59:00.000Z',
+      },
+    }, 'fallback-catch');
+
+    expect(entry?.weather).toEqual({
+      temperature: 21,
+      windSpeed: 13,
+      windDirection: 360,
+      cloudCover: 45,
+    });
+    expect(entry?.score).toEqual({
+      value: 87,
+      fishLabel: 'Barsch',
+      recordedAt: '2026-05-01T11:59:00.000Z',
+    });
+  });
 });

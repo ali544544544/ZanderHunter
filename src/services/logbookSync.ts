@@ -32,6 +32,8 @@ interface CatchRow {
   caught_at: string;
   photo_name: string | null;
   photo_data_url: string | null;
+  catch_weather?: CatchEntry['weather'] | null;
+  catch_score?: CatchEntry['score'] | null;
   updated_at?: string;
 }
 
@@ -83,8 +85,21 @@ function toCatchRow(entry: CatchEntry, trip: LogbookTrip, user: User): CatchRow 
     caught_at: entry.caughtAt,
     photo_name: entry.photoName ?? null,
     photo_data_url: entry.photoDataUrl ?? null,
+    catch_weather: entry.weather ?? null,
+    catch_score: entry.score ?? null,
     updated_at: new Date().toISOString(),
   };
+}
+
+function stripCatchContextColumns(row: CatchRow): CatchRow {
+  const { catch_weather: _catchWeather, catch_score: _catchScore, ...baseRow } = row;
+  return baseRow;
+}
+
+function isMissingCatchContextColumn(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const message = String((error as { message?: unknown }).message ?? '').toLowerCase();
+  return message.includes('catch_weather') || message.includes('catch_score');
 }
 
 function rowsToTrips(spots: SpotRow[], catches: CatchRow[]): LogbookTrip[] {
@@ -106,6 +121,8 @@ function rowsToTrips(spots: SpotRow[], catches: CatchRow[]): LogbookTrip[] {
       notes: row.notes,
       photoName: row.photo_name ?? undefined,
       photoDataUrl: row.photo_data_url ?? undefined,
+      weather: row.catch_weather ?? undefined,
+      score: row.catch_score ?? undefined,
     });
     catchesBySpot.set(row.spot_id, entries);
   });
@@ -187,7 +204,17 @@ export async function syncLogbook(user: User, trips: LogbookTrip[]) {
 
   if (catchRows.length > 0) {
     const { error } = await supabase.from('logbook_catches').upsert(catchRows, { onConflict: 'id' });
-    if (error) throw new Error(getSupabaseErrorMessage(error, 'Fänge konnten nicht synchronisiert werden'));
+    if (error) {
+      if (isMissingCatchContextColumn(error)) {
+        const { error: fallbackError } = await supabase
+          .from('logbook_catches')
+          .upsert(catchRows.map(stripCatchContextColumns), { onConflict: 'id' });
+        if (fallbackError) throw new Error(getSupabaseErrorMessage(fallbackError, 'Fänge konnten nicht synchronisiert werden'));
+        return;
+      }
+
+      throw new Error(getSupabaseErrorMessage(error, 'Fänge konnten nicht synchronisiert werden'));
+    }
   }
 }
 

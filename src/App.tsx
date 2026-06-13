@@ -484,6 +484,8 @@ const App: React.FC = () => {
               gpsError={gpsError}
               locationLabel={locationLabel}
               weather={weather}
+              currentScore={loading ? null : score}
+              scoreFishLabel={fishLabel}
               waterName={waterProfile?.name}
               baseUrl={import.meta.env.BASE_URL}
               quickAddRequest={logbookQuickAddRequest}

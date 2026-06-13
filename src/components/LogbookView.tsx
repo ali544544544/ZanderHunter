@@ -27,6 +27,19 @@ export type FishSpecies =
   | 'sonstiges';
 export type WeightUnit = 'g' | 'kg';
 
+export interface CatchWeatherSnapshot {
+  temperature: number;
+  windSpeed: number;
+  windDirection: number;
+  cloudCover: number;
+}
+
+export interface CatchScoreSnapshot {
+  value: number;
+  fishLabel: string;
+  recordedAt: string;
+}
+
 export interface CatchEntry {
   id: string;
   fishSpecies: FishSpecies;
@@ -41,6 +54,8 @@ export interface CatchEntry {
   notes: string;
   photoName?: string;
   photoDataUrl?: string;
+  weather?: CatchWeatherSnapshot;
+  score?: CatchScoreSnapshot;
 }
 
 export interface LogbookTrip {
@@ -78,6 +93,8 @@ interface LogbookViewProps {
   gpsError: string | null;
   locationLabel: string;
   weather: WeatherData | null;
+  currentScore?: number | null;
+  scoreFishLabel?: string;
   waterName?: string;
   baseUrl: string;
   quickAddRequest?: number;
@@ -230,13 +247,22 @@ function persistTrips(trips: LogbookTrip[]) {
   return { ...result, strippedPhotos: false };
 }
 
-function getWeatherSnapshot(weather: WeatherData | null): LogbookTrip['weather'] | undefined {
+function getWeatherSnapshot(weather: WeatherData | null): CatchWeatherSnapshot | undefined {
   if (!weather) return undefined;
   return {
     temperature: Math.round(weather.temperature),
     windSpeed: Math.round(weather.windSpeed),
     windDirection: Math.round(weather.windDirection),
     cloudCover: Math.round(weather.cloudCover),
+  };
+}
+
+function getScoreSnapshot(score: number | null | undefined, fishLabel: string | undefined): CatchScoreSnapshot | undefined {
+  if (typeof score !== 'number' || !Number.isFinite(score) || score <= 0) return undefined;
+  return {
+    value: Math.round(score),
+    fishLabel: fishLabel || 'Fisch',
+    recordedAt: new Date().toISOString(),
   };
 }
 
@@ -284,6 +310,8 @@ const emptyCatch = (): Omit<CatchEntry, 'id'> => ({
   notes: '',
   photoName: undefined,
   photoDataUrl: undefined,
+  weather: undefined,
+  score: undefined,
 });
 
 const PHOTO_MAX_EDGE = 960;
@@ -395,6 +423,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   gpsError,
   locationLabel,
   weather,
+  currentScore,
+  scoreFishLabel,
   waterName,
   baseUrl,
   quickAddRequest = 0,
@@ -889,6 +919,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       notes: entry.notes,
       photoName: entry.photoName,
       photoDataUrl: entry.photoDataUrl,
+      weather: entry.weather,
+      score: entry.score,
     });
     setEditingCatch({ tripId, catchId: entry.id });
     setFormError('');
@@ -940,6 +972,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       customFishName: catchDraft.fishSpecies === OTHER_FISH_VALUE ? catchDraft.customFishName?.trim() : '',
       bait: catchDraft.bait.trim() || baitCatalog[catchDraft.fishSpecies]?.[0] || fallbackBaits[0],
       method: catchDraft.method.trim() || methods[0],
+      weather: catchDraft.weather ?? getWeatherSnapshot(weather),
+      score: catchDraft.score ?? getScoreSnapshot(currentScore, scoreFishLabel),
     }, entryId);
 
     if (!entry) {
@@ -1332,6 +1366,24 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                           <p className="truncate text-sm font-black text-white">{entry.method}</p>
                         </div>
                       </div>
+                      {(entry.weather || entry.score) && (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                            <p className="text-[9px] font-black uppercase text-slate-500">Wetter</p>
+                            <p className="truncate text-sm font-black text-white">
+                              {entry.weather
+                                ? `${entry.weather.temperature}°C · ${entry.weather.windSpeed} km/h · ${entry.weather.cloudCover}%`
+                                : '--'}
+                            </p>
+                          </div>
+                          <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                            <p className="text-[9px] font-black uppercase text-slate-500">Score</p>
+                            <p className="truncate text-sm font-black text-white">
+                              {entry.score ? `${entry.score.value}/100 · ${entry.score.fishLabel}` : '--'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                       {entry.notes && (
                         <p className="mt-3 rounded-md border border-slate-700 bg-slate-950/45 px-2 py-2 text-xs font-semibold leading-relaxed text-slate-300">
                           {entry.notes}
