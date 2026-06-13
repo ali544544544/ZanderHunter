@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { normalizeLogbookTrips } from './logbookModel';
 import type { CatchEntry, LogbookTrip } from '../components/LogbookView';
 
 interface SpotRow {
@@ -127,7 +128,7 @@ function rowsToTrips(spots: SpotRow[], catches: CatchRow[]): LogbookTrip[] {
 export function mergeTrips(localTrips: LogbookTrip[], remoteTrips: LogbookTrip[]) {
   const byId = new Map<string, LogbookTrip>();
 
-  [...remoteTrips, ...localTrips].forEach((trip) => {
+  [...normalizeLogbookTrips(remoteTrips), ...normalizeLogbookTrips(localTrips)].forEach((trip) => {
     const existing = byId.get(trip.id);
     if (!existing) {
       byId.set(trip.id, trip);
@@ -169,14 +170,15 @@ export async function loadRemoteLogbook(user: User) {
   if (spotsError) throw new Error(getSupabaseErrorMessage(spotsError, 'Spots konnten nicht aus Supabase geladen werden'));
   if (catchesError) throw new Error(getSupabaseErrorMessage(catchesError, 'Fänge konnten nicht aus Supabase geladen werden'));
 
-  return rowsToTrips((spots ?? []) as SpotRow[], (catches ?? []) as CatchRow[]);
+  return normalizeLogbookTrips(rowsToTrips((spots ?? []) as SpotRow[], (catches ?? []) as CatchRow[]));
 }
 
 export async function syncLogbook(user: User, trips: LogbookTrip[]) {
   if (!supabase) return;
 
-  const spotRows = trips.map((trip) => toSpotRow(trip, user));
-  const catchRows = trips.flatMap((trip) => trip.catches.map((entry) => toCatchRow(entry, trip, user)));
+  const safeTrips = normalizeLogbookTrips(trips);
+  const spotRows = safeTrips.map((trip) => toSpotRow(trip, user));
+  const catchRows = safeTrips.flatMap((trip) => trip.catches.map((entry) => toCatchRow(entry, trip, user)));
 
   if (spotRows.length > 0) {
     const { error } = await supabase.from('logbook_spots').upsert(spotRows, { onConflict: 'id' });

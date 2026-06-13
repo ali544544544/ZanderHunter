@@ -6,6 +6,7 @@ import { waterDataService } from '../services/WaterDataService';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import { deleteRemoteCatch, deleteRemoteSpot, loadRemoteLogbook, mergeTrips, syncLogbook } from '../services/logbookSync';
 import { ACCOUNT_DATA_CLEARED_EVENT, LOGBOOK_STORAGE_KEY, markAccountDataSaved } from '../services/accountData';
+import { normalizeCatchEntry, normalizeLogbookTrips, normalizeWeight } from '../services/logbookModel';
 import { readJson, writeJson } from '../services/storage';
 import LocationPickerMap from './LocationPickerMap';
 
@@ -142,8 +143,21 @@ const formatDateTime = (value: string) =>
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 
+const toDateTimeLocalValue = (value: string) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const fromDateTimeLocalValue = (value: string) => {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : new Date().toISOString();
+};
+
 const getDateKey = (value: string) => {
   const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'unknown';
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -172,9 +186,13 @@ function dedupeTrips(trips: LogbookTrip[]) {
     if (existingKey) {
       const existing = merged.get(existingKey);
       if (!existing) return;
+      const catchesById = new Map<string, CatchEntry>();
+      [...existing.catches, ...trip.catches].forEach((entry) => catchesById.set(entry.id, entry));
       merged.set(existingKey, {
         ...existing,
-        catches: [...existing.catches, ...trip.catches],
+        catches: [...catchesById.values()].sort(
+          (a, b) => new Date(b.caughtAt).getTime() - new Date(a.caughtAt).getTime(),
+        ),
       });
       return;
     }
@@ -186,8 +204,8 @@ function dedupeTrips(trips: LogbookTrip[]) {
 }
 
 function readStoredTrips(): LogbookTrip[] {
-  const parsed = readJson<LogbookTrip[]>(LOGBOOK_STORAGE_KEY, [], Array.isArray as (value: unknown) => value is LogbookTrip[]);
-  return dedupeTrips(parsed);
+  const parsed = readJson<unknown[]>(LOGBOOK_STORAGE_KEY, [], Array.isArray as (value: unknown) => value is unknown[]);
+  return dedupeTrips(normalizeLogbookTrips(parsed));
 }
 
 function stripPersistedPhotoData(trips: LogbookTrip[]): LogbookTrip[] {
@@ -201,10 +219,11 @@ function stripPersistedPhotoData(trips: LogbookTrip[]): LogbookTrip[] {
 }
 
 function persistTrips(trips: LogbookTrip[]) {
-  const result = writeJson(LOGBOOK_STORAGE_KEY, trips);
+  const safeTrips = dedupeTrips(normalizeLogbookTrips(trips));
+  const result = writeJson(LOGBOOK_STORAGE_KEY, safeTrips);
 
   if (!result.persisted && result.error instanceof DOMException) {
-    const leanResult = writeJson(LOGBOOK_STORAGE_KEY, stripPersistedPhotoData(trips));
+    const leanResult = writeJson(LOGBOOK_STORAGE_KEY, stripPersistedPhotoData(safeTrips));
     return { ...leanResult, strippedPhotos: leanResult.persisted };
   }
 
@@ -235,10 +254,10 @@ function getCurrentSpotSnapshot(
   };
 }
 
-const getMarkerTone = (catchCount: number, bestLength: number) => {
-  if (catchCount >= 4 || bestLength >= 70) return 'bg-emerald-400 shadow-emerald-500/40';
-  if (catchCount >= 2 || bestLength >= 45) return 'bg-amber-300 shadow-amber-500/40';
-  return 'bg-red-400 shadow-red-500/40';
+const getMarkerSize = (catchCount: number) => {
+  if (catchCount >= 4) return 'h-9 w-9 text-sm';
+  if (catchCount >= 2) return 'h-8 w-8 text-xs';
+  return 'h-7 w-7 text-[11px]';
 };
 
 const getFishLabel = (id: FishSpecies, customName?: string) =>
@@ -273,28 +292,101 @@ const emptyCatch = (): Omit<CatchEntry, 'id'> => ({
   photoDataUrl: undefined,
 });
 
-function readPhotoPreview(file: File): Promise<{ name: string; dataUrl: string }> {
+const PHOTO_MAX_EDGE = 960;
+const PHOTO_MIN_EDGE = 640;
+const PHOTO_TARGET_BYTES = 240 * 1024;
+const PHOTO_INITIAL_QUALITY = 0.78;
+const PHOTO_MIN_QUALITY = 0.5;
+
+interface PhotoPreview {
+  name: string;
+  dataUrl: string;
+  originalBytes: number;
+  compressedBytes: number;
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Foto konnte nicht komprimiert werden.'));
+      }
+    }, 'image/jpeg', quality);
+  });
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Foto konnte nicht gelesen werden.'));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function drawScaledPhoto(canvas: HTMLCanvasElement, image: HTMLImageElement, maxEdge: number) {
+  const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    throw new Error('Foto konnte nicht vorbereitet werden.');
+  }
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+}
+
+function formatStorageSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function readPhotoPreview(file: File): Promise<PhotoPreview> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Foto konnte nicht gelesen werden.'));
     reader.onload = () => {
       const image = new Image();
       image.onerror = () => reject(new Error('Foto konnte nicht verarbeitet werden.'));
-      image.onload = () => {
-        const maxSize = 960;
-        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+      image.onload = async () => {
         const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext('2d');
+        let maxEdge = PHOTO_MAX_EDGE;
+        let quality = PHOTO_INITIAL_QUALITY;
 
-        if (!context) {
-          reject(new Error('Foto konnte nicht vorbereitet werden.'));
-          return;
+        try {
+          drawScaledPhoto(canvas, image, maxEdge);
+          let blob = await canvasToBlob(canvas, quality);
+
+          while (blob.size > PHOTO_TARGET_BYTES && (quality > PHOTO_MIN_QUALITY || maxEdge > PHOTO_MIN_EDGE)) {
+            if (quality > PHOTO_MIN_QUALITY) {
+              quality = Math.max(PHOTO_MIN_QUALITY, Number((quality - 0.08).toFixed(2)));
+            } else {
+              maxEdge = Math.max(PHOTO_MIN_EDGE, Math.round(maxEdge * 0.85));
+              drawScaledPhoto(canvas, image, maxEdge);
+              quality = 0.68;
+            }
+
+            blob = await canvasToBlob(canvas, quality);
+          }
+
+          const compressedDataUrl = await blobToDataUrl(blob);
+          const originalDataUrl = String(reader.result);
+          const keepOriginal = file.size <= blob.size
+            && file.size <= PHOTO_TARGET_BYTES
+            && originalDataUrl.startsWith('data:image/');
+
+          resolve({
+            name: file.name,
+            dataUrl: keepOriginal ? originalDataUrl : compressedDataUrl,
+            originalBytes: file.size,
+            compressedBytes: keepOriginal ? file.size : blob.size,
+          });
+        } catch (error) {
+          reject(error);
         }
-
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve({ name: file.name, dataUrl: canvas.toDataURL('image/jpeg', 0.78) });
       };
       image.src = String(reader.result);
     };
@@ -327,6 +419,9 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [syncStatus, setSyncStatus] = useState<'local' | 'loading' | 'synced' | 'error'>('local');
   const [syncMessage, setSyncMessage] = useState('Lokal gespeichert');
+  const [formError, setFormError] = useState('');
+  const [photoMessage, setPhotoMessage] = useState('');
+  const [photoProcessing, setPhotoProcessing] = useState(false);
   const handledQuickAddRequest = useRef(0);
   const remoteLoadedForUser = useRef<string | null>(null);
   const syncDebounce = useRef<number | null>(null);
@@ -466,7 +561,9 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   );
 
   const allCatches = useMemo(
-    () => trips.flatMap((trip) => trip.catches.map((entry) => ({ ...entry, trip }))),
+    () => trips
+      .flatMap((trip) => trip.catches.map((entry) => ({ ...entry, trip })))
+      .sort((a, b) => new Date(b.caughtAt).getTime() - new Date(a.caughtAt).getTime()),
     [trips],
   );
 
@@ -658,18 +755,15 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     nextDraft.caughtAt = new Date().toISOString();
     setCatchDraft(nextDraft);
     setEditingCatch(null);
+    setFormError('');
+    setPhotoMessage('');
+    setPhotoProcessing(false);
   }, [recentBaits]);
 
   const openQuickAdd = useCallback(() => {
-    setPendingSpot(activeTrip
-      ? {
-          name: activeTrip.spotName,
-          lat: activeTrip.lat,
-          lng: activeTrip.lng,
-          accuracy: activeTrip.accuracy,
-        }
-      : getCurrentSpotSnapshot(spotDraftName || suggestedSpotName, currentLocation, gpsPosition));
+    setPendingSpot(activeTrip ? null : getCurrentSpotSnapshot(spotDraftName || suggestedSpotName, currentLocation, gpsPosition));
     resetDraftForNewCatch();
+    setFormError('');
     setQuickAddMapOpen(false);
     setQuickAddOpen(true);
   }, [activeTrip, currentLocation, gpsPosition, resetDraftForNewCatch, spotDraftName, suggestedSpotName]);
@@ -731,17 +825,42 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       photoDataUrl: undefined,
     });
     setEditingCatch(null);
-    setPendingSpot({
-      name: lastCatch.trip.spotName,
-      lat: lastCatch.trip.lat,
-      lng: lastCatch.trip.lng,
-      accuracy: lastCatch.trip.accuracy,
-    });
+    setFormError('');
+    setPhotoMessage('');
+    setPhotoProcessing(false);
+    setActiveTripId(lastCatch.trip.id);
+    setSpotDraftName(lastCatch.trip.spotName);
+    setPendingSpot(null);
     setQuickAddOpen(true);
   };
 
   const updateDraft = <K extends keyof Omit<CatchEntry, 'id'>>(key: K, value: Omit<CatchEntry, 'id'>[K]) => {
     setCatchDraft((draft) => ({ ...draft, [key]: value }));
+  };
+
+  const handlePhotoFile = async (file: File | undefined) => {
+    if (!file) return;
+    setPhotoProcessing(true);
+    setPhotoMessage('Foto wird komprimiert...');
+    setFormError('');
+
+    try {
+      const preview = await readPhotoPreview(file);
+      setCatchDraft((draft) => ({
+        ...draft,
+        photoName: preview.name,
+        photoDataUrl: preview.dataUrl,
+      }));
+      setPhotoMessage(
+        `Foto komprimiert: ${formatStorageSize(preview.originalBytes)} -> ${formatStorageSize(preview.compressedBytes)}`,
+      );
+    } catch (error) {
+      updateDraft('photoName', file.name);
+      setPhotoMessage('');
+      setFormError(error instanceof Error ? error.message : 'Foto konnte nicht komprimiert werden.');
+    } finally {
+      setPhotoProcessing(false);
+    }
   };
 
   const selectFishSpecies = (fishSpecies: FishSpecies) => {
@@ -760,12 +879,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     setActiveTripId(tripId);
     if (trip) {
       setSpotDraftName(trip.spotName);
-      setPendingSpot({
-        name: trip.spotName,
-        lat: trip.lat,
-        lng: trip.lng,
-        accuracy: trip.accuracy,
-      });
+      setPendingSpot(null);
     }
     setCatchDraft({
       fishSpecies: entry.fishSpecies,
@@ -782,6 +896,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       photoDataUrl: entry.photoDataUrl,
     });
     setEditingCatch({ tripId, catchId: entry.id });
+    setFormError('');
+    setPhotoMessage(entry.photoDataUrl ? 'Foto ist bereits komprimiert gespeichert.' : '');
     setQuickAddOpen(true);
   };
 
@@ -811,6 +927,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
 
   const saveCatch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setFormError('');
     const spotForSave = pendingSpot
       ?? (activeTrip
         ? {
@@ -820,30 +937,42 @@ const LogbookView: React.FC<LogbookViewProps> = ({
             accuracy: activeTrip.accuracy,
           }
         : getCurrentSpotSnapshot(spotDraftName || suggestedSpotName, currentLocation, gpsPosition));
-    const tripId = editingCatch?.tripId ?? getOrCreateTripForSpot(spotForSave);
-    const entry: CatchEntry = {
-      id: editingCatch?.catchId ?? createId('catch'),
+    const tripId = getOrCreateTripForSpot(spotForSave);
+    const entryId = editingCatch?.catchId ?? createId('catch');
+    const entry = normalizeCatchEntry({
+      id: entryId,
       ...catchDraft,
-      lengthCm: Math.max(1, Math.round(Number(catchDraft.lengthCm) || 1)),
       customFishName: catchDraft.fishSpecies === OTHER_FISH_VALUE ? catchDraft.customFishName?.trim() : '',
       bait: catchDraft.bait.trim() || baitCatalog[catchDraft.fishSpecies]?.[0] || fallbackBaits[0],
       method: catchDraft.method.trim() || methods[0],
-      notes: catchDraft.notes.trim(),
-      weight: catchDraft.weight?.trim(),
-    };
+    }, entryId);
+
+    if (!entry) {
+      setFormError('Fang konnte nicht gespeichert werden. Bitte pruefe Fischart, Laenge und Uhrzeit.');
+      return;
+    }
 
     setTrips((current) => current.map((trip) => {
-      if (trip.id !== tripId) return trip;
-
       if (editingCatch) {
+        if (trip.id === editingCatch.tripId && trip.id !== tripId) {
+          return {
+            ...trip,
+            catches: trip.catches.filter((candidate) => candidate.id !== editingCatch.catchId),
+          };
+        }
+
+        if (trip.id !== tripId) return trip;
+
+        const hasCatch = trip.catches.some((candidate) => candidate.id === editingCatch.catchId);
         return {
           ...trip,
-          catches: trip.catches.map((candidate) => (
-            candidate.id === editingCatch.catchId ? entry : candidate
-          )),
+          catches: hasCatch
+            ? trip.catches.map((candidate) => (candidate.id === editingCatch.catchId ? entry : candidate))
+            : [entry, ...trip.catches],
         };
       }
 
+      if (trip.id !== tripId) return trip;
       return { ...trip, catches: [entry, ...trip.catches] };
     }));
 
@@ -852,6 +981,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     setPendingSpot(null);
     setQuickAddMapOpen(false);
     setQuickAddOpen(false);
+    setPhotoMessage('');
   };
 
   const gpsText = gpsPosition
@@ -1064,16 +1194,18 @@ const LogbookView: React.FC<LogbookViewProps> = ({
               key={spot.id}
               type="button"
               onClick={() => selectTrip(spot.id)}
-              className={`absolute h-5 w-5 rounded-full border-2 border-white/80 shadow-lg ${getMarkerTone(spot.catches, spot.bestLength)}`}
+              className={`absolute flex items-center justify-center rounded-full border-2 border-cyan-100 bg-cyan-300 font-black text-slate-950 shadow-lg shadow-cyan-500/30 ${getMarkerSize(spot.catches)}`}
               style={{
                 left: `${18 + (index * 17) % 66}%`,
                 top: `${22 + (index * 23) % 54}%`,
               }}
               title={`${spot.name}: ${spot.catches} Fänge, bester ${spot.bestLength} cm, Top-Köder ${spot.topBait}`}
-            />
+            >
+              {spot.catches}
+            </button>
           ))}
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="hidden">
           <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-2 py-2">
             <p className="text-[9px] font-black uppercase text-emerald-300">Grün</p>
             <p className="text-[10px] font-semibold text-slate-400">stark</p>
@@ -1087,6 +1219,41 @@ const LogbookView: React.FC<LogbookViewProps> = ({
             <p className="text-[10px] font-semibold text-slate-400">wenig</p>
           </div>
         </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-2 py-2">
+            <p className="text-[9px] font-black uppercase text-cyan-200">Markerzahl</p>
+            <p className="text-[10px] font-semibold text-slate-400">Faenge</p>
+          </div>
+          <div className="rounded-lg border border-slate-600 bg-slate-900/70 px-2 py-2">
+            <p className="text-[9px] font-black uppercase text-slate-200">Groesse</p>
+            <p className="text-[10px] font-semibold text-slate-400">Aktivitaet</p>
+          </div>
+          <div className="rounded-lg border border-slate-600 bg-slate-900/70 px-2 py-2">
+            <p className="text-[9px] font-black uppercase text-slate-200">Bestmass</p>
+            <p className="text-[10px] font-semibold text-slate-400">Liste</p>
+          </div>
+        </div>
+        {spotSummaries.length > 0 && (
+          <div className="grid gap-2">
+            {spotSummaries.slice(0, 3).map((spot) => (
+              <button
+                key={spot.id}
+                type="button"
+                onClick={() => selectTrip(spot.id)}
+                className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-black text-slate-100">{spot.name}</span>
+                  <span className="mt-0.5 block truncate text-[10px] font-semibold text-slate-500">{spot.topBait}</span>
+                </span>
+                <span className="text-right">
+                  <span className="block text-xs font-black text-cyan-200">{spot.catches} Faenge</span>
+                  <span className="mt-0.5 block text-[10px] font-semibold text-slate-500">Bestmass {spot.bestLength} cm</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="card space-y-3">
@@ -1237,6 +1404,9 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                     setQuickAddOpen(false);
                     setEditingCatch(null);
                     setPendingSpot(null);
+                    setFormError('');
+                    setPhotoMessage('');
+                    setPhotoProcessing(false);
                     setQuickAddMapOpen(false);
                   }}
                   className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 bg-slate-800 text-lg font-black text-slate-200"
@@ -1288,15 +1458,12 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                   onChange={(event) => {
                     if (event.target.value) {
                       selectTrip(event.target.value);
-                      const trip = trips.find((candidate) => candidate.id === event.target.value);
-                      setPendingSpot(trip
-                        ? {
-                            name: trip.spotName,
-                            lat: trip.lat,
-                            lng: trip.lng,
-                            accuracy: trip.accuracy,
-                          }
-                        : null);
+                      setPendingSpot(null);
+                    } else {
+                      const nextSpot = getCurrentSpotSnapshot(spotDraftName || suggestedSpotName, currentLocation, gpsPosition);
+                      setActiveTripId(null);
+                      setPendingSpot(nextSpot);
+                      setSpotDraftName(nextSpot.name);
                     }
                   }}
                   className="mt-3 h-12 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none focus:border-emerald-300"
@@ -1375,21 +1542,32 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                   <input
                     type="range"
                     min="1"
-                    max="180"
+                    max="300"
                     value={catchDraft.lengthCm}
-                    onChange={(event) => updateDraft('lengthCm', Number(event.target.value))}
+                    onChange={(event) => updateDraft('lengthCm', Math.min(300, Math.max(1, Number(event.target.value) || 1)))}
                     className="min-w-0 flex-1 accent-emerald-400"
                   />
                   <input
                     type="number"
                     min="1"
+                    max="300"
                     inputMode="numeric"
                     value={catchDraft.lengthCm}
-                    onChange={(event) => updateDraft('lengthCm', Number(event.target.value))}
+                    onChange={(event) => updateDraft('lengthCm', Math.min(300, Math.max(1, Number(event.target.value) || 1)))}
                     className="h-12 w-20 rounded-lg border border-slate-700 bg-slate-900 text-center text-lg font-black text-white outline-none focus:border-emerald-300"
                   />
                   <span className="text-sm font-black text-slate-400">cm</span>
                 </div>
+              </label>
+
+              <label className="block rounded-lg border border-slate-700 bg-slate-950/50 p-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Datum & Zeit</span>
+                <input
+                  type="datetime-local"
+                  value={toDateTimeLocalValue(catchDraft.caughtAt)}
+                  onChange={(event) => updateDraft('caughtAt', fromDateTimeLocalValue(event.target.value))}
+                  className="mt-2 h-12 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm font-bold text-white outline-none focus:border-emerald-300"
+                />
               </label>
 
               <div className="space-y-2">
@@ -1445,8 +1623,10 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                   <div className="mt-1 flex h-12 rounded-lg border border-slate-700 bg-slate-950 focus-within:border-emerald-300">
                     <input
                       value={catchDraft.weight}
-                      onChange={(event) => updateDraft('weight', event.target.value)}
+                      onChange={(event) => updateDraft('weight', event.target.value.replace(/[^\d,.]/g, '').slice(0, 12))}
+                      onBlur={() => updateDraft('weight', normalizeWeight(catchDraft.weight))}
                       inputMode="decimal"
+                      maxLength={12}
                       className="min-w-0 flex-1 bg-transparent px-3 text-sm font-bold text-white outline-none"
                       placeholder="optional"
                     />
@@ -1462,7 +1642,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                 </label>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-[1fr_1.4fr]">
                 <label className="flex min-h-[52px] items-center justify-between rounded-lg border border-slate-700 bg-slate-950/50 px-3">
                   <span className="text-xs font-black uppercase tracking-wide text-slate-300">Released</span>
                   <input
@@ -1472,29 +1652,35 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                     className="h-6 w-6 accent-emerald-400"
                   />
                 </label>
-                <label className="flex min-h-[52px] items-center justify-center rounded-lg border border-slate-700 bg-slate-950/50 px-3 text-center text-xs font-black uppercase tracking-wide text-slate-300">
-                  Foto
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const preview = await readPhotoPreview(file);
-                        setCatchDraft((draft) => ({
-                          ...draft,
-                          photoName: preview.name,
-                          photoDataUrl: preview.dataUrl,
-                        }));
-                      } catch {
-                        updateDraft('photoName', file.name);
-                      }
-                    }}
-                    className="sr-only"
-                  />
-                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex min-h-[52px] items-center justify-center rounded-lg border border-slate-700 bg-slate-950/50 px-3 text-center text-xs font-black uppercase tracking-wide text-slate-300">
+                    {photoProcessing ? 'Komprimiere...' : 'Kamera'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      disabled={photoProcessing}
+                      onChange={(event) => {
+                        void handlePhotoFile(event.target.files?.[0]);
+                        event.currentTarget.value = '';
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                  <label className="flex min-h-[52px] items-center justify-center rounded-lg border border-slate-700 bg-slate-950/50 px-3 text-center text-xs font-black uppercase tracking-wide text-slate-300">
+                    Fotos
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={photoProcessing}
+                      onChange={(event) => {
+                        void handlePhotoFile(event.target.files?.[0]);
+                        event.currentTarget.value = '';
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
               </div>
 
               <label className="block">
@@ -1514,14 +1700,25 @@ const LogbookView: React.FC<LogbookViewProps> = ({
                   {activeTrip?.spotName ?? spotDraftName} · {gpsText}
                   {catchDraft.photoName ? ` · Foto: ${catchDraft.photoName}` : ''}
                 </p>
+                {photoMessage && (
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-emerald-300">
+                    {photoMessage}
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-2">
+                {formError && (
+                  <p className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs font-black text-red-200">
+                    {formError}
+                  </p>
+                )}
                 <button
                   type="submit"
-                  className="min-h-[56px] w-full rounded-lg bg-emerald-400 px-5 py-4 text-sm font-black uppercase tracking-wide text-slate-950 shadow-lg shadow-emerald-950/40"
+                  disabled={photoProcessing}
+                  className="min-h-[56px] w-full rounded-lg bg-emerald-400 px-5 py-4 text-sm font-black uppercase tracking-wide text-slate-950 shadow-lg shadow-emerald-950/40 disabled:opacity-50"
                 >
-                  {editingCatch ? 'Änderungen speichern ✓' : 'Speichern ✓'}
+                  {photoProcessing ? 'Foto wird vorbereitet...' : editingCatch ? 'Änderungen speichern ✓' : 'Speichern ✓'}
                 </button>
                 {editingCatch && (
                   <button
