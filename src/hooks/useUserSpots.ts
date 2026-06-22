@@ -24,6 +24,37 @@ export interface UserSpotSaveResult {
 }
 
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
+const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
+const HOOPTE_SLOT_ONE_SEED_KEY = 'zanderhunter-hoopte-slot-one-seeded-v1';
+const HOOPTE_ZOLLENSPIEKER_SPOT: Spot = {
+  id: 'user-hoopte-zollenspieker',
+  name: 'Elbe Hoopte / Zollenspieker',
+  beschreibung: 'Tideelbe-Spot bei Hoopte/Zollenspieker. Fangregel: 30 min vor Hochwasser starten, Topphase Hochwasser bis 2 h danach; Bonus bei deutlich fallendem Wasser, Wolken, leichtem Regen, Truebung und Daemmerung.',
+  lat: 53.396611,
+  lng: 10.221192,
+  tiefe: '4-8 m',
+  bestePhase: 'kenter',
+  windtoleranz: 35,
+  bootNötig: false,
+  uferAngling: true,
+  struktur: ['Tidekante', 'Steinpackung', 'Hauptstrom', 'Ablaufkante'],
+  trübungsPräferenz: 'getrübt',
+  temperaturMin: 5,
+  jahreszeitBonus: { frühling: 10, sommer: 6, herbst: 16, winter: 7 },
+  taktik: '30 min vor Hochwasser am Platz sein, Kanten und Stromschatten sauber abfischen. Nach Hochwasser die erste ablaufende Tide konsequent nutzen.',
+  koderTipp: 'Schlanke Shads 10-14 cm in Motoroil, UV-Chartreuse oder dunklem Gruen; Jiggewicht an Stroemung anpassen.',
+  type: 'elbe',
+  isWindExposed: true,
+};
+
+function getHoopteSeedStorageKey(userId?: string | null) {
+  return userId ? `${HOOPTE_SLOT_ONE_SEED_KEY}:${userId}` : HOOPTE_SLOT_ONE_SEED_KEY;
+}
+
+function putHoopteSpotInFirstSlot(spots: Spot[]) {
+  const otherSpots = spots.filter((spot) => spot.id !== HOOPTE_ZOLLENSPIEKER_SPOT.id);
+  return normalizeUserSpots([HOOPTE_ZOLLENSPIEKER_SPOT, ...otherSpots]);
+}
 
 function readStoredSpots(userId?: string | null) {
   return normalizeUserSpots(
@@ -91,9 +122,18 @@ export function useUserSpots() {
 
   const loadUserSpots = useCallback(async (forceRemote: boolean = false) => {
     const currentUser = userRef.current;
-    const localSpots = readStoredSpots(currentUser?.id);
+    const seedKey = getHoopteSeedStorageKey(currentUser?.id);
+    const shouldSeedHoopteSpot = !readJson<boolean>(seedKey, false, isBoolean);
+    const rawLocalSpots = readStoredSpots(currentUser?.id);
+    const localSpots = shouldSeedHoopteSpot
+      ? putHoopteSpotInFirstSlot(rawLocalSpots)
+      : rawLocalSpots;
 
     setUserSpots(localSpots);
+    if (shouldSeedHoopteSpot) {
+      writeJson(getUserSpotsStorageKey(currentUser?.id), localSpots);
+      writeJson(seedKey, true);
+    }
     setError(null);
 
     if (!currentUser || !supabase) {
@@ -105,15 +145,21 @@ export function useUserSpots() {
 
     try {
       const remoteSpots = await loadRemoteUserSpots(currentUser);
-      const shouldSeedFromLegacy = remoteSpots.length === 0 && localSpots.length === 0;
-      const merged = mergeUserSpots(
+      const shouldSeedFromLegacy = remoteSpots.length === 0 && rawLocalSpots.length === 0;
+      const mergedBase = mergeUserSpots(
         forceRemote ? remoteSpots : localSpots,
         forceRemote ? localSpots : remoteSpots,
         shouldSeedFromLegacy ? readLegacySpots() : []
       );
+      const merged = shouldSeedHoopteSpot
+        ? putHoopteSpotInFirstSlot(mergedBase)
+        : mergedBase;
 
       setUserSpots(merged);
       writeJson(getUserSpotsStorageKey(currentUser.id), merged);
+      if (shouldSeedHoopteSpot) {
+        writeJson(seedKey, true);
+      }
 
       if (JSON.stringify(remoteSpots) !== JSON.stringify(merged)) {
         await syncRemoteUserSpots(currentUser, merged);
