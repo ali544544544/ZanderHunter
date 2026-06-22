@@ -1,6 +1,6 @@
 import React from 'react';
 import { HOOPTE_ZOLLENSPIEKER_SPOT } from '../data/userSpotSeeds';
-import { useHoopteZanderAnalysis } from '../hooks/useHoopteZanderAnalysis';
+import { useHoopteZanderSourceAnalysis } from '../hooks/useHoopteZanderSourceAnalysis';
 
 interface HoopteZanderAnalysisCardProps {
   enabled: boolean;
@@ -40,7 +40,7 @@ function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ enabled }) => {
-  const { current, rows, loading, error } = useHoopteZanderAnalysis(enabled);
+  const { current, rows, loading, error } = useHoopteZanderSourceAnalysis(enabled);
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${HOOPTE_ZOLLENSPIEKER_SPOT.lat},${HOOPTE_ZOLLENSPIEKER_SPOT.lng}`;
 
   if (!enabled) return null;
@@ -67,8 +67,9 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
         <div>
           <h3 className="text-xs font-black text-slate-100">Hoopte/Zollenspieker Zanderfenster</h3>
           <p className="mt-0.5 text-[9px] font-semibold leading-snug text-slate-400">
-            Quelle Pegel: {current.station}. O2: {current.oxygenStation}.
+            Pegel: {current.station}. Tide: {current.tideSource}.
           </p>
+          <p className="mt-0.5 text-[9px] font-semibold leading-snug text-slate-500">{current.oxygenStation}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <ScorePill score={current.nowScore} />
@@ -95,6 +96,7 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
         <InfoLine label="Tidephase" value={current.tidePhase} />
         <InfoLine label="Sauerstoff" value={current.oxygen} />
         <InfoLine label="Nächster Bestzeitpunkt" value={`${current.nextBestTime} (${current.nextBestScore})`} />
+        <InfoLine label="Wasserqualität" value={current.waterQuality} />
       </div>
 
       <p className="rounded-md border border-slate-800 bg-slate-950/25 px-2 py-1.5 text-[9px] font-semibold leading-snug text-slate-300">
@@ -142,6 +144,20 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex flex-wrap gap-1">
+        {current.sourceLinks.map((source) => (
+          <a
+            key={source.label}
+            href={source.url}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded border border-slate-800 bg-slate-950/35 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 hover:text-slate-200"
+          >
+            {source.label}
+          </a>
+        ))}
       </div>
     </div>
   );

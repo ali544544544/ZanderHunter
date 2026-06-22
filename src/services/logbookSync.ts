@@ -92,7 +92,9 @@ function toCatchRow(entry: CatchEntry, trip: LogbookTrip, user: User): CatchRow 
 }
 
 function stripCatchContextColumns(row: CatchRow): CatchRow {
-  const { catch_weather: _catchWeather, catch_score: _catchScore, ...baseRow } = row;
+  const baseRow = { ...row };
+  delete baseRow.catch_weather;
+  delete baseRow.catch_score;
   return baseRow;
 }
 

@@ -1,0 +1,28 @@
+{
+  "station": "WGMN Bunthaus",
+  "sourceUrl": "https://www.wgmn-hamburg.de/daten-2/ReportAktuelleMesswerte-BU-2.html",
+  "fetchedAt": "2026-06-22T18:04:41.320Z",
+  "proxyNote": "Proxy-Wert: Messstation Bunthaus, nicht exakt am Spot Hoopte/Zollenspieker.",
+  "measurements": {
+    "oxygenMgL": {
+      "value": 7.2,
+      "unit": "mg/l",
+      "timestamp": "22.06.2026 15:50"
+    },
+    "oxygenSaturationPercent": {
+      "value": 87.1,
+      "unit": "%",
+      "timestamp": "22.06.2026 15:50"
+    },
+    "waterTemperatureC": {
+      "value": 24.4,
+      "unit": "°C",
+      "timestamp": "22.06.2026 15:50"
+    },
+    "turbidityFnu": {
+      "value": 23.7,
+      "unit": "FNU",
+      "timestamp": "22.06.2026 15:50"
+    }
+  }
+}

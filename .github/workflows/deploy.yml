@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 */3 * * *'
   workflow_dispatch:
 
 # Nötig für GitHub Pages Deployment
@@ -32,6 +34,9 @@ jobs:
 
       - name: Run tests (Pflicht vor Deploy)
         run: npm run test:run
+
+      - name: Prepare Hoopte data snapshots
+        run: npm run prepare:hoopte-data
 
       - name: Build
         run: npm run build
