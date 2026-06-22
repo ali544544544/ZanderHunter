@@ -106,38 +106,41 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
       <div className="rounded-md border border-slate-800">
         <table className="w-full table-fixed divide-y divide-slate-800 text-left text-[8px] sm:text-[9px]">
           <colgroup>
-            <col className="w-[12%]" />
+            <col className="w-[13%]" />
+            <col className="w-[6%]" />
             <col className="w-[9%]" />
-            <col className="w-[11%]" />
-            <col className="w-[17%]" />
-            <col className="w-[14%]" />
+            <col className="w-[10%]" />
+            <col className="w-[16%]" />
+            <col className="w-[13%]" />
             <col className="w-[8%]" />
-            <col className="w-[29%]" />
+            <col className="w-[25%]" />
           </colgroup>
           <thead className="bg-slate-950/60 text-slate-500">
             <tr>
+              <th className="px-1 py-1.5 font-black uppercase tracking-wide">Datum</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Tag</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">HW</th>
-              <th className="px-1 py-1.5 font-black uppercase tracking-wide">Da</th>
+              <th className="px-1 py-1.5 font-black uppercase tracking-wide">Da sein</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Wetter</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Phase</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Score</th>
-              <th className="px-1 py-1.5 font-black uppercase tracking-wide">Kurzinfo</th>
+              <th className="px-1 py-1.5 font-black uppercase tracking-wide">Begründung</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 bg-slate-950/20 text-slate-300">
             {rows.map((row) => (
-              <tr key={`${row.dateLabel}-${row.highWater}`} className={row.rank ? 'bg-blue-500/5' : undefined}>
+              <tr key={`${row.date}-${row.highWater}`} className={row.rank ? 'bg-blue-500/5' : undefined}>
                 <td className="px-1 py-1.5 font-black leading-tight text-slate-100">
-                  {row.rank ? `T${row.rank} ` : ''}{row.dateLabel}
+                  {row.rank ? `Top ${row.rank} ` : ''}{row.date}
                 </td>
+                <td className="px-1 py-1.5 font-bold leading-tight">{row.day}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.highWater}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.arrival}</td>
                 <td className="px-1 py-1.5 leading-tight">{row.weather}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight text-blue-100">{row.bestPhase}</td>
                 <td className="px-1 py-1.5"><TableScore score={row.score} /></td>
                 <td className="px-1 py-1.5 leading-tight">
-                  {row.thunderstormRisk && <span className="font-black text-red-200">Gewitterrisiko. </span>}
+                  {row.warningText && <span className="font-black text-red-200">{row.warningText}. </span>}
                   {row.reason}
                 </td>
               </tr>

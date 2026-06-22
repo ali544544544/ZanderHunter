@@ -29,6 +29,7 @@ interface BrightSkyWeatherRecord {
   temperature?: number | null;
   pressure_msl?: number | null;
   wind_speed?: number | null;
+  wind_gust_speed?: number | null;
   wind_direction?: number | null;
   cloud_cover?: number | null;
   precipitation?: number | null;
@@ -93,8 +94,10 @@ interface WeatherScore {
   score: number;
   label: string;
   thunderstormRisk: boolean;
+  stormRisk: boolean;
   pressureFalling: boolean;
   cloudCover: number;
+  warningText?: string;
 }
 
 interface WaterScore {
@@ -112,10 +115,13 @@ interface SessionScore {
   waterScore: number;
   reason: string;
   thunderstormRisk: boolean;
+  stormRisk: boolean;
+  warningText?: string;
 }
 
 export interface HoopteForecastRow {
-  dateLabel: string;
+  date: string;
+  day: string;
   highWater: string;
   arrival: string;
   weather: string;
@@ -124,6 +130,8 @@ export interface HoopteForecastRow {
   reason: string;
   rank?: 1 | 2 | 3;
   thunderstormRisk: boolean;
+  stormRisk: boolean;
+  warningText?: string;
 }
 
 export interface HoopteSourceLink {
@@ -205,6 +213,11 @@ function formatDayLabel(date: Date) {
   return `${weekdays[date.getDay()]} ${formatDate(date)}`;
 }
 
+function formatWeekday(date: Date) {
+  const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  return weekdays[date.getDay()];
+}
+
 function formatDecimal(value: number, digits = 1) {
   return new Intl.NumberFormat('de-DE', {
     maximumFractionDigits: digits,
@@ -226,12 +239,6 @@ function parseDate(value?: string) {
   const normalized = value.includes(' ') ? value.replace(' ', 'T') : value;
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function sameLocalDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate();
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -357,14 +364,32 @@ function getTidePhase(now: Date, tides: TideEvent[], dhdt: number | null) {
   return 'Tidephase offen';
 }
 
-function isNearTwilight(date: Date) {
-  const times = SunCalc.getTimes(date, SPOT_LAT, SPOT_LNG);
-  const limit = 75 * 60 * 1000;
-  const time = date.getTime();
-  return Boolean(
-    (times.sunrise && Math.abs(time - times.sunrise.getTime()) <= limit)
-    || (times.sunset && Math.abs(time - times.sunset.getTime()) <= limit)
-  );
+function intervalOverlaps(start: number, end: number, rangeStart: number, rangeEnd: number) {
+  return start <= rangeEnd && end >= rangeStart;
+}
+
+function scoreLightWindow(highWater: Date, cloudCover: number) {
+  const times = SunCalc.getTimes(highWater, SPOT_LAT, SPOT_LNG);
+  const start = highWater.getTime();
+  const end = highWater.getTime() + 2 * 60 * 60 * 1000;
+  const mid = highWater.getTime() + 60 * 60 * 1000;
+  const midDate = new Date(mid);
+  const sunrise = times.sunrise.getTime();
+  const sunset = times.sunset.getTime();
+  const twilightLimit = 75 * 60 * 1000;
+  const eveningStart = sunset - 3 * 60 * 60 * 1000;
+  const twilight = intervalOverlaps(start, end, sunrise - twilightLimit, sunrise + twilightLimit)
+    || intervalOverlaps(start, end, sunset - twilightLimit, sunset + twilightLimit);
+  const night = mid < sunrise || mid > sunset;
+  const evening = intervalOverlaps(start, end, eveningStart, sunset + twilightLimit);
+  const brightMidday = midDate.getHours() >= 11 && midDate.getHours() <= 15 && cloudCover < 35;
+
+  if (twilight) return { score: 10, label: 'Dämm.' };
+  if (night) return { score: 10, label: 'Nacht' };
+  if (evening) return { score: 8, label: 'Abend' };
+  if (brightMidday) return { score: 1, label: 'Mittagssonne' };
+  if (cloudCover >= 60) return { score: 5, label: 'Wolkenlicht' };
+  return { score: 3, label: null };
 }
 
 function scoreWeather(weather: BrightSkyBundle, date: Date): WeatherScore {
@@ -377,6 +402,7 @@ function scoreWeather(weather: BrightSkyBundle, date: Date): WeatherScore {
       score: 7,
       label: 'Wetter offen',
       thunderstormRisk: false,
+      stormRisk: false,
       pressureFalling: false,
       cloudCover: 50,
     };
@@ -385,12 +411,14 @@ function scoreWeather(weather: BrightSkyBundle, date: Date): WeatherScore {
   const cloud = record.cloud_cover ?? 50;
   const precipitation = record.precipitation ?? 0;
   const wind = record.wind_speed ?? 0;
+  const gust = record.wind_gust_speed ?? wind;
   const pressure = record.pressure_msl ?? 1013;
   const pressureBefore = before?.pressure_msl ?? pressure;
   const pressureFalling = pressure - pressureBefore < -1;
   const condition = record.condition ?? '';
   const icon = record.icon ?? '';
   const thunderstormRisk = condition === 'thunderstorm' || icon.includes('thunderstorm');
+  const stormRisk = wind >= 45 || gust >= 55;
 
   let score = 4;
   if (cloud >= 60) score += 5;
@@ -400,13 +428,21 @@ function scoreWeather(weather: BrightSkyBundle, date: Date): WeatherScore {
   if (wind >= 6 && wind <= 25) score += 2;
   if (pressureFalling) score += 2;
   if (thunderstormRisk) score -= 8;
+  if (stormRisk) score -= 8;
+  else if (wind > 35 || gust > 45) score -= 4;
 
   return {
     score: Math.round(clamp(score, 0, 15)),
     label: `${weatherConditionShortLabel(record)}, ${Math.round(cloud)}%, ${wind.toFixed(0)} km/h`,
     thunderstormRisk,
+    stormRisk,
     pressureFalling,
     cloudCover: cloud,
+    warningText: thunderstormRisk
+      ? 'Gewitter'
+      : stormRisk
+        ? 'Sturm'
+        : undefined,
   };
 }
 
@@ -480,29 +516,35 @@ function scoreSession(
   if (typeof tideHub === 'number' && tideHub >= 180) flowScore += 1;
 
   const weatherScore = scoreWeather(weather, highWater);
-  const twilight = isNearTwilight(highWater);
-  const lightScore = twilight ? 10 : weatherScore.cloudCover >= 60 ? 5 : 3;
+  const light = scoreLightWindow(highWater, weatherScore.cloudCover);
   const waterScore = scoreWaterQuality(waterQuality);
-  const total = Math.round(clamp(tideScore + clamp(flowScore, 0, 25) + weatherScore.score + lightScore + waterScore.score));
+  const total = Math.round(clamp(tideScore + clamp(flowScore, 0, 25) + weatherScore.score + light.score + waterScore.score));
 
   const reasonParts = [
     inTopWindow || inStartWindow ? 'HW-Fenster' : 'Randfenster',
     fallingAfterHighWater ? 'Ablauf' : 'vor HW',
     weatherScore.pressureFalling ? 'Druck fallend' : null,
-    twilight ? 'Dämm.' : null,
+    light.label,
     weatherScore.thunderstormRisk ? 'Gewitter' : null,
+    weatherScore.stormRisk ? 'Sturm' : null,
     waterScore.label,
   ].filter(Boolean);
+  const warningText = [
+    weatherScore.warningText,
+    waterScore.warning,
+  ].filter(Boolean).join(', ') || undefined;
 
   return {
     total,
     tideScore,
     flowScore: Math.round(clamp(flowScore, 0, 25)),
     weatherScore: weatherScore.score,
-    lightScore,
+    lightScore: light.score,
     waterScore: waterScore.score,
     reason: reasonParts.join(', '),
     thunderstormRisk: weatherScore.thunderstormRisk,
+    stormRisk: weatherScore.stormRisk,
+    warningText,
   };
 }
 
@@ -513,40 +555,36 @@ function buildRows(
   waterQuality: WaterQualitySnapshot | null
 ) {
   const now = new Date();
+  const endDate = addDays(now, 7);
   const rows: Array<HoopteForecastRow & { highWaterDate: Date }> = [];
-  const softNow = now.getTime() - 30 * 60 * 1000;
-
-  for (let day = 0; rows.length < 7 && day < 10; day += 1) {
-    const date = addDays(now, day);
-    const highWaters = tides.filter((event) => (
+  const highWaters = tides
+    .filter((event) => (
       event.type === 'HW'
-      && sameLocalDay(event.time, date)
-      && event.time.getTime() >= softNow
-    ));
-    const bestHighWater = highWaters
-      .map((event) => ({
-        event,
-        score: scoreSession(event, weather, tides, dhdt, waterQuality),
-      }))
-      .sort((a, b) => b.score.total - a.score.total)[0];
+      && event.time > now
+      && event.time <= endDate
+    ))
+    .sort((a, b) => a.time.getTime() - b.time.getTime());
 
-    if (!bestHighWater) continue;
-
-    const arrival = new Date(bestHighWater.event.time.getTime() - 30 * 60000);
-    const end = new Date(bestHighWater.event.time.getTime() + 2 * 60 * 60000);
-    const weatherInfo = scoreWeather(weather, bestHighWater.event.time);
-    const phase = `${formatTime(bestHighWater.event.time)}-${formatTime(end)}`;
+  for (const highWater of highWaters) {
+    const score = scoreSession(highWater, weather, tides, dhdt, waterQuality);
+    const arrival = new Date(highWater.time.getTime() - 30 * 60000);
+    const end = new Date(highWater.time.getTime() + 2 * 60 * 60000);
+    const weatherInfo = scoreWeather(weather, highWater.time);
+    const phase = `${formatTime(highWater.time)}-${formatTime(end)}`;
 
     rows.push({
-      dateLabel: formatDayLabel(date),
-      highWater: formatTime(bestHighWater.event.time),
+      date: formatDate(highWater.time),
+      day: formatWeekday(highWater.time),
+      highWater: formatTime(highWater.time),
       arrival: `ab ${formatTime(arrival)}`,
       weather: weatherInfo.label,
       bestPhase: phase,
-      score: bestHighWater.score.total,
-      reason: bestHighWater.score.reason,
-      thunderstormRisk: bestHighWater.score.thunderstormRisk,
-      highWaterDate: bestHighWater.event.time,
+      score: score.total,
+      reason: score.reason,
+      thunderstormRisk: score.thunderstormRisk,
+      stormRisk: score.stormRisk,
+      warningText: score.warningText,
+      highWaterDate: highWater.time,
     });
   }
 
@@ -670,6 +708,9 @@ export function useHoopteZanderSourceAnalysis(enabled: boolean): HoopteZanderAna
         const warningParts = [
           nowScore.thunderstormRisk || nextBest?.score.thunderstormRisk
             ? 'Sicherheitswarnung: Gewitterrisiko in den Daten, Session kritisch prüfen.'
+            : null,
+          nowScore.stormRisk || nextBest?.score.stormRisk
+            ? 'Sicherheitswarnung: Sturmrisiko in den Daten, Session kritisch prüfen.'
             : null,
           waterScore.warning,
         ].filter(Boolean);
