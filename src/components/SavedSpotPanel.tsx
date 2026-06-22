@@ -16,6 +16,7 @@ interface SavedSpotPanelProps {
   spots: Spot[];
   selectedSpotId: string | null;
   onSelectSpot: (spot: Spot) => void;
+  onCreateSpot: () => void;
   onManageSpots: () => void;
   conditions: any;
   weather: WeatherData | null;
@@ -125,6 +126,7 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
   spots,
   selectedSpotId,
   onSelectSpot,
+  onCreateSpot,
   onManageSpots,
   conditions,
   weather,
@@ -195,7 +197,7 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
               <button
                 key={`empty-${index}`}
                 type="button"
-                onClick={onManageSpots}
+                onClick={onCreateSpot}
                 className="flex aspect-square min-h-[58px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-700 bg-slate-900/50 text-slate-500 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-200"
                 aria-label={`Spot ${index + 1} anlegen`}
                 title="Spot anlegen"

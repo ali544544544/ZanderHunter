@@ -8,6 +8,7 @@ import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
 import SavedSpotPanel from './components/SavedSpotPanel';
+import AddSpotModal from './components/AddSpotModal';
 import Briefing from './components/Briefing';
 import HechtInfo from './components/HechtInfo';
 import { LocalRegulationsCard } from './components/LocalRegulationsCard';
@@ -121,6 +122,7 @@ const App: React.FC = () => {
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationMapOpen, setLocationMapOpen] = useState(false);
+  const [savedSpotModalOpen, setSavedSpotModalOpen] = useState(false);
   const [locationRevision, setLocationRevision] = useState(0);
   const [logbookQuickAddRequest, setLogbookQuickAddRequest] = useState(0);
   const { position: gpsPosition, loading: gpsLoading, error: gpsError } = useGeolocation(gpsEnabled);
@@ -138,7 +140,12 @@ const App: React.FC = () => {
       ? { lat: normalizeCoordinate(gpsPosition.lat), lng: normalizeCoordinate(gpsPosition.lng) }
       : defaultLocation;
 
-  const { userSpots } = useUserSpots();
+  const {
+    userSpots,
+    addUserSpot,
+    user: userSpotsAccount,
+    limit: userSpotsLimit,
+  } = useUserSpots();
   const {
     score,
     loading,
@@ -437,6 +444,7 @@ const App: React.FC = () => {
                 spots={userSpots}
                 selectedSpotId={selectedSavedSpotId}
                 onSelectSpot={selectSavedSpot}
+                onCreateSpot={() => setSavedSpotModalOpen(true)}
                 onManageSpots={() => setActiveTab('spots')}
                 conditions={conditions}
                 weather={weather}
@@ -548,6 +556,22 @@ const App: React.FC = () => {
         >
           +
         </button>
+      )}
+
+      {savedSpotModalOpen && (
+        <AddSpotModal
+          onClose={() => setSavedSpotModalOpen(false)}
+          onAdd={async (spot) => {
+            const result = await addUserSpot(spot);
+            if (result.ok) {
+              selectSavedSpot(spot);
+            }
+            return result;
+          }}
+          spotCount={userSpots.length}
+          spotLimit={userSpotsLimit}
+          accountEmail={userSpotsAccount?.email ?? null}
+        />
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 px-3 pt-2 pb-7 z-40">
