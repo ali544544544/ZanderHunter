@@ -105,6 +105,11 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
+function formatDayLabel(date: Date) {
+  const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  return `${weekdays[date.getDay()]} ${formatDate(date)}`;
+}
+
 function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
@@ -330,7 +335,7 @@ function buildRows(weather: WeatherApiResponse, tides: TideEvent[], dhdt: number
     const phase = `HW ${formatTime(bestHighWater.event.time)} bis ${formatTime(end)}`;
 
     rows.push({
-      dateLabel: formatDate(date),
+      dateLabel: formatDayLabel(date),
       highWater: formatTime(bestHighWater.event.time),
       arrival: `Da sein: ${formatTime(arrival)}`,
       weather: weatherInfo.label,
@@ -393,7 +398,7 @@ export function useHoopteZanderAnalysis(enabled: boolean): HoopteZanderAnalysis 
             event,
             score: scoreSession(event.time, weather, tides, dhdt),
           }))
-          .sort((a, b) => b.score.total - a.score.total);
+          .sort((a, b) => a.event.time.getTime() - b.event.time.getTime());
         const nextBest = allFutureHighWaters[0];
         const previousHighWater = [...tides].reverse().find((event) => event.type === 'HW' && event.time <= now) ?? tides[0];
         const nowScore = scoreSession(previousHighWater.time, weather, tides, dhdt, now);
@@ -408,7 +413,7 @@ export function useHoopteZanderAnalysis(enabled: boolean): HoopteZanderAnalysis 
           waterLevel: level ? `${level.value.toFixed(0)} cm` : 'kein aktueller Pegelwert',
           tidePhase,
           oxygen: 'keine aktuellen O2-Daten gefunden',
-          nextBestTime: nextBest ? `${formatDate(nextBest.event.time)} ${formatTime(nextBest.event.time)}` : 'kein HW-Fenster gefunden',
+          nextBestTime: nextBest ? `HW ${formatDayLabel(nextBest.event.time)} ${formatTime(nextBest.event.time)}` : 'kein HW-Fenster gefunden',
           nowReason: `Jetzt: ${nowScore.reason}. ${typeof dhdt === 'number' ? `dH/dt ${dhdt.toFixed(1)} cm/h.` : 'dH/dt nicht verfügbar.'}`,
           nowScore: nowScore.total,
           nextBestScore: nextBest?.score.total ?? 0,
