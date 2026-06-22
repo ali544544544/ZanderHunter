@@ -17,7 +17,7 @@ import {
   normalizeUserSpots,
   syncRemoteUserSpots,
 } from '../services/userSpotsSync';
-import { HOOPTE_ZOLLENSPIEKER_SPOT } from '../data/userSpotSeeds';
+import { HOOPTE_ZOLLENSPIEKER_SPOT, HOOPTE_ZOLLENSPIEKER_SPOT_ID } from '../data/userSpotSeeds';
 
 export interface UserSpotSaveResult {
   ok: boolean;
@@ -25,22 +25,10 @@ export interface UserSpotSaveResult {
 }
 
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
-const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
-const HOOPTE_SLOT_ONE_SEED_KEY = 'zanderhunter-hoopte-slot-one-seeded-v1';
-
-function getHoopteSeedStorageKey(userId?: string | null) {
-  return userId ? `${HOOPTE_SLOT_ONE_SEED_KEY}:${userId}` : HOOPTE_SLOT_ONE_SEED_KEY;
-}
 
 function putHoopteSpotInFirstSlot(spots: Spot[]) {
   const otherSpots = spots.filter((spot) => spot.id !== HOOPTE_ZOLLENSPIEKER_SPOT.id);
   return normalizeUserSpots([HOOPTE_ZOLLENSPIEKER_SPOT, ...otherSpots]);
-}
-
-function updateHoopteSpotIfPresent(spots: Spot[]) {
-  return spots.some((spot) => spot.id === HOOPTE_ZOLLENSPIEKER_SPOT.id)
-    ? putHoopteSpotInFirstSlot(spots)
-    : spots;
 }
 
 function readStoredSpots(userId?: string | null) {
@@ -109,19 +97,12 @@ export function useUserSpots() {
 
   const loadUserSpots = useCallback(async (forceRemote: boolean = false) => {
     const currentUser = userRef.current;
-    const seedKey = getHoopteSeedStorageKey(currentUser?.id);
-    const shouldSeedHoopteSpot = !readJson<boolean>(seedKey, false, isBoolean);
     const rawLocalSpots = readStoredSpots(currentUser?.id);
-    const localSpots = shouldSeedHoopteSpot
-      ? putHoopteSpotInFirstSlot(rawLocalSpots)
-      : updateHoopteSpotIfPresent(rawLocalSpots);
+    const localSpots = putHoopteSpotInFirstSlot(rawLocalSpots);
 
     setUserSpots(localSpots);
     if (JSON.stringify(rawLocalSpots) !== JSON.stringify(localSpots)) {
       writeJson(getUserSpotsStorageKey(currentUser?.id), localSpots);
-    }
-    if (shouldSeedHoopteSpot) {
-      writeJson(seedKey, true);
     }
     setError(null);
 
@@ -140,15 +121,10 @@ export function useUserSpots() {
         forceRemote ? localSpots : remoteSpots,
         shouldSeedFromLegacy ? readLegacySpots() : []
       );
-      const merged = shouldSeedHoopteSpot
-        ? putHoopteSpotInFirstSlot(mergedBase)
-        : updateHoopteSpotIfPresent(mergedBase);
+      const merged = putHoopteSpotInFirstSlot(mergedBase);
 
       setUserSpots(merged);
       writeJson(getUserSpotsStorageKey(currentUser.id), merged);
-      if (shouldSeedHoopteSpot) {
-        writeJson(seedKey, true);
-      }
 
       if (JSON.stringify(remoteSpots) !== JSON.stringify(merged)) {
         await syncRemoteUserSpots(currentUser, merged);
@@ -167,12 +143,12 @@ export function useUserSpots() {
 
   useEffect(() => {
     const reloadLocalSpots = () => {
-      const localSpots = readStoredSpots(userRef.current?.id);
+      const localSpots = putHoopteSpotInFirstSlot(readStoredSpots(userRef.current?.id));
       setUserSpots(localSpots);
     };
 
     const clearSpots = () => {
-      setUserSpots([]);
+      setUserSpots(putHoopteSpotInFirstSlot([]));
       setError(null);
     };
 
@@ -189,7 +165,7 @@ export function useUserSpots() {
 
   const persistUserSpots = useCallback(async (spots: Spot[]): Promise<UserSpotSaveResult> => {
     const currentUser = userRef.current;
-    const safeSpots = normalizeUserSpots(spots);
+    const safeSpots = putHoopteSpotInFirstSlot(spots);
 
     setUserSpots(safeSpots);
     writeJson(getUserSpotsStorageKey(currentUser?.id), safeSpots);
@@ -233,6 +209,10 @@ export function useUserSpots() {
   }, [persistUserSpots]);
 
   const deleteUserSpot = useCallback(async (id: string): Promise<UserSpotSaveResult> => {
+    if (id === HOOPTE_ZOLLENSPIEKER_SPOT_ID) {
+      return { ok: false, message: 'Dieser Spot ist fest vorprogrammiert.' };
+    }
+
     const updated = spotsRef.current.filter((spot) => spot.id !== id);
     return persistUserSpots(updated);
   }, [persistUserSpots]);

@@ -66,7 +66,6 @@ export interface HoopteForecastRow {
   bestPhase: string;
   score: number;
   reason: string;
-  rank?: 1 | 2 | 3;
   thunderstormRisk: boolean;
 }
 
@@ -314,7 +313,7 @@ function scoreSession(
 
 function buildRows(weather: WeatherApiResponse, tides: TideEvent[], dhdt: number | null) {
   const now = new Date();
-  const rows: Array<HoopteForecastRow & { highWaterDate: Date }> = [];
+  const rows: HoopteForecastRow[] = [];
 
   for (let day = 0; day < 7; day += 1) {
     const date = new Date(now);
@@ -343,18 +342,10 @@ function buildRows(weather: WeatherApiResponse, tides: TideEvent[], dhdt: number
       score: bestHighWater.score.total,
       reason: bestHighWater.score.reason,
       thunderstormRisk: bestHighWater.score.thunderstormRisk,
-      highWaterDate: bestHighWater.event.time,
     });
   }
 
-  const ranked = [...rows].sort((a, b) => b.score - a.score).slice(0, 3);
-  return rows.map(({ highWaterDate: _highWaterDate, ...row }) => {
-    const rankIndex = ranked.findIndex((rankedRow) => rankedRow.highWaterDate.getTime() === _highWaterDate.getTime());
-    return {
-      ...row,
-      rank: rankIndex >= 0 ? (rankIndex + 1) as 1 | 2 | 3 : undefined,
-    };
-  });
+  return rows;
 }
 
 export function useHoopteZanderAnalysis(enabled: boolean): HoopteZanderAnalysis {

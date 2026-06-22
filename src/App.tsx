@@ -230,6 +230,17 @@ const App: React.FC = () => {
   };
 
   const selectSavedSpot = (spot: (typeof userSpots)[number]) => {
+    if (selectedSavedSpotId === spot.id) {
+      setSelectedSavedSpotId(null);
+      setManualLocation(null);
+      setLocationRevision((revision) => revision + 1);
+      setLocationQuery('');
+      setLocationSearchOpen(false);
+      setLocationMapOpen(false);
+      clearLocationSearch();
+      return;
+    }
+
     selectManualLocation(
       {
         id: `saved-${spot.id}`,

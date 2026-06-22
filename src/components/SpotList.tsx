@@ -3,6 +3,7 @@ import SpotCard from './SpotCard';
 import { SPOTS, calculateSpotScoreForFish } from '../data/spots';
 import { useUserSpots } from '../hooks/useUserSpots';
 import AddSpotModal from './AddSpotModal';
+import { HOOPTE_ZOLLENSPIEKER_SPOT_ID } from '../data/userSpotSeeds';
 import type { TargetFish } from '../utils/calculations';
 
 interface SpotListProps {
@@ -20,7 +21,8 @@ const SpotList: React.FC<SpotListProps> = ({ conditions, targetFish = 'zander' }
     () => [...SPOTS, ...userSpots].map(spot => ({
       ...spot,
       currentScore: conditions ? calculateSpotScoreForFish(spot, conditions, targetFish) : 0,
-      isUserSpot: spot.id.startsWith('user-')
+      isUserSpot: spot.id.startsWith('user-'),
+      isLockedSpot: spot.id === HOOPTE_ZOLLENSPIEKER_SPOT_ID,
     })),
     [conditions, targetFish, userSpots]
   );
@@ -77,7 +79,12 @@ const SpotList: React.FC<SpotListProps> = ({ conditions, targetFish = 'zander' }
           filteredSpots.map(spot => (
             <div key={spot.id} className="relative group">
               <SpotCard spot={spot} score={spot.currentScore} conditions={conditions} targetFish={targetFish} />
-              {spot.isUserSpot && (
+              {spot.isLockedSpot && (
+                <span className="absolute top-4 right-14 rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-slate-400">
+                  Fest
+                </span>
+              )}
+              {spot.isUserSpot && !spot.isLockedSpot && (
                 <button 
                   onClick={() => deleteUserSpot(spot.id)}
                   className="absolute top-4 right-14 bg-red-500/10 hover:bg-red-500/20 text-red-500 p-1.5 rounded-lg border border-red-500/20 opacity-0 group-hover:opacity-100 transition-opacity"

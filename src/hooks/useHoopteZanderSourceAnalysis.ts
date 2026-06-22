@@ -128,6 +128,7 @@ export interface HoopteForecastRow {
   bestPhase: string;
   score: number;
   reason: string;
+  isDaytimeWindow: boolean;
   thunderstormRisk: boolean;
   stormRisk: boolean;
   warningText?: string;
@@ -483,6 +484,11 @@ function scoreWaterQuality(waterQuality: WaterQualitySnapshot | null): WaterScor
   };
 }
 
+function isBetweenEightAndTwenty(date: Date) {
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return minutes >= 8 * 60 && minutes <= 20 * 60;
+}
+
 function scoreSession(
   highWaterEvent: TideEvent,
   weather: BrightSkyBundle,
@@ -580,6 +586,7 @@ function buildRows(
       bestPhase: phase,
       score: score.total,
       reason: score.reason,
+      isDaytimeWindow: isBetweenEightAndTwenty(highWater.time),
       thunderstormRisk: score.thunderstormRisk,
       stormRisk: score.stormRisk,
       warningText: score.warningText,

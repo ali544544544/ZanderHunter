@@ -148,8 +148,12 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
           </thead>
           <tbody className="divide-y divide-slate-800 bg-slate-950/20 text-slate-300">
             {rows.map((row) => (
-              <tr key={`${row.date}-${row.highWater}`}>
-                <td className="px-1 py-1.5 font-black leading-tight text-slate-100">{row.date}</td>
+              <tr
+                key={`${row.date}-${row.highWater}`}
+                className={row.isDaytimeWindow ? 'bg-emerald-400/10' : undefined}
+                title={row.isDaytimeWindow ? 'Hochwasser zwischen 08:00 und 20:00' : undefined}
+              >
+                <td className={`px-1 py-1.5 font-black leading-tight ${row.isDaytimeWindow ? 'text-emerald-100' : 'text-slate-100'}`}>{row.date}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.day}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.highWater}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.arrival}</td>

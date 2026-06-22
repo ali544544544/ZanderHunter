@@ -222,7 +222,8 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
                   : 'border-slate-700 bg-slate-900/70 text-slate-300 hover:border-slate-500'
               }`}
               aria-pressed={active}
-              title={spot.name}
+              aria-label={active ? `${spot.name} schliessen` : `${spot.name} auswaehlen`}
+              title={active ? `${spot.name} schliessen` : spot.name}
             >
               <span className="line-clamp-2 max-w-full text-[10px] font-black leading-tight">{spot.name}</span>
               <span className="mt-1 block text-[8px] font-bold uppercase tracking-wide text-slate-500">
