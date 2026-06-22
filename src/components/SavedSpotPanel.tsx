@@ -41,6 +41,8 @@ const tideTypeLabels: Record<TideEvent['type'], string> = {
   NW: 'Niedrigwasser',
 };
 
+const SLOT_COUNT = 5;
+
 function formatTime(value?: Date | string | null) {
   if (!value) return '--:--';
   const date = value instanceof Date ? value : new Date(value);
@@ -111,9 +113,9 @@ function MetricTile({
       : 'border-slate-700/80 bg-slate-950/25';
 
   return (
-    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
+    <div className={`rounded-lg border px-2.5 py-2 ${toneClass}`}>
       <span className="block text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
-      <span className="mt-0.5 block text-sm font-black leading-snug text-slate-100">{value}</span>
+      <span className="mt-0.5 block text-xs font-black leading-snug text-slate-100">{value}</span>
       {sub && <span className="mt-1 block text-[10px] font-bold leading-snug text-slate-400">{sub}</span>}
     </div>
   );
@@ -166,63 +168,60 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
     };
   }, [conditions, hourlyScores, scoreDetails?.primeWindow, selectedSpot, startHour, targetFish, tide]);
 
-  if (spots.length === 0) {
-    return (
-      <section className="card space-y-3 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Meine Spots</p>
-            <h2 className="mt-1 text-lg font-black text-slate-100">0/5 gespeichert</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onManageSpots}
-            className="rounded-lg border border-blue-500/40 bg-blue-500/15 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-blue-200"
-          >
-            Anlegen
-          </button>
-        </div>
-        <p className="text-xs font-semibold leading-relaxed text-slate-400">
-          Speichere bis zu fünf Angelplätze im Spots-Tab. Danach kannst du sie hier direkt für Live-Daten auswählen.
-        </p>
-      </section>
-    );
-  }
+  const slotItems = Array.from({ length: SLOT_COUNT }, (_, index) => spots[index] ?? null);
 
   return (
-    <section className="card space-y-4 p-4">
-      <div className="flex items-start justify-between gap-3">
+    <section className="card space-y-3 p-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Meine Spots</p>
-          <h2 className="mt-1 text-lg font-black text-slate-100">{spots.length}/5 gespeichert</h2>
+          <h2 className="mt-0.5 text-sm font-black text-slate-100">{spots.length}/{SLOT_COUNT} gespeichert</h2>
         </div>
         <button
           type="button"
           onClick={onManageSpots}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-200"
+          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-2 text-[10px] font-black uppercase tracking-wide text-slate-200"
         >
           Verwalten
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
-        {spots.map((spot) => {
-          const active = spot.id === selectedSpotId;
+      <div className="grid grid-cols-5 gap-1.5">
+        {slotItems.map((spot, index) => {
+          const active = spot?.id === selectedSpotId;
+
+          if (!spot) {
+            return (
+              <button
+                key={`empty-${index}`}
+                type="button"
+                onClick={onManageSpots}
+                className="flex aspect-square min-h-[58px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-700 bg-slate-900/50 text-slate-500 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-200"
+                aria-label={`Spot ${index + 1} anlegen`}
+                title="Spot anlegen"
+              >
+                <span className="text-xl font-black leading-none">+</span>
+                <span className="mt-1 text-[8px] font-black uppercase tracking-wide">Spot</span>
+              </button>
+            );
+          }
+
           return (
             <button
               key={spot.id}
               type="button"
               onClick={() => onSelectSpot(spot)}
-              className={`min-h-[54px] rounded-lg border px-3 py-2 text-left transition-colors ${
+              className={`flex aspect-square min-h-[58px] flex-col items-center justify-center rounded-lg border px-1.5 py-1.5 text-center transition-colors ${
                 active
-                  ? 'border-blue-400/50 bg-blue-500/15 text-blue-100'
+                  ? 'border-blue-400/60 bg-blue-500/20 text-blue-100 shadow-sm shadow-blue-950/50'
                   : 'border-slate-700 bg-slate-900/70 text-slate-300 hover:border-slate-500'
               }`}
               aria-pressed={active}
+              title={spot.name}
             >
-              <span className="block truncate text-sm font-black">{spot.name}</span>
-              <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                {spot.tiefe} - {spot.uferAngling ? 'Ufer' : 'Boot'} - {spot.type ?? 'Spot'}
+              <span className="line-clamp-2 max-w-full text-[10px] font-black leading-tight">{spot.name}</span>
+              <span className="mt-1 block text-[8px] font-bold uppercase tracking-wide text-slate-500">
+                {spot.uferAngling ? 'Ufer' : 'Boot'}
               </span>
             </button>
           );
@@ -230,20 +229,20 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
       </div>
 
       {!selectedSpot && (
-        <p className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-xs font-semibold text-slate-400">
-          Wähle einen gespeicherten Spot aus, um die Jetzt-Daten genau für diesen Ort zu laden.
+        <p className="rounded-lg border border-slate-800 bg-slate-950/25 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-400">
+          Tippe auf + zum Anlegen oder auf einen Slot zum Auswählen.
         </p>
       )}
 
       {selectedSpot && detail && (
-        <div className="space-y-4 border-t border-slate-800 pt-4">
+        <div className="space-y-3 border-t border-slate-800 pt-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-lg font-black leading-tight text-slate-100">{selectedSpot.name}</h3>
-              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-400">{selectedSpot.beschreibung}</p>
+              <h3 className="truncate text-sm font-black leading-tight text-slate-100">{selectedSpot.name}</h3>
+              <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-400">{selectedSpot.beschreibung}</p>
             </div>
             <div className="shrink-0 text-right">
-              <p className={`text-2xl font-black ${detail.spotScore && detail.spotScore >= 70 ? 'text-angel-green' : 'text-angel-yellow'}`}>
+              <p className={`text-xl font-black ${detail.spotScore && detail.spotScore >= 70 ? 'text-angel-green' : 'text-angel-yellow'}`}>
                 {detail.spotScore ?? '--'}%
               </p>
               <p className="text-[9px] font-black uppercase text-slate-500">Spot</p>
