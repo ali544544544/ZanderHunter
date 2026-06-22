@@ -11,9 +11,10 @@ interface SpotListProps {
 }
 
 const SpotList: React.FC<SpotListProps> = ({ conditions, targetFish = 'zander' }) => {
-  const { userSpots, addUserSpot, deleteUserSpot } = useUserSpots();
+  const { userSpots, addUserSpot, deleteUserSpot, user, loading, syncing, error, limit } = useUserSpots();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'boot' | 'ufer'>('all');
+  const canAddSpot = userSpots.length < limit;
 
   const allSpots = useMemo(
     () => [...SPOTS, ...userSpots].map(spot => ({
@@ -32,16 +33,28 @@ const SpotList: React.FC<SpotListProps> = ({ conditions, targetFish = 'zander' }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center px-1">
-        <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm">Spots in deiner Nähe</h3>
+      <div className="flex justify-between items-start gap-3 px-1">
+        <div>
+          <h3 className="text-slate-400 font-medium uppercase tracking-wider text-sm">Spots in deiner Nähe</h3>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Meine Spots {userSpots.length}/{limit} {user ? 'Account' : 'lokal'}{syncing ? ' - Sync' : ''}
+          </p>
+        </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-all shadow-lg shadow-blue-900/20 active:scale-95"
+          onClick={() => canAddSpot && setIsModalOpen(true)}
+          disabled={!canAddSpot || loading}
+          className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-all shadow-lg shadow-blue-900/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span>Neu</span>
+          <span>{canAddSpot ? 'Neu' : 'Voll'}</span>
           <span className="text-sm">+</span>
         </button>
       </div>
+
+      {error && (
+        <p className="mx-1 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-xs font-bold text-yellow-100">
+          {error}
+        </p>
+      )}
 
       <div className="flex space-x-2 px-1">
         {(['all', 'boot', 'ufer'] as const).map(f => (
@@ -87,7 +100,10 @@ const SpotList: React.FC<SpotListProps> = ({ conditions, targetFish = 'zander' }
       {isModalOpen && (
         <AddSpotModal 
           onClose={() => setIsModalOpen(false)} 
-          onAdd={(spot) => addUserSpot(spot)} 
+          onAdd={(spot) => addUserSpot(spot)}
+          spotCount={userSpots.length}
+          spotLimit={limit}
+          accountEmail={user?.email ?? null}
         />
       )}
     </div>

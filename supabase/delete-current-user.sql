@@ -17,6 +17,11 @@ begin
   delete from public.logbook_spots
   where user_id = current_user_id;
 
+  if to_regclass('public.user_favorite_spots') is not null then
+    execute 'delete from public.user_favorite_spots where user_id = $1'
+    using current_user_id;
+  end if;
+
   delete from auth.users
   where id = current_user_id;
 end;

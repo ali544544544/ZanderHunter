@@ -7,6 +7,7 @@ import AngelIndex, { type FishPresenceHint } from './components/AngelIndex';
 import TideTimeline from './components/TideTimeline';
 import ConditionGrid from './components/ConditionGrid';
 import SpotList from './components/SpotList';
+import SavedSpotPanel from './components/SavedSpotPanel';
 import Briefing from './components/Briefing';
 import HechtInfo from './components/HechtInfo';
 import { LocalRegulationsCard } from './components/LocalRegulationsCard';
@@ -116,6 +117,7 @@ const App: React.FC = () => {
   const [targetFish, setTargetFish] = useState<TargetFish>('zander');
   const [gpsEnabled, setGpsEnabled] = useState(false);
   const [manualLocation, setManualLocation] = useState<SearchLocation | null>(null);
+  const [selectedSavedSpotId, setSelectedSavedSpotId] = useState<string | null>(null);
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationMapOpen, setLocationMapOpen] = useState(false);
@@ -210,6 +212,7 @@ const App: React.FC = () => {
   };
 
   const selectManualLocation = (location: SearchLocation, closeMap = true) => {
+    setSelectedSavedSpotId(null);
     setManualLocation(location);
     setGpsEnabled(false);
     setLocationRevision((revision) => revision + 1);
@@ -219,7 +222,21 @@ const App: React.FC = () => {
     clearLocationSearch();
   };
 
+  const selectSavedSpot = (spot: (typeof userSpots)[number]) => {
+    selectManualLocation(
+      {
+        id: `saved-${spot.id}`,
+        label: spot.name,
+        lat: spot.lat,
+        lng: spot.lng,
+      }
+    );
+    setSelectedSavedSpotId(spot.id);
+    setLocationQuery(spot.name);
+  };
+
   const clearManualLocation = () => {
+    setSelectedSavedSpotId(null);
     setManualLocation(null);
     setLocationRevision((revision) => revision + 1);
     setLocationQuery('');
@@ -233,6 +250,12 @@ const App: React.FC = () => {
       setGpsEnabled(true);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedSavedSpotId && !userSpots.some((spot) => spot.id === selectedSavedSpotId)) {
+      setSelectedSavedSpotId(null);
+    }
+  }, [selectedSavedSpotId, userSpots]);
 
   const logbookLocation = gpsPosition
     ? { lat: normalizeCoordinate(gpsPosition.lat), lng: normalizeCoordinate(gpsPosition.lng) }
@@ -272,6 +295,7 @@ const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  setSelectedSavedSpotId(null);
                   setGpsEnabled((enabled) => !enabled);
                   setManualLocation(null);
                   setLocationRevision((revision) => revision + 1);
@@ -409,6 +433,22 @@ const App: React.FC = () => {
         <Suspense fallback={<LoadingPanel />}>
           {activeTab === 'jetzt' && (
             <>
+              <SavedSpotPanel
+                spots={userSpots}
+                selectedSpotId={selectedSavedSpotId}
+                onSelectSpot={selectSavedSpot}
+                onManageSpots={() => setActiveTab('spots')}
+                conditions={conditions}
+                weather={weather}
+                pegel={pegel}
+                tide={tide || []}
+                waterProfile={waterProfile}
+                scoreDetails={scoreDetails}
+                hourlyScores={hourlyScores || []}
+                startHour={startHour}
+                targetFish={targetFish}
+                loading={loading}
+              />
               <AngelIndex
                 score={score}
                 loading={loading}

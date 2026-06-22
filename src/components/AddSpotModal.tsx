@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { Spot } from '../data/spots';
+import type { UserSpotSaveResult } from '../hooks/useUserSpots';
 
 interface AddSpotModalProps {
   onClose: () => void;
-  onAdd: (spot: Spot) => void;
+  onAdd: (spot: Spot) => void | UserSpotSaveResult | Promise<void | UserSpotSaveResult>;
+  spotCount?: number;
+  spotLimit?: number;
+  accountEmail?: string | null;
 }
 
-const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
+const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd, spotCount = 0, spotLimit = 5, accountEmail = null }) => {
   const [name, setName] = useState('');
   const [mapsLink, setMapsLink] = useState('');
   const [lat, setLat] = useState<number | ''>('');
@@ -15,6 +19,8 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
   const [bootNotig, setBootNotig] = useState(false);
   const [spotType, setSpotType] = useState<'elbe' | 'hafen' | 'kanal'>('elbe');
   const [isExposed, setIsExposed] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Simple coordinate extraction from Google Maps URL
   const handleLinkChange = (url: string) => {
@@ -34,9 +40,13 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || lat === '' || lng === '') return;
+    if (spotCount >= spotLimit) {
+      setError(`Maximal ${spotLimit} Spots speicherbar.`);
+      return;
+    }
 
     const newSpot: Spot = {
       id: `user-${Date.now()}`,
@@ -59,15 +69,37 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
       isWindExposed: isExposed
     };
 
-    onAdd(newSpot);
-    onClose();
+    setSaving(true);
+    setError(null);
+
+    try {
+      const result = await onAdd(newSpot);
+      if (result && !result.ok) {
+        setError(result.message || 'Spot konnte nicht gespeichert werden.');
+        return;
+      }
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Spot konnte nicht gespeichert werden.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 maxHeight-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-black text-white mb-6 uppercase tracking-tighter">Neuen Spot hinzufügen</h3>
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-black text-white mb-2 uppercase tracking-tighter">Neuen Spot hinzufügen</h3>
         
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            {spotCount}/{spotLimit} Spots {accountEmail ? `- ${accountEmail}` : '- lokal'}
+          </p>
+          <span className="rounded-md border border-slate-700 px-2 py-1 text-[10px] font-black text-slate-300">
+            max {spotLimit}
+          </span>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Name des Spots</label>
@@ -146,9 +178,17 @@ const AddSpotModal: React.FC<AddSpotModalProps> = ({ onClose, onAdd }) => {
             </div>
           </div>
 
+          {error && (
+            <p className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs font-bold text-red-200">
+              {error}
+            </p>
+          )}
+
           <div className="flex space-x-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold uppercase tracking-tight text-xs transition-colors">Abbrechen</button>
-            <button type="submit" className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-tight text-xs transition-all shadow-lg shadow-blue-900/40">Speichern</button>
+            <button type="submit" disabled={saving || spotCount >= spotLimit} className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-tight text-xs transition-all shadow-lg shadow-blue-900/40 disabled:opacity-50">
+              {saving ? 'Speichere...' : 'Speichern'}
+            </button>
           </div>
         </form>
       </div>

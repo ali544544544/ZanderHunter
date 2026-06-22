@@ -77,6 +77,41 @@ export function removeStorageItem(key: string): StorageWriteResult {
   }
 }
 
+export function removeStorageItemsByPrefix(prefix: string): StorageWriteResult {
+  let ok = true;
+  let persisted = false;
+  let firstError: unknown;
+
+  for (const key of Array.from(memoryStorage.keys())) {
+    if (key.startsWith(prefix)) {
+      memoryStorage.delete(key);
+    }
+  }
+
+  const storage = getLocalStorage();
+  if (!storage) {
+    return { ok: true, persisted: false };
+  }
+
+  const keysToRemove: string[] = [];
+  try {
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(prefix)) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach((key) => storage.removeItem(key));
+    persisted = true;
+  } catch (error) {
+    ok = false;
+    firstError = error;
+  }
+
+  return { ok, persisted, error: firstError };
+}
+
 export function readJson<T>(key: string, fallback: T, guard?: JsonGuard<T>): T {
   const raw = readStorageItem(key);
   if (!raw) return fallback;

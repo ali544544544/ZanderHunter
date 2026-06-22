@@ -2,7 +2,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Spot } from '../data/spots';
 import type { LogbookTrip } from '../components/LogbookView';
 import { supabase } from './supabase';
-import { readJson, removeStorageItem, writeJson } from './storage';
+import { readJson, removeStorageItem, removeStorageItemsByPrefix, writeJson } from './storage';
 
 export const LOGBOOK_STORAGE_KEY = 'zanderhunter-logbook-v1';
 export const USER_SPOTS_STORAGE_KEY = 'zanderhunter_user_spots';
@@ -28,6 +28,10 @@ function getStoredLastSavedAt() {
   return readJson<AccountActivity>(ACCOUNT_ACTIVITY_STORAGE_KEY, {}).lastSavedAt ?? null;
 }
 
+export function getUserSpotsStorageKey(userId?: string | null) {
+  return userId ? `${USER_SPOTS_STORAGE_KEY}:${userId}` : USER_SPOTS_STORAGE_KEY;
+}
+
 function getLatestDate(values: Array<string | null | undefined>) {
   const timestamps = values
     .map((value) => (value ? new Date(value).getTime() : Number.NaN))
@@ -46,9 +50,9 @@ export function markAccountDataSaved() {
   dispatchAccountDataChanged();
 }
 
-export function getLocalAccountSummary(): AccountStorageSummary {
+export function getLocalAccountSummary(userId?: string | null): AccountStorageSummary {
   const trips = readJson<LogbookTrip[]>(LOGBOOK_STORAGE_KEY, [], isArray as (value: unknown) => value is LogbookTrip[]);
-  const customSpots = readJson<Spot[]>(USER_SPOTS_STORAGE_KEY, [], isArray as (value: unknown) => value is Spot[]);
+  const customSpots = readJson<Spot[]>(getUserSpotsStorageKey(userId), [], isArray as (value: unknown) => value is Spot[]);
   const logbookSpots = Array.isArray(trips) ? trips.length : 0;
   const catches = Array.isArray(trips)
     ? trips.reduce((sum, trip) => sum + (Array.isArray(trip.catches) ? trip.catches.length : 0), 0)
@@ -65,11 +69,12 @@ export function getLocalAccountSummary(): AccountStorageSummary {
 }
 
 export async function getRemoteAccountSummary(user: User): Promise<AccountStorageSummary> {
-  if (!supabase) return getLocalAccountSummary();
+  if (!supabase) return getLocalAccountSummary(user.id);
 
   const [
     { data: latestSpot, count: spotCount, error: spotsError },
     { data: latestCatch, count: catchCount, error: catchesError },
+    { data: latestFavoriteSpot, count: favoriteSpotCount, error: favoriteSpotsError },
   ] = await Promise.all([
     supabase
       .from('logbook_spots')
@@ -83,27 +88,36 @@ export async function getRemoteAccountSummary(user: User): Promise<AccountStorag
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(1),
+    supabase
+      .from('user_favorite_spots')
+      .select('updated_at', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1),
   ]);
 
   if (spotsError || catchesError) {
-    return getLocalAccountSummary();
+    return getLocalAccountSummary(user.id);
   }
 
-  const local = getLocalAccountSummary();
+  const local = getLocalAccountSummary(user.id);
   const remoteSpots = spotCount ?? 0;
   const remoteCatches = catchCount ?? 0;
+  const remoteFavoriteSpots = favoriteSpotsError ? local.customSpots : favoriteSpotCount ?? 0;
+  const customSpots = Math.max(local.customSpots, remoteFavoriteSpots);
 
   return {
-    customSpots: local.customSpots,
+    customSpots,
     logbookSpots: Math.max(local.logbookSpots, remoteSpots),
     catches: Math.max(local.catches, remoteCatches),
-    totalItems: local.customSpots
+    totalItems: customSpots
       + Math.max(local.logbookSpots, remoteSpots)
       + Math.max(local.catches, remoteCatches),
     lastSavedAt: getLatestDate([
       local.lastSavedAt,
       latestSpot?.[0]?.updated_at,
       latestCatch?.[0]?.updated_at,
+      latestFavoriteSpot?.[0]?.updated_at,
     ]),
   };
 }
@@ -111,6 +125,7 @@ export async function getRemoteAccountSummary(user: User): Promise<AccountStorag
 export function clearLocalAccountData() {
   removeStorageItem(LOGBOOK_STORAGE_KEY);
   removeStorageItem(USER_SPOTS_STORAGE_KEY);
+  removeStorageItemsByPrefix(`${USER_SPOTS_STORAGE_KEY}:`);
   removeStorageItem(ACCOUNT_ACTIVITY_STORAGE_KEY);
   window.dispatchEvent(new CustomEvent(ACCOUNT_DATA_CLEARED_EVENT));
   dispatchAccountDataChanged();
