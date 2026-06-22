@@ -5,6 +5,8 @@ import type { PegelData } from '../hooks/usePegel';
 import type { TideEvent } from '../hooks/useTide';
 import type { WeatherData } from '../hooks/useWeather';
 import type { WaterBodyProfile } from '../types/waterData';
+import HoopteZanderAnalysisCard from './HoopteZanderAnalysisCard';
+import { HOOPTE_ZOLLENSPIEKER_SPOT_ID } from '../data/userSpotSeeds';
 import {
   getLocalConditions,
   getTideOffset,
@@ -171,6 +173,7 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
   }, [conditions, hourlyScores, scoreDetails?.primeWindow, selectedSpot, startHour, targetFish, tide]);
 
   const slotItems = Array.from({ length: SLOT_COUNT }, (_, index) => spots[index] ?? null);
+  const isHoopteSpotSelected = selectedSpot?.id === HOOPTE_ZOLLENSPIEKER_SPOT_ID;
 
   return (
     <section className="card space-y-3 p-3">
@@ -237,11 +240,16 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
       )}
 
       {selectedSpot && detail && (
+        isHoopteSpotSelected ? (
+          <HoopteZanderAnalysisCard enabled />
+        ) : (
         <div className="space-y-3 border-t border-slate-800 pt-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="truncate text-sm font-black leading-tight text-slate-100">{selectedSpot.name}</h3>
-              <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-400">{selectedSpot.beschreibung}</p>
+              {selectedSpot.beschreibung && (
+                <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-400">{selectedSpot.beschreibung}</p>
+              )}
             </div>
             <div className="shrink-0 text-right">
               <p className={`text-xl font-black ${detail.spotScore && detail.spotScore >= 70 ? 'text-angel-green' : 'text-angel-yellow'}`}>
@@ -297,6 +305,7 @@ const SavedSpotPanel: React.FC<SavedSpotPanelProps> = ({
             />
           </div>
         </div>
+        )
       )}
     </section>
   );

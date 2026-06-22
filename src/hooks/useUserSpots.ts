@@ -17,6 +17,7 @@ import {
   normalizeUserSpots,
   syncRemoteUserSpots,
 } from '../services/userSpotsSync';
+import { HOOPTE_ZOLLENSPIEKER_SPOT } from '../data/userSpotSeeds';
 
 export interface UserSpotSaveResult {
   ok: boolean;
@@ -26,26 +27,6 @@ export interface UserSpotSaveResult {
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 const HOOPTE_SLOT_ONE_SEED_KEY = 'zanderhunter-hoopte-slot-one-seeded-v1';
-const HOOPTE_ZOLLENSPIEKER_SPOT: Spot = {
-  id: 'user-hoopte-zollenspieker',
-  name: 'Elbe Hoopte / Zollenspieker',
-  beschreibung: 'Tideelbe-Spot bei Hoopte/Zollenspieker. Fangregel: 30 min vor Hochwasser starten, Topphase Hochwasser bis 2 h danach; Bonus bei deutlich fallendem Wasser, Wolken, leichtem Regen, Truebung und Daemmerung.',
-  lat: 53.396611,
-  lng: 10.221192,
-  tiefe: '4-8 m',
-  bestePhase: 'kenter',
-  windtoleranz: 35,
-  bootNötig: false,
-  uferAngling: true,
-  struktur: ['Tidekante', 'Steinpackung', 'Hauptstrom', 'Ablaufkante'],
-  trübungsPräferenz: 'getrübt',
-  temperaturMin: 5,
-  jahreszeitBonus: { frühling: 10, sommer: 6, herbst: 16, winter: 7 },
-  taktik: '30 min vor Hochwasser am Platz sein, Kanten und Stromschatten sauber abfischen. Nach Hochwasser die erste ablaufende Tide konsequent nutzen.',
-  koderTipp: 'Schlanke Shads 10-14 cm in Motoroil, UV-Chartreuse oder dunklem Gruen; Jiggewicht an Stroemung anpassen.',
-  type: 'elbe',
-  isWindExposed: true,
-};
 
 function getHoopteSeedStorageKey(userId?: string | null) {
   return userId ? `${HOOPTE_SLOT_ONE_SEED_KEY}:${userId}` : HOOPTE_SLOT_ONE_SEED_KEY;
@@ -54,6 +35,12 @@ function getHoopteSeedStorageKey(userId?: string | null) {
 function putHoopteSpotInFirstSlot(spots: Spot[]) {
   const otherSpots = spots.filter((spot) => spot.id !== HOOPTE_ZOLLENSPIEKER_SPOT.id);
   return normalizeUserSpots([HOOPTE_ZOLLENSPIEKER_SPOT, ...otherSpots]);
+}
+
+function updateHoopteSpotIfPresent(spots: Spot[]) {
+  return spots.some((spot) => spot.id === HOOPTE_ZOLLENSPIEKER_SPOT.id)
+    ? putHoopteSpotInFirstSlot(spots)
+    : spots;
 }
 
 function readStoredSpots(userId?: string | null) {
@@ -127,11 +114,13 @@ export function useUserSpots() {
     const rawLocalSpots = readStoredSpots(currentUser?.id);
     const localSpots = shouldSeedHoopteSpot
       ? putHoopteSpotInFirstSlot(rawLocalSpots)
-      : rawLocalSpots;
+      : updateHoopteSpotIfPresent(rawLocalSpots);
 
     setUserSpots(localSpots);
-    if (shouldSeedHoopteSpot) {
+    if (JSON.stringify(rawLocalSpots) !== JSON.stringify(localSpots)) {
       writeJson(getUserSpotsStorageKey(currentUser?.id), localSpots);
+    }
+    if (shouldSeedHoopteSpot) {
       writeJson(seedKey, true);
     }
     setError(null);
@@ -153,7 +142,7 @@ export function useUserSpots() {
       );
       const merged = shouldSeedHoopteSpot
         ? putHoopteSpotInFirstSlot(mergedBase)
-        : mergedBase;
+        : updateHoopteSpotIfPresent(mergedBase);
 
       setUserSpots(merged);
       writeJson(getUserSpotsStorageKey(currentUser.id), merged);
