@@ -128,7 +128,6 @@ export interface HoopteForecastRow {
   bestPhase: string;
   score: number;
   reason: string;
-  rank?: 1 | 2 | 3;
   thunderstormRisk: boolean;
   stormRisk: boolean;
   warningText?: string;
@@ -556,7 +555,7 @@ function buildRows(
 ) {
   const now = new Date();
   const endDate = addDays(now, 7);
-  const rows: Array<HoopteForecastRow & { highWaterDate: Date }> = [];
+  const rows: HoopteForecastRow[] = [];
   const highWaters = tides
     .filter((event) => (
       event.type === 'HW'
@@ -584,18 +583,10 @@ function buildRows(
       thunderstormRisk: score.thunderstormRisk,
       stormRisk: score.stormRisk,
       warningText: score.warningText,
-      highWaterDate: highWater.time,
     });
   }
 
-  const ranked = [...rows].sort((a, b) => b.score - a.score).slice(0, 3);
-  return rows.map(({ highWaterDate, ...row }) => {
-    const rankIndex = ranked.findIndex((rankedRow) => rankedRow.highWaterDate.getTime() === highWaterDate.getTime());
-    return {
-      ...row,
-      rank: rankIndex >= 0 ? (rankIndex + 1) as 1 | 2 | 3 : undefined,
-    };
-  });
+  return rows;
 }
 
 function formatOxygen(waterQuality: WaterQualitySnapshot | null) {

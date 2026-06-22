@@ -1,6 +1,7 @@
 import React from 'react';
 import { HOOPTE_ZOLLENSPIEKER_SPOT } from '../data/userSpotSeeds';
 import { useHoopteZanderSourceAnalysis } from '../hooks/useHoopteZanderSourceAnalysis';
+import type { HoopteSourceLink } from '../hooks/useHoopteZanderSourceAnalysis';
 
 interface HoopteZanderAnalysisCardProps {
   enabled: boolean;
@@ -30,10 +31,24 @@ function TableScore({ score }: { score: number }) {
   return <span className={`font-black ${className}`}>{score}</span>;
 }
 
-function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
+function InfoLine({ label, value, source }: { label: string; value: React.ReactNode; source?: HoopteSourceLink }) {
   return (
     <div className="rounded-md border border-slate-800 bg-slate-950/25 px-2 py-1.5">
-      <span className="block text-[8px] font-black uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="flex items-center justify-between gap-1 text-[8px] font-black uppercase tracking-wide text-slate-500">
+        <span>{label}</span>
+        {source && (
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noreferrer"
+            title={`Quelle: ${source.label}`}
+            aria-label={`Quelle fuer ${label} oeffnen: ${source.label}`}
+            className="inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-950 text-[9px] font-black normal-case leading-none text-slate-400 hover:border-blue-400/60 hover:text-blue-200"
+          >
+            i
+          </a>
+        )}
+      </span>
       <span className="mt-0.5 block text-[10px] font-black leading-snug text-slate-100">{value}</span>
     </div>
   );
@@ -60,6 +75,10 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
       </div>
     );
   }
+
+  const pegelSource = current.sourceLinks.find((source) => source.label === 'PegelOnline');
+  const oxygenSource = current.sourceLinks.find((source) => source.label === 'WGMN Bunthaus');
+  const waterQualitySource = current.sourceLinks.find((source) => source.label === 'WGMN Service');
 
   return (
     <div className="space-y-2 border-t border-slate-800 pt-2">
@@ -92,11 +111,11 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
       )}
 
       <div className="grid grid-cols-2 gap-1.5">
-        <InfoLine label="Wasserstand" value={`${current.waterLevel} (${current.dhdt})`} />
+        <InfoLine label="Wasserstand" value={`${current.waterLevel} (${current.dhdt})`} source={pegelSource} />
         <InfoLine label="Tidephase" value={current.tidePhase} />
-        <InfoLine label="Sauerstoff" value={current.oxygen} />
+        <InfoLine label="Sauerstoff" value={current.oxygen} source={oxygenSource} />
         <InfoLine label="Nächster Bestzeitpunkt" value={`${current.nextBestTime} (${current.nextBestScore})`} />
-        <InfoLine label="Wasserqualität" value={current.waterQuality} />
+        <InfoLine label="Wasserqualität" value={current.waterQuality} source={waterQualitySource} />
       </div>
 
       <p className="rounded-md border border-slate-800 bg-slate-950/25 px-2 py-1.5 text-[9px] font-semibold leading-snug text-slate-300">
@@ -129,10 +148,8 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
           </thead>
           <tbody className="divide-y divide-slate-800 bg-slate-950/20 text-slate-300">
             {rows.map((row) => (
-              <tr key={`${row.date}-${row.highWater}`} className={row.rank ? 'bg-blue-500/5' : undefined}>
-                <td className="px-1 py-1.5 font-black leading-tight text-slate-100">
-                  {row.rank ? `Top ${row.rank} ` : ''}{row.date}
-                </td>
+              <tr key={`${row.date}-${row.highWater}`}>
+                <td className="px-1 py-1.5 font-black leading-tight text-slate-100">{row.date}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.day}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.highWater}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.arrival}</td>
@@ -149,19 +166,6 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
         </table>
       </div>
 
-      <div className="flex flex-wrap gap-1">
-        {current.sourceLinks.map((source) => (
-          <a
-            key={source.label}
-            href={source.url}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded border border-slate-800 bg-slate-950/35 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 hover:text-slate-200"
-          >
-            {source.label}
-          </a>
-        ))}
-      </div>
     </div>
   );
 };
