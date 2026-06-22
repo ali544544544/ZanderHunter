@@ -1,4 +1,5 @@
 import React from 'react';
+import { HOOPTE_ZOLLENSPIEKER_SPOT } from '../data/userSpotSeeds';
 import { useHoopteZanderAnalysis } from '../hooks/useHoopteZanderAnalysis';
 
 interface HoopteZanderAnalysisCardProps {
@@ -30,6 +31,7 @@ function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
 
 const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ enabled }) => {
   const { current, rows, loading, error } = useHoopteZanderAnalysis(enabled);
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${HOOPTE_ZOLLENSPIEKER_SPOT.lat},${HOOPTE_ZOLLENSPIEKER_SPOT.lng}`;
 
   if (!enabled) return null;
 
@@ -58,7 +60,18 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
             Quelle Pegel: {current.station}. O2: {current.oxygenStation}.
           </p>
         </div>
-        <ScorePill score={current.nowScore} />
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <ScorePill score={current.nowScore} />
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded-md bg-blue-500 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-white"
+            aria-label="Navigation zu Hoopte/Zollenspieker in Google Maps öffnen"
+          >
+            Google Maps
+          </a>
+        </div>
       </div>
 
       {current.warning && (
