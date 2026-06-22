@@ -126,15 +126,15 @@ function sameLocalDay(a: Date, b: Date) {
     && a.getDate() === b.getDate();
 }
 
-function weatherCodeLabel(code?: number) {
-  if (typeof code !== 'number') return 'Wetter offen';
+function weatherCodeShortLabel(code?: number) {
+  if (typeof code !== 'number') return 'offen';
   if (code === 0) return 'klar';
-  if (code <= 3) return 'bewölkt';
-  if (code < 60) return 'Niesel/Regen möglich';
+  if (code <= 3) return 'bew.';
+  if (code < 60) return 'Niesel';
   if (code < 80) return 'Regen';
   if (code < 90) return 'Schauer';
-  if (code >= 95) return 'Gewitterrisiko';
-  return 'wechselhaft';
+  if (code >= 95) return 'Gewitter';
+  return 'wechselh.';
 }
 
 function getNearestHourlyIndex(times: string[] = [], date: Date) {
@@ -250,7 +250,7 @@ function scoreWeather(weather: WeatherApiResponse, date: Date) {
 
   return {
     score: Math.round(clamp(score, 0, 15)),
-    label: `${weatherCodeLabel(code)}, ${Math.round(cloud)}% Wolken, ${wind.toFixed(0)} km/h Wind`,
+    label: `${weatherCodeShortLabel(code)}, ${Math.round(cloud)}%, ${wind.toFixed(0)} km/h`,
     thunderstormRisk,
     pressureFalling,
   };
@@ -292,12 +292,12 @@ function scoreSession(
   const total = Math.round(clamp(tideScore + clamp(flowScore, 0, 25) + weatherScore.score + lightScore + waterScore));
 
   const reasonParts = [
-    inTopWindow || inStartWindow ? 'HW-Fenster passt' : 'außerhalb Topfenster',
-    fallingAfterHighWater ? 'erste ablaufende Tide' : 'vor HW',
+    inTopWindow || inStartWindow ? 'HW-Fenster' : 'Randfenster',
+    fallingAfterHighWater ? 'Ablauf' : 'vor HW',
     weatherScore.pressureFalling ? 'Druck fallend' : null,
-    twilight ? 'Dämmerung' : null,
-    weatherScore.thunderstormRisk ? 'Gewitterrisiko' : null,
-    'O2 fehlt',
+    twilight ? 'Dämm.' : null,
+    weatherScore.thunderstormRisk ? 'Gewitter' : null,
+    'O2 offen',
   ].filter(Boolean);
 
   return {
@@ -332,12 +332,12 @@ function buildRows(weather: WeatherApiResponse, tides: TideEvent[], dhdt: number
     const arrival = new Date(bestHighWater.event.time.getTime() - 30 * 60000);
     const end = new Date(bestHighWater.event.time.getTime() + 2 * 60 * 60000);
     const weatherInfo = scoreWeather(weather, bestHighWater.event.time);
-    const phase = `HW ${formatTime(bestHighWater.event.time)} bis ${formatTime(end)}`;
+    const phase = `${formatTime(bestHighWater.event.time)}-${formatTime(end)}`;
 
     rows.push({
       dateLabel: formatDayLabel(date),
       highWater: formatTime(bestHighWater.event.time),
-      arrival: `Da sein: ${formatTime(arrival)}`,
+      arrival: `ab ${formatTime(arrival)}`,
       weather: weatherInfo.label,
       bestPhase: phase,
       score: bestHighWater.score.total,
