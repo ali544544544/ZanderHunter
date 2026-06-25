@@ -233,6 +233,7 @@ function scoreWeather(weather: WeatherApiResponse, date: Date) {
   const precipitation = weather.hourly.precipitation[index] ?? 0;
   const wind = weather.hourly.wind_speed_10m[index] ?? 0;
   const code = weather.hourly.weather_code[index] ?? 0;
+  const temperature = weather.hourly.temperature_2m[index] ?? weather.current?.temperature_2m;
   const pressure = weather.hourly.surface_pressure[index] ?? 1013;
   const pressureBefore = weather.hourly.surface_pressure[Math.max(0, index - 3)] ?? pressure;
   const pressureFalling = pressure - pressureBefore < -1;
@@ -247,9 +248,11 @@ function scoreWeather(weather: WeatherApiResponse, date: Date) {
   if (pressureFalling) score += 2;
   if (thunderstormRisk) score -= 8;
 
+  const temperatureLabel = typeof temperature === 'number' ? `${temperature.toFixed(0)}°C` : 'Temp offen';
+
   return {
     score: Math.round(clamp(score, 0, 15)),
-    label: `${weatherCodeShortLabel(code)}, ${Math.round(cloud)}%, ${wind.toFixed(0)} km/h`,
+    label: `${temperatureLabel}, ${weatherCodeShortLabel(code)}, ${Math.round(cloud)}% Wolken, ${wind.toFixed(0)} km/h`,
     thunderstormRisk,
     pressureFalling,
   };
@@ -287,8 +290,9 @@ function scoreSession(
   const dayIndex = weather.daily?.time.findIndex((value) => sameLocalDay(new Date(value), highWater)) ?? -1;
   const twilight = isNearTwilight(highWater, weather.daily?.sunrise[dayIndex], weather.daily?.sunset[dayIndex]);
   const lightScore = twilight ? 10 : weatherScore.label.includes('bewölkt') ? 5 : 3;
-  const waterScore = 3;
-  const total = Math.round(clamp(tideScore + clamp(flowScore, 0, 25) + weatherScore.score + lightScore + waterScore));
+  const waterScore = 0;
+  const rawTotal = tideScore + clamp(flowScore, 0, 25) + weatherScore.score + lightScore;
+  const total = Math.round(clamp((rawTotal / 95) * 100));
 
   const reasonParts = [
     inTopWindow || inStartWindow ? 'HW-Fenster' : 'Randfenster',
@@ -296,7 +300,6 @@ function scoreSession(
     weatherScore.pressureFalling ? 'Druck fallend' : null,
     twilight ? 'Dämm.' : null,
     weatherScore.thunderstormRisk ? 'Gewitter' : null,
-    'O2 offen',
   ].filter(Boolean);
 
   return {

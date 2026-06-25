@@ -102,7 +102,7 @@ interface WeatherScore {
 
 interface WaterScore {
   score: number;
-  label: string;
+  label?: string;
   warning?: string;
 }
 
@@ -413,6 +413,7 @@ function scoreWeather(weather: BrightSkyBundle, date: Date): WeatherScore {
   const wind = record.wind_speed ?? 0;
   const gust = record.wind_gust_speed ?? wind;
   const pressure = record.pressure_msl ?? 1013;
+  const temperature = record.temperature;
   const pressureBefore = before?.pressure_msl ?? pressure;
   const pressureFalling = pressure - pressureBefore < -1;
   const condition = record.condition ?? '';
@@ -431,9 +432,13 @@ function scoreWeather(weather: BrightSkyBundle, date: Date): WeatherScore {
   if (stormRisk) score -= 8;
   else if (wind > 35 || gust > 45) score -= 4;
 
+  const temperatureLabel = typeof temperature === 'number'
+    ? `${formatDecimal(temperature, 0)}°C`
+    : 'Temp offen';
+
   return {
     score: Math.round(clamp(score, 0, 15)),
-    label: `${weatherConditionShortLabel(record)}, ${Math.round(cloud)}%, ${wind.toFixed(0)} km/h`,
+    label: `${temperatureLabel}, ${weatherConditionShortLabel(record)}, ${Math.round(cloud)}% Wolken, ${wind.toFixed(0)} km/h`,
     thunderstormRisk,
     stormRisk,
     pressureFalling,
@@ -495,7 +500,8 @@ function scoreSession(
   tides: TideEvent[],
   dhdt: number | null,
   waterQuality: WaterQualitySnapshot | null,
-  currentTime: Date = highWaterEvent.time
+  currentTime: Date = highWaterEvent.time,
+  includeWaterQuality = true
 ): SessionScore {
   const highWater = highWaterEvent.time;
   const minutesFromHighWater = (currentTime.getTime() - highWater.getTime()) / 60000;
@@ -522,8 +528,10 @@ function scoreSession(
 
   const weatherScore = scoreWeather(weather, highWater);
   const light = scoreLightWindow(highWater, weatherScore.cloudCover);
-  const waterScore = scoreWaterQuality(waterQuality);
-  const total = Math.round(clamp(tideScore + clamp(flowScore, 0, 25) + weatherScore.score + light.score + waterScore.score));
+  const waterScore: WaterScore = includeWaterQuality ? scoreWaterQuality(waterQuality) : { score: 0 };
+  const rawTotal = tideScore + clamp(flowScore, 0, 25) + weatherScore.score + light.score + waterScore.score;
+  const maxTotal = includeWaterQuality ? 100 : 95;
+  const total = Math.round(clamp((rawTotal / maxTotal) * 100));
 
   const reasonParts = [
     inTopWindow || inStartWindow ? 'HW-Fenster' : 'Randfenster',
@@ -532,11 +540,11 @@ function scoreSession(
     light.label,
     weatherScore.thunderstormRisk ? 'Gewitter' : null,
     weatherScore.stormRisk ? 'Sturm' : null,
-    waterScore.label,
+    includeWaterQuality ? waterScore.label : null,
   ].filter(Boolean);
   const warningText = [
     weatherScore.warningText,
-    waterScore.warning,
+    includeWaterQuality ? waterScore.warning : null,
   ].filter(Boolean).join(', ') || undefined;
 
   return {
@@ -571,7 +579,7 @@ function buildRows(
     .sort((a, b) => a.time.getTime() - b.time.getTime());
 
   for (const highWater of highWaters) {
-    const score = scoreSession(highWater, weather, tides, dhdt, waterQuality);
+    const score = scoreSession(highWater, weather, tides, dhdt, waterQuality, highWater.time, false);
     const arrival = new Date(highWater.time.getTime() - 30 * 60000);
     const end = new Date(highWater.time.getTime() + 2 * 60 * 60000);
     const weatherInfo = scoreWeather(weather, highWater.time);
@@ -694,7 +702,7 @@ export function useHoopteZanderSourceAnalysis(enabled: boolean): HoopteZanderAna
           .filter((event) => event.type === 'HW' && event.time > now)
           .map((event) => ({
             event,
-            score: scoreSession(event, weather, tides, dhdt, waterQuality),
+            score: scoreSession(event, weather, tides, dhdt, waterQuality, event.time, false),
           }))
           .sort((a, b) => a.event.time.getTime() - b.event.time.getTime());
         const nextBest = allFutureHighWaters[0];
