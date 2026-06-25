@@ -1,7 +1,7 @@
 import React from 'react';
 import { HOOPTE_ZOLLENSPIEKER_SPOT } from '../data/userSpotSeeds';
 import { useHoopteZanderSourceAnalysis } from '../hooks/useHoopteZanderSourceAnalysis';
-import type { HoopteSourceLink } from '../hooks/useHoopteZanderSourceAnalysis';
+import type { HoopteSourceLink, HoopteTideTurn } from '../hooks/useHoopteZanderSourceAnalysis';
 
 interface HoopteZanderAnalysisCardProps {
   enabled: boolean;
@@ -55,8 +55,10 @@ function InfoLine({ label, value, source }: { label: string; value: React.ReactN
 }
 
 const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ enabled }) => {
-  const { current, rows, loading, error } = useHoopteZanderSourceAnalysis(enabled);
+  const [tideTurn, setTideTurn] = React.useState<HoopteTideTurn>('HW');
+  const { current, rows, loading, error } = useHoopteZanderSourceAnalysis(enabled, tideTurn);
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${HOOPTE_ZOLLENSPIEKER_SPOT.lat},${HOOPTE_ZOLLENSPIEKER_SPOT.lng}`;
+  const tideTurnLabel = tideTurn === 'HW' ? 'Hochwasser' : 'Niedrigwasser';
 
   if (!enabled) return null;
 
@@ -110,6 +112,27 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
         </p>
       )}
 
+      <div className="grid grid-cols-2 gap-1 rounded-md border border-slate-800 bg-slate-950/40 p-1">
+        {(['HW', 'NW'] as const).map((turn) => {
+          const active = tideTurn === turn;
+          return (
+            <button
+              key={turn}
+              type="button"
+              onClick={() => setTideTurn(turn)}
+              className={`rounded px-2 py-1.5 text-[9px] font-black uppercase tracking-wide transition-colors ${
+                active
+                  ? 'bg-blue-500 text-white'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+              }`}
+              aria-pressed={active}
+            >
+              {turn} <span className="normal-case tracking-normal">{turn === 'HW' ? 'Hochwasser' : 'Niedrigwasser'}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-2 gap-1.5">
         <InfoLine label="Wasserstand" value={`${current.waterLevel} (${current.dhdt})`} source={pegelSource} />
         <InfoLine label="Tidephase" value={current.tidePhase} />
@@ -138,7 +161,7 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
             <tr>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Datum</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Tag</th>
-              <th className="px-1 py-1.5 font-black uppercase tracking-wide">HW</th>
+              <th className="px-1 py-1.5 font-black uppercase tracking-wide">{tideTurn}</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Da sein</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Wetter</th>
               <th className="px-1 py-1.5 font-black uppercase tracking-wide">Phase</th>
@@ -149,13 +172,13 @@ const HoopteZanderAnalysisCard: React.FC<HoopteZanderAnalysisCardProps> = ({ ena
           <tbody className="divide-y divide-slate-800 bg-slate-950/20 text-slate-300">
             {rows.map((row) => (
               <tr
-                key={`${row.date}-${row.highWater}`}
+                key={`${row.date}-${row.turnTime}`}
                 className={row.isDaytimeWindow ? 'bg-emerald-400/10' : undefined}
-                title={row.isDaytimeWindow ? 'Hochwasser zwischen 08:00 und 20:00' : undefined}
+                title={row.isDaytimeWindow ? `${tideTurnLabel} zwischen 08:00 und 20:00` : undefined}
               >
                 <td className={`px-1 py-1.5 font-black leading-tight ${row.isDaytimeWindow ? 'text-emerald-100' : 'text-slate-100'}`}>{row.date}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.day}</td>
-                <td className="px-1 py-1.5 font-bold leading-tight">{row.highWater}</td>
+                <td className="px-1 py-1.5 font-bold leading-tight">{row.turnTime}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight">{row.arrival}</td>
                 <td className="px-1 py-1.5 leading-tight">{row.weather}</td>
                 <td className="px-1 py-1.5 font-bold leading-tight text-blue-100">{row.bestPhase}</td>

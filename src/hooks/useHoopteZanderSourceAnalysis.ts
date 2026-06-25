@@ -90,6 +90,8 @@ interface TideEvent {
   source: 'BSH' | 'Fallback';
 }
 
+export type HoopteTideTurn = 'HW' | 'NW';
+
 interface WeatherScore {
   score: number;
   label: string;
@@ -122,7 +124,7 @@ interface SessionScore {
 export interface HoopteForecastRow {
   date: string;
   day: string;
-  highWater: string;
+  turnTime: string;
   arrival: string;
   weather: string;
   bestPhase: string;
@@ -495,47 +497,52 @@ function isBetweenEightAndTwenty(date: Date) {
 }
 
 function scoreSession(
-  highWaterEvent: TideEvent,
+  turnEvent: TideEvent,
   weather: BrightSkyBundle,
   tides: TideEvent[],
   dhdt: number | null,
   waterQuality: WaterQualitySnapshot | null,
-  currentTime: Date = highWaterEvent.time,
+  currentTime: Date = turnEvent.time,
   includeWaterQuality = true
 ): SessionScore {
-  const highWater = highWaterEvent.time;
-  const minutesFromHighWater = (currentTime.getTime() - highWater.getTime()) / 60000;
-  const inTopWindow = minutesFromHighWater >= 0 && minutesFromHighWater <= 120;
-  const inStartWindow = minutesFromHighWater >= -30 && minutesFromHighWater < 0;
-  const nearWindow = minutesFromHighWater >= -90 && minutesFromHighWater <= 180;
+  const turnTime = turnEvent.time;
+  const minutesFromTurn = (currentTime.getTime() - turnTime.getTime()) / 60000;
+  const inTopWindow = minutesFromTurn >= 0 && minutesFromTurn <= 120;
+  const inStartWindow = minutesFromTurn >= -30 && minutesFromTurn < 0;
+  const nearWindow = minutesFromTurn >= -90 && minutesFromTurn <= 180;
 
   const tideScore = inTopWindow || inStartWindow
     ? 45
     : nearWindow
       ? 32
-      : minutesFromHighWater > 120 && minutesFromHighWater <= 240
+      : minutesFromTurn > 120 && minutesFromTurn <= 240
         ? 18
         : 8;
 
-  const nextLowWater = tides.find((event) => event.type === 'NW' && event.time > highWater);
-  const previousLowWater = [...tides].reverse().find((event) => event.type === 'NW' && event.time < highWater);
-  const tideHub = nextLowWater && previousLowWater ? Math.abs(highWaterEvent.height - nextLowWater.height) : null;
-  const fallingAfterHighWater = minutesFromHighWater >= 0 || currentTime.getTime() >= highWater.getTime();
-  let flowScore = fallingAfterHighWater ? 20 : 12;
-  if (typeof dhdt === 'number' && dhdt < -8) flowScore += 5;
-  else if (typeof dhdt === 'number' && dhdt < -3) flowScore += 3;
+  const nextOppositeTurn = tides.find((event) => event.type !== turnEvent.type && event.time > turnTime);
+  const previousOppositeTurn = [...tides].reverse().find((event) => event.type !== turnEvent.type && event.time < turnTime);
+  const tideHub = nextOppositeTurn && previousOppositeTurn ? Math.abs(turnEvent.height - nextOppositeTurn.height) : null;
+  const afterTurn = minutesFromTurn >= 0 || currentTime.getTime() >= turnTime.getTime();
+  let flowScore = afterTurn ? 20 : 12;
+  if (turnEvent.type === 'HW') {
+    if (typeof dhdt === 'number' && dhdt < -8) flowScore += 5;
+    else if (typeof dhdt === 'number' && dhdt < -3) flowScore += 3;
+  } else {
+    if (typeof dhdt === 'number' && dhdt > 8) flowScore += 5;
+    else if (typeof dhdt === 'number' && dhdt > 3) flowScore += 3;
+  }
   if (typeof tideHub === 'number' && tideHub >= 180) flowScore += 1;
 
-  const weatherScore = scoreWeather(weather, highWater);
-  const light = scoreLightWindow(highWater, weatherScore.cloudCover);
+  const weatherScore = scoreWeather(weather, turnTime);
+  const light = scoreLightWindow(turnTime, weatherScore.cloudCover);
   const waterScore: WaterScore = includeWaterQuality ? scoreWaterQuality(waterQuality) : { score: 0 };
   const rawTotal = tideScore + clamp(flowScore, 0, 25) + weatherScore.score + light.score + waterScore.score;
   const maxTotal = includeWaterQuality ? 100 : 95;
   const total = Math.round(clamp((rawTotal / maxTotal) * 100));
 
   const reasonParts = [
-    inTopWindow || inStartWindow ? 'HW-Fenster' : 'Randfenster',
-    fallingAfterHighWater ? 'Ablauf' : 'vor HW',
+    inTopWindow || inStartWindow ? `${turnEvent.type}-Fenster` : 'Randfenster',
+    afterTurn ? (turnEvent.type === 'HW' ? 'Ablauf' : 'Auflauf') : `vor ${turnEvent.type}`,
     weatherScore.pressureFalling ? 'Druck fallend' : null,
     light.label,
     weatherScore.thunderstormRisk ? 'Gewitter' : null,
@@ -565,36 +572,37 @@ function buildRows(
   weather: BrightSkyBundle,
   tides: TideEvent[],
   dhdt: number | null,
-  waterQuality: WaterQualitySnapshot | null
+  waterQuality: WaterQualitySnapshot | null,
+  tideTurn: HoopteTideTurn
 ) {
   const now = new Date();
   const endDate = addDays(now, 7);
   const rows: HoopteForecastRow[] = [];
-  const highWaters = tides
+  const turnEvents = tides
     .filter((event) => (
-      event.type === 'HW'
+      event.type === tideTurn
       && event.time > now
       && event.time <= endDate
     ))
     .sort((a, b) => a.time.getTime() - b.time.getTime());
 
-  for (const highWater of highWaters) {
-    const score = scoreSession(highWater, weather, tides, dhdt, waterQuality, highWater.time, false);
-    const arrival = new Date(highWater.time.getTime() - 30 * 60000);
-    const end = new Date(highWater.time.getTime() + 2 * 60 * 60000);
-    const weatherInfo = scoreWeather(weather, highWater.time);
-    const phase = `${formatTime(highWater.time)}-${formatTime(end)}`;
+  for (const turnEvent of turnEvents) {
+    const score = scoreSession(turnEvent, weather, tides, dhdt, waterQuality, turnEvent.time, false);
+    const arrival = new Date(turnEvent.time.getTime() - 30 * 60000);
+    const end = new Date(turnEvent.time.getTime() + 2 * 60 * 60000);
+    const weatherInfo = scoreWeather(weather, turnEvent.time);
+    const phase = `${formatTime(turnEvent.time)}-${formatTime(end)}`;
 
     rows.push({
-      date: formatDate(highWater.time),
-      day: formatWeekday(highWater.time),
-      highWater: formatTime(highWater.time),
+      date: formatDate(turnEvent.time),
+      day: formatWeekday(turnEvent.time),
+      turnTime: formatTime(turnEvent.time),
       arrival: `ab ${formatTime(arrival)}`,
       weather: weatherInfo.label,
       bestPhase: phase,
       score: score.total,
       reason: score.reason,
-      isDaytimeWindow: isBetweenEightAndTwenty(highWater.time),
+      isDaytimeWindow: isBetweenEightAndTwenty(turnEvent.time),
       thunderstormRisk: score.thunderstormRisk,
       stormRisk: score.stormRisk,
       warningText: score.warningText,
@@ -650,7 +658,7 @@ function getSourceLinks(brightSkyPeriodUrl: string): HoopteSourceLink[] {
   ];
 }
 
-export function useHoopteZanderSourceAnalysis(enabled: boolean): HoopteZanderAnalysis {
+export function useHoopteZanderSourceAnalysis(enabled: boolean, tideTurn: HoopteTideTurn = 'HW'): HoopteZanderAnalysis {
   const [current, setCurrent] = useState<HoopteCurrentAnalysis | null>(null);
   const [rows, setRows] = useState<HoopteForecastRow[]>([]);
   const [loading, setLoading] = useState(enabled);
@@ -698,18 +706,18 @@ export function useHoopteZanderSourceAnalysis(enabled: boolean): HoopteZanderAna
           : 'Fallback-Tide, BSH-Snapshot nicht verfügbar';
         const dhdt = calculateDhdt(measurements);
         const tidePhase = getTidePhase(now, tides, dhdt);
-        const allFutureHighWaters = tides
-          .filter((event) => event.type === 'HW' && event.time > now)
+        const allFutureTurns = tides
+          .filter((event) => event.type === tideTurn && event.time > now)
           .map((event) => ({
             event,
             score: scoreSession(event, weather, tides, dhdt, waterQuality, event.time, false),
           }))
           .sort((a, b) => a.event.time.getTime() - b.event.time.getTime());
-        const nextBest = allFutureHighWaters[0];
-        const referenceHighWater = [...tides].reverse().find((event) => event.type === 'HW' && event.time <= now)
-          ?? allFutureHighWaters[0]?.event
+        const nextBest = allFutureTurns[0];
+        const referenceTurn = [...tides].reverse().find((event) => event.type === tideTurn && event.time <= now)
+          ?? allFutureTurns[0]?.event
           ?? tides[0];
-        const nowScore = scoreSession(referenceHighWater, weather, tides, dhdt, waterQuality, now);
+        const nowScore = scoreSession(referenceTurn, weather, tides, dhdt, waterQuality, now);
         const waterScore = scoreWaterQuality(waterQuality);
         const warningParts = [
           nowScore.thunderstormRisk || nextBest?.score.thunderstormRisk
@@ -723,13 +731,13 @@ export function useHoopteZanderSourceAnalysis(enabled: boolean): HoopteZanderAna
 
         if (cancelled) return;
 
-        setRows(buildRows(weather, tides, dhdt, waterQuality));
+        setRows(buildRows(weather, tides, dhdt, waterQuality, tideTurn));
         setCurrent({
           waterLevel: level ? `${level.value.toFixed(0)} cm` : 'kein aktueller Pegelwert',
           tidePhase,
           oxygen: formatOxygen(waterQuality),
           waterQuality: formatWaterQuality(waterQuality),
-          nextBestTime: nextBest ? `HW ${formatDayLabel(nextBest.event.time)} ${formatTime(nextBest.event.time)}` : 'kein HW-Fenster gefunden',
+          nextBestTime: nextBest ? `${tideTurn} ${formatDayLabel(nextBest.event.time)} ${formatTime(nextBest.event.time)}` : `kein ${tideTurn}-Fenster gefunden`,
           nowReason: `Jetzt: ${nowScore.reason}. ${typeof dhdt === 'number' ? `dH/dt ${dhdt.toFixed(1)} cm/h.` : 'dH/dt nicht verfügbar.'}`,
           nowScore: nowScore.total,
           nextBestScore: nextBest?.score.total ?? 0,
@@ -756,7 +764,7 @@ export function useHoopteZanderSourceAnalysis(enabled: boolean): HoopteZanderAna
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, [enabled, tideTurn]);
 
   return {
     current,
