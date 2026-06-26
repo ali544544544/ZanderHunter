@@ -447,6 +447,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   const [photoMessage, setPhotoMessage] = useState('');
   const [photoProcessing, setPhotoProcessing] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<{ src: string; title: string } | null>(null);
+  const [expandedTripIds, setExpandedTripIds] = useState<Set<string>>(() => new Set());
   const handledQuickAddRequest = useRef(0);
   const remoteLoadedForUser = useRef<string | null>(null);
   const syncDebounce = useRef<number | null>(null);
@@ -478,6 +479,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       setPendingSpot(null);
       setQuickAddOpen(false);
       setQuickAddMapOpen(false);
+      setExpandedTripIds(new Set());
     };
 
     window.addEventListener(ACCOUNT_DATA_CLEARED_EVENT, clearLogbookState);
@@ -744,6 +746,12 @@ const LogbookView: React.FC<LogbookViewProps> = ({
 
     const remainingTrips = trips.filter((candidate) => candidate.id !== tripId);
     setTrips(remainingTrips);
+    setExpandedTripIds((current) => {
+      if (!current.has(tripId)) return current;
+      const next = new Set(current);
+      next.delete(tripId);
+      return next;
+    });
 
     if (activeTripId === tripId) {
       const nextTrip = remainingTrips[0] ?? null;
@@ -772,6 +780,18 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       setSpotDraftName(nextTrip.spotName);
       setSpotFeedback(`${nextTrip.spotName} als Spot ausgewählt.`);
     }
+  };
+
+  const toggleTripExpanded = (tripId: string) => {
+    setExpandedTripIds((current) => {
+      const next = new Set(current);
+      if (next.has(tripId)) {
+        next.delete(tripId);
+      } else {
+        next.add(tripId);
+      }
+      return next;
+    });
   };
 
   const resetDraftForNewCatch = useCallback(() => {
@@ -1287,130 +1307,171 @@ const LogbookView: React.FC<LogbookViewProps> = ({
             <p className="mt-1 text-xs text-slate-500">Ein Fang reicht, dann entsteht dein erstes Logbuch automatisch.</p>
           </div>
         ) : (
-          trips.map((trip) => (
-            <article key={trip.id} className="overflow-hidden rounded-lg border border-slate-700 bg-slate-900/70 shadow-lg shadow-slate-950/20">
-              <button
-                type="button"
-                onClick={() => selectTrip(trip.id)}
-                className="block w-full border-b border-slate-700 bg-slate-950/45 p-3 text-left"
+          trips.map((trip) => {
+            const isExpanded = expandedTripIds.has(trip.id);
+            const isActiveTrip = activeTripId === trip.id;
+            const latestCatch = trip.catches[0];
+            const tripPanelId = `logbook-trip-${trip.id}`;
+
+            return (
+              <article
+                key={trip.id}
+                className={`overflow-hidden rounded-lg border bg-slate-900/70 shadow-lg shadow-slate-950/20 ${
+                  isActiveTrip ? 'border-emerald-400/40' : 'border-slate-700'
+                }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{formatDateTime(trip.startedAt)}</p>
-                    <h4 className="mt-1 text-base font-black text-white">{trip.spotName}</h4>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-500">
-                      {trip.lat}, {trip.lng}{trip.accuracy ? ` · +/-${Math.round(trip.accuracy)} m` : ''}
-                    </p>
-                  </div>
-                  <span className="rounded-lg border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-sm font-black text-emerald-200">
-                    {trip.catches.length}x
-                  </span>
-                </div>
-              </button>
-              <div className="grid grid-cols-2 gap-2 p-3">
                 <button
                   type="button"
-                  onClick={() => selectTrip(trip.id)}
-                  className="min-h-[40px] rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-100"
+                  onClick={() => toggleTripExpanded(trip.id)}
+                  className={`block w-full bg-slate-950/45 p-3 text-left transition-colors hover:bg-slate-900/80 ${
+                    isExpanded ? 'border-b border-slate-700' : ''
+                  }`}
+                  aria-expanded={isExpanded}
+                  aria-controls={tripPanelId}
                 >
-                  Spot wählen
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteTrip(trip.id)}
-                  className="min-h-[40px] rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-lg font-black leading-none text-red-200"
-                  aria-label="Spot löschen"
-                  title="Spot löschen"
-                >
-                  ×
-                </button>
-              </div>
-              {trip.catches.length > 0 && (
-                <div className="divide-y divide-slate-800">
-                  {trip.catches.map((entry) => (
-                    <div key={entry.id} className="p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-slate-100">{getFishLabel(entry.fishSpecies, entry.customFishName)} · {entry.lengthCm} cm</p>
-                          <p className="truncate text-[11px] font-semibold text-slate-500">{formatTime(entry.caughtAt)} · {entry.bait}</p>
-                        </div>
-                        {entry.photoDataUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPhoto({
-                              src: entry.photoDataUrl as string,
-                              title: `${getFishLabel(entry.fishSpecies, entry.customFishName)} ${entry.lengthCm} cm`,
-                            })}
-                            className="group h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 sm:h-28 sm:w-28"
-                            aria-label="Fangfoto vergrößern"
-                          >
-                            <img
-                              src={entry.photoDataUrl}
-                              alt={`${getFishLabel(entry.fishSpecies, entry.customFishName)} ${entry.lengthCm} cm`}
-                              className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                              loading="lazy"
-                            />
-                          </button>
-                        )}
-                        <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-black uppercase ${entry.released ? 'bg-cyan-400/10 text-cyan-300' : 'bg-amber-300/10 text-amber-200'}`}>
-                          {entry.released ? 'Released' : 'Mitgenommen'}
-                        </span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
-                          <p className="text-[9px] font-black uppercase text-slate-500">Gewicht</p>
-                          <p className="text-sm font-black text-white">{entry.weight ? `${entry.weight} ${entry.weightUnit}` : '--'}</p>
-                        </div>
-                        <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
-                          <p className="text-[9px] font-black uppercase text-slate-500">Methode</p>
-                          <p className="truncate text-sm font-black text-white">{entry.method}</p>
-                        </div>
-                      </div>
-                      {(entry.weather || entry.score) && (
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
-                            <p className="text-[9px] font-black uppercase text-slate-500">Wetter</p>
-                            <p className="truncate text-sm font-black text-white">
-                              {entry.weather
-                                ? `${entry.weather.temperature}°C · ${entry.weather.windSpeed} km/h · ${entry.weather.cloudCover}%`
-                                : '--'}
-                            </p>
-                          </div>
-                          <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
-                            <p className="text-[9px] font-black uppercase text-slate-500">Score</p>
-                            <p className="truncate text-sm font-black text-white">
-                              {entry.score ? `${entry.score.value}/100 · ${entry.score.fishLabel}` : '--'}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      {entry.notes && (
-                        <p className="mt-3 rounded-md border border-slate-700 bg-slate-950/45 px-2 py-2 text-xs font-semibold leading-relaxed text-slate-300">
-                          {entry.notes}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{formatDateTime(trip.startedAt)}</p>
+                      <h4 className="mt-1 truncate text-base font-black text-white">{trip.spotName}</h4>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                        {trip.lat}, {trip.lng}{trip.accuracy ? ` · +/-${Math.round(trip.accuracy)} m` : ''}
+                      </p>
+                      {latestCatch && !isExpanded && (
+                        <p className="mt-2 truncate text-[11px] font-semibold text-slate-400">
+                          Letzter Fang: {getFishLabel(latestCatch.fishSpecies, latestCatch.customFishName)} · {latestCatch.lengthCm} cm · {formatTime(latestCatch.caughtAt)}
                         </p>
                       )}
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => editCatchEntry(trip.id, entry)}
-                          className="min-h-[40px] rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-100"
-                        >
-                          Bearbeiten
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteCatchEntry(trip.id, entry.id)}
-                          className="min-h-[40px] rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-red-200"
-                        >
-                          Löschen
-                        </button>
-                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </article>
-          ))
+                    <div className="flex shrink-0 items-center gap-2">
+                      {isActiveTrip && (
+                        <span className="rounded-lg border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 text-[10px] font-black uppercase text-emerald-200">
+                          Aktiv
+                        </span>
+                      )}
+                      <span className="rounded-lg border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-sm font-black text-emerald-200">
+                        {trip.catches.length}x
+                      </span>
+                      <span className="flex h-9 min-w-[2.5rem] items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-2 text-[10px] font-black uppercase text-slate-200">
+                        {isExpanded ? 'Zu' : 'Auf'}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div id={tripPanelId} className="animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-2 gap-2 p-3">
+                      <button
+                        type="button"
+                        onClick={() => selectTrip(trip.id)}
+                        className="min-h-[40px] rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-100"
+                      >
+                        Spot wählen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteTrip(trip.id)}
+                        className="min-h-[40px] rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-lg font-black leading-none text-red-200"
+                        aria-label="Spot löschen"
+                        title="Spot löschen"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    {trip.catches.length > 0 ? (
+                      <div className="divide-y divide-slate-800">
+                        {trip.catches.map((entry) => (
+                          <div key={entry.id} className="p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-black text-slate-100">{getFishLabel(entry.fishSpecies, entry.customFishName)} · {entry.lengthCm} cm</p>
+                                <p className="truncate text-[11px] font-semibold text-slate-500">{formatTime(entry.caughtAt)} · {entry.bait}</p>
+                              </div>
+                              {entry.photoDataUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedPhoto({
+                                    src: entry.photoDataUrl as string,
+                                    title: `${getFishLabel(entry.fishSpecies, entry.customFishName)} ${entry.lengthCm} cm`,
+                                  })}
+                                  className="group h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 sm:h-28 sm:w-28"
+                                  aria-label="Fangfoto vergrößern"
+                                >
+                                  <img
+                                    src={entry.photoDataUrl}
+                                    alt={`${getFishLabel(entry.fishSpecies, entry.customFishName)} ${entry.lengthCm} cm`}
+                                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                    loading="lazy"
+                                  />
+                                </button>
+                              )}
+                              <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-black uppercase ${entry.released ? 'bg-cyan-400/10 text-cyan-300' : 'bg-amber-300/10 text-amber-200'}`}>
+                                {entry.released ? 'Released' : 'Mitgenommen'}
+                              </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                                <p className="text-[9px] font-black uppercase text-slate-500">Gewicht</p>
+                                <p className="text-sm font-black text-white">{entry.weight ? `${entry.weight} ${entry.weightUnit}` : '--'}</p>
+                              </div>
+                              <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                                <p className="text-[9px] font-black uppercase text-slate-500">Methode</p>
+                                <p className="truncate text-sm font-black text-white">{entry.method}</p>
+                              </div>
+                            </div>
+                            {(entry.weather || entry.score) && (
+                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                                  <p className="text-[9px] font-black uppercase text-slate-500">Wetter</p>
+                                  <p className="truncate text-sm font-black text-white">
+                                    {entry.weather
+                                      ? `${entry.weather.temperature}°C · ${entry.weather.windSpeed} km/h · ${entry.weather.cloudCover}%`
+                                      : '--'}
+                                  </p>
+                                </div>
+                                <div className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1.5">
+                                  <p className="text-[9px] font-black uppercase text-slate-500">Score</p>
+                                  <p className="truncate text-sm font-black text-white">
+                                    {entry.score ? `${entry.score.value}/100 · ${entry.score.fishLabel}` : '--'}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {entry.notes && (
+                              <p className="mt-3 rounded-md border border-slate-700 bg-slate-950/45 px-2 py-2 text-xs font-semibold leading-relaxed text-slate-300">
+                                {entry.notes}
+                              </p>
+                            )}
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => editCatchEntry(trip.id, entry)}
+                                className="min-h-[40px] rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-100"
+                              >
+                                Bearbeiten
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteCatchEntry(trip.id, entry.id)}
+                                className="min-h-[40px] rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-red-200"
+                              >
+                                Löschen
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="border-t border-slate-800 px-3 py-4 text-center text-xs font-bold text-slate-500">
+                        Noch keine Fänge an diesem Spot.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })
         )}
       </section>
 
