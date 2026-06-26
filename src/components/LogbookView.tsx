@@ -149,16 +149,24 @@ const fallbackBaits = ['Gummifisch', 'Tauwurm', 'Made', 'Grundmontage', 'Wobbler
 const quickBaitButtons = ['Spinner', 'Gummifisch', 'Wobbler', 'Crankbait'];
 const methods = ['Jiggen', 'Faulenzen', 'Dropshot', 'Twitchbait', 'Ansitz', 'Topwater', 'Feeder', 'Pose'];
 
-const formatDateTime = (value: string) =>
-  new Intl.DateTimeFormat('de-DE', {
+const formatDateTime = (value: string) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '--.-- --:--';
+
+  return new Intl.DateTimeFormat('de-DE', {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(value));
+  }).format(date);
+};
 
-const formatTime = (value: string) =>
-  new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+const formatTime = (value: string) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '--:--';
+
+  return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(date);
+};
 
 const toDateTimeLocalValue = (value: string) => {
   const date = new Date(value);
@@ -447,7 +455,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
   const [photoMessage, setPhotoMessage] = useState('');
   const [photoProcessing, setPhotoProcessing] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<{ src: string; title: string } | null>(null);
-  const [expandedTripIds, setExpandedTripIds] = useState<Set<string>>(() => new Set());
+  const [spotSummaryExpanded, setSpotSummaryExpanded] = useState(false);
+  const [expandedTripIds, setExpandedTripIds] = useState<Record<string, boolean>>({});
   const handledQuickAddRequest = useRef(0);
   const remoteLoadedForUser = useRef<string | null>(null);
   const syncDebounce = useRef<number | null>(null);
@@ -479,7 +488,8 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       setPendingSpot(null);
       setQuickAddOpen(false);
       setQuickAddMapOpen(false);
-      setExpandedTripIds(new Set());
+      setSpotSummaryExpanded(false);
+      setExpandedTripIds({});
     };
 
     window.addEventListener(ACCOUNT_DATA_CLEARED_EVENT, clearLogbookState);
@@ -747,9 +757,9 @@ const LogbookView: React.FC<LogbookViewProps> = ({
     const remainingTrips = trips.filter((candidate) => candidate.id !== tripId);
     setTrips(remainingTrips);
     setExpandedTripIds((current) => {
-      if (!current.has(tripId)) return current;
-      const next = new Set(current);
-      next.delete(tripId);
+      if (!current[tripId]) return current;
+      const next = { ...current };
+      delete next[tripId];
       return next;
     });
 
@@ -784,12 +794,25 @@ const LogbookView: React.FC<LogbookViewProps> = ({
 
   const toggleTripExpanded = (tripId: string) => {
     setExpandedTripIds((current) => {
-      const next = new Set(current);
-      if (next.has(tripId)) {
-        next.delete(tripId);
+      const next = { ...current };
+      if (next[tripId]) {
+        delete next[tripId];
       } else {
-        next.add(tripId);
+        next[tripId] = true;
       }
+      return next;
+    });
+  };
+
+  const toggleAllTripsExpanded = () => {
+    setExpandedTripIds((current) => {
+      const shouldExpand = trips.some((trip) => !current[trip.id]);
+      if (!shouldExpand) return {};
+
+      const next: Record<string, boolean> = {};
+      trips.forEach((trip) => {
+        next[trip.id] = true;
+      });
       return next;
     });
   };
@@ -1222,16 +1245,29 @@ const LogbookView: React.FC<LogbookViewProps> = ({
       </section>
 
       <section className="card space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h3 className="text-sm font-black uppercase tracking-wider text-slate-300">Meine Angel-Spots</h3>
-          <span className="text-[10px] font-bold text-slate-500">{spotSummaries.length || 'keine'} Spots</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-500">{spotSummaries.length || 'keine'} Spots</span>
+            {spotSummaries.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSpotSummaryExpanded((expanded) => !expanded)}
+                className="min-h-[36px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase text-slate-200"
+                aria-expanded={spotSummaryExpanded}
+                aria-controls="logbook-spot-summaries"
+              >
+                {spotSummaryExpanded ? 'Zu' : 'Auf'}
+              </button>
+            )}
+          </div>
         </div>
         {spotSummaries.length === 0 ? (
           <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-4 text-center text-xs font-bold text-slate-400">
             Der erste gespeicherte Fang erscheint hier als Spot.
           </div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
+        ) : spotSummaryExpanded ? (
+          <div id="logbook-spot-summaries" className="grid gap-2 sm:grid-cols-2">
             {spotSummaries.map((spot) => (
               <button
                 key={spot.id}
@@ -1263,7 +1299,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
               </button>
             ))}
           </div>
-        )}
+        ) : null}
       </section>
 
       <section className="card space-y-3">
@@ -1297,9 +1333,20 @@ const LogbookView: React.FC<LogbookViewProps> = ({
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-300">Logbuch</h3>
             <p className="mt-1 text-xs font-semibold text-slate-500">Fänge nach Spot sortiert. Fotos antippen zum Vergrößern.</p>
           </div>
-          <span className="shrink-0 rounded-lg border border-slate-700 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-black text-slate-300">
-            {stats.catches} Fänge
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="rounded-lg border border-slate-700 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-black text-slate-300">
+              {stats.catches} Fänge
+            </span>
+            {trips.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleAllTripsExpanded}
+                className="min-h-[36px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase text-slate-200"
+              >
+                {trips.every((trip) => expandedTripIds[trip.id]) ? 'Alle zu' : 'Alle auf'}
+              </button>
+            )}
+          </div>
         </div>
         {trips.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-700 bg-slate-800/25 px-5 py-8 text-center">
@@ -1308,7 +1355,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({
           </div>
         ) : (
           trips.map((trip) => {
-            const isExpanded = expandedTripIds.has(trip.id);
+            const isExpanded = Boolean(expandedTripIds[trip.id]);
             const isActiveTrip = activeTripId === trip.id;
             const latestCatch = trip.catches[0];
             const tripPanelId = `logbook-trip-${trip.id}`;
