@@ -122,6 +122,8 @@ const App: React.FC = () => {
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationMapOpen, setLocationMapOpen] = useState(false);
+  const [locationMapCenterRevision, setLocationMapCenterRevision] = useState(0);
+  const [locationMapGpsFocusKey, setLocationMapGpsFocusKey] = useState(0);
   const [savedSpotModalOpen, setSavedSpotModalOpen] = useState(false);
   const [locationRevision, setLocationRevision] = useState(0);
   const [logbookQuickAddRequest, setLogbookQuickAddRequest] = useState(0);
@@ -139,6 +141,13 @@ const App: React.FC = () => {
     : gpsEnabled && gpsPosition
       ? { lat: normalizeCoordinate(gpsPosition.lat), lng: normalizeCoordinate(gpsPosition.lng) }
       : defaultLocation;
+  const dashboardGpsLocation = gpsEnabled && gpsPosition
+    ? {
+        lat: normalizeCoordinate(gpsPosition.lat),
+        lng: normalizeCoordinate(gpsPosition.lng),
+        accuracy: gpsPosition.accuracy,
+      }
+    : null;
 
   const {
     userSpots,
@@ -223,6 +232,7 @@ const App: React.FC = () => {
     setManualLocation(location);
     setGpsEnabled(false);
     setLocationRevision((revision) => revision + 1);
+    setLocationMapCenterRevision((revision) => revision + 1);
     setLocationQuery(location.label.split(',')[0]);
     setLocationSearchOpen(false);
     setLocationMapOpen(!closeMap);
@@ -257,6 +267,7 @@ const App: React.FC = () => {
     setSelectedSavedSpotId(null);
     setManualLocation(null);
     setLocationRevision((revision) => revision + 1);
+    setLocationMapCenterRevision((revision) => revision + 1);
     setLocationQuery('');
     setLocationSearchOpen(false);
     setLocationMapOpen(false);
@@ -313,12 +324,16 @@ const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  const nextGpsEnabled = !gpsEnabled;
                   setSelectedSavedSpotId(null);
-                  setGpsEnabled((enabled) => !enabled);
+                  setGpsEnabled(nextGpsEnabled);
                   setManualLocation(null);
                   setLocationRevision((revision) => revision + 1);
                   setLocationSearchOpen(false);
-                  setLocationMapOpen(false);
+                  if (nextGpsEnabled) {
+                    setLocationMapOpen(true);
+                    setLocationMapGpsFocusKey((key) => key + 1);
+                  }
                   clearLocationSearch();
                 }}
                 className={`rounded-lg border px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors ${
@@ -328,7 +343,7 @@ const App: React.FC = () => {
                 }`}
                 aria-pressed={gpsEnabled}
               >
-                {gpsEnabled ? 'GPS aus' : 'GPS an'}
+                {gpsEnabled ? 'GPS aus' : 'GPS zeigen'}
               </button>
               <button
                 type="button"
@@ -341,7 +356,11 @@ const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setLocationMapOpen((open) => !open);
+                  const nextLocationMapOpen = !locationMapOpen;
+                  setLocationMapOpen(nextLocationMapOpen);
+                  if (nextLocationMapOpen && gpsEnabled) {
+                    setLocationMapGpsFocusKey((key) => key + 1);
+                  }
                   setLocationSearchOpen(false);
                   clearLocationSearch();
                 }}
@@ -397,6 +416,17 @@ const App: React.FC = () => {
               <Suspense fallback={<LoadingPanel />}>
                 <LocationPickerMap
                   center={activeLocation}
+                  centerKey={locationMapCenterRevision}
+                  currentLocation={dashboardGpsLocation}
+                  currentLocationLoading={gpsLoading}
+                  currentLocationError={gpsError}
+                  focusCurrentLocationKey={locationMapGpsFocusKey}
+                  onRequestCurrentLocation={() => {
+                    setGpsEnabled(true);
+                    setLocationSearchOpen(false);
+                    setLocationMapGpsFocusKey((key) => key + 1);
+                    clearLocationSearch();
+                  }}
                   onSelect={(location) => {
                     selectManualLocation(
                       {

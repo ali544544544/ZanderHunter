@@ -15,6 +15,16 @@ interface LocationPickerMapProps {
     lat: number;
     lng: number;
   };
+  centerKey?: number | string;
+  currentLocation?: {
+    lat: number;
+    lng: number;
+    accuracy?: number;
+  } | null;
+  currentLocationLoading?: boolean;
+  currentLocationError?: string | null;
+  focusCurrentLocationKey?: number | string;
+  onRequestCurrentLocation?: () => void;
   onSelect: (location: { lat: number; lng: number; label: string }) => void;
 }
 
@@ -186,7 +196,16 @@ async function fetchWaterAreas() {
   return [];
 }
 
-const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect }) => {
+const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
+  center,
+  centerKey,
+  currentLocation,
+  currentLocationLoading = false,
+  currentLocationError = null,
+  focusCurrentLocationKey,
+  onRequestCurrentLocation,
+  onSelect,
+}) => {
   const centerLat = center.lat;
   const centerLng = center.lng;
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -194,6 +213,8 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   const activePointersRef = useRef<Map<number, PointerPosition>>(new Map());
   const pinchRef = useRef<PinchState | null>(null);
   const suppressClusterClickRef = useRef(false);
+  const latestCenterRef = useRef(center);
+  latestCenterRef.current = { lat: centerLat, lng: centerLng };
   const [mapWidth, setMapWidth] = useState(360);
   const [zoom, setZoom] = useState(12);
   const [mapCenter, setMapCenter] = useState(center);
@@ -205,11 +226,13 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
   const [fishingOverlayLoading, setFishingOverlayLoading] = useState(false);
   const [fishingOverlayError, setFishingOverlayError] = useState<string | null>(null);
 
+  const effectiveCenterKey = centerKey ?? `${centerLat}:${centerLng}`;
+
   useEffect(() => {
-    const nextCenter = { lat: centerLat, lng: centerLng };
+    const nextCenter = latestCenterRef.current;
     setMapCenter(nextCenter);
     setSelectedPoint(nextCenter);
-  }, [centerLat, centerLng]);
+  }, [effectiveCenterKey]);
 
   const centerWorld = useMemo(
     () => ({
@@ -345,6 +368,30 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     };
   }, [centerWorld.x, centerWorld.y, mapWidth, selectedPoint.lat, selectedPoint.lng, zoom]);
 
+  const currentLocationMarkerStyle = useMemo(() => {
+    if (!currentLocation) {
+      return null;
+    }
+
+    return {
+      left: lngToWorldX(currentLocation.lng, zoom) - centerWorld.x + mapWidth / 2,
+      top: latToWorldY(currentLocation.lat, zoom) - centerWorld.y + mapHeight / 2,
+    };
+  }, [centerWorld.x, centerWorld.y, currentLocation, mapWidth, zoom]);
+
+  const currentLocationAccuracyRadius = useMemo(() => {
+    if (!currentLocation?.accuracy || !Number.isFinite(currentLocation.accuracy)) {
+      return 0;
+    }
+
+    const metersPerPixel = 156543.03392 * Math.cos(currentLocation.lat * Math.PI / 180) / Math.pow(2, zoom);
+    if (metersPerPixel <= 0) {
+      return 0;
+    }
+
+    return clamp(currentLocation.accuracy / metersPerPixel, 10, 110);
+  }, [currentLocation, zoom]);
+
   const getMarkerStyle = (point: { lat: number; lng: number }) => ({
     left: lngToWorldX(point.lng, zoom) - centerWorld.x + mapWidth / 2,
     top: latToWorldY(point.lat, zoom) - centerWorld.y + mapHeight / 2,
@@ -471,6 +518,20 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
     onSelect({ ...mapCenter, label: locationLabel(mapCenter.lat, mapCenter.lng) });
   };
 
+  const focusCurrentLocation = useCallback(() => {
+    if (!currentLocation) {
+      return;
+    }
+
+    const nextPoint = {
+      lat: currentLocation.lat,
+      lng: currentLocation.lng,
+    };
+    setMapCenter(nextPoint);
+    setSelectedPoint(nextPoint);
+    setZoom((value) => Math.max(value, 15));
+  }, [currentLocation]);
+
   const changeZoom = (direction: number) => {
     setZoom((value) => clamp(value + direction, minZoom, maxZoom));
   };
@@ -539,6 +600,21 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
       active = false;
     };
   }, []);
+
+  const lastFocusedCurrentLocationKeyRef = useRef<number | string | null>(null);
+
+  useEffect(() => {
+    if (focusCurrentLocationKey === undefined || !currentLocation) {
+      return;
+    }
+
+    if (lastFocusedCurrentLocationKeyRef.current === focusCurrentLocationKey) {
+      return;
+    }
+
+    lastFocusedCurrentLocationKeyRef.current = focusCurrentLocationKey;
+    focusCurrentLocation();
+  }, [currentLocation, focusCurrentLocation, focusCurrentLocationKey]);
 
   useEffect(() => {
     if (!fishingOverlayEnabled || !intersectsHamburg(visibleBounds)) {
@@ -775,6 +851,26 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-400 bg-blue-400/25 shadow-lg shadow-blue-950"
           style={selectedMarkerStyle}
         ></div>
+        {currentLocationMarkerStyle && (
+          <>
+            {currentLocationAccuracyRadius > 0 && (
+              <div
+                className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/60 bg-emerald-300/10"
+                style={{
+                  ...currentLocationMarkerStyle,
+                  width: currentLocationAccuracyRadius * 2,
+                  height: currentLocationAccuracyRadius * 2,
+                }}
+              />
+            )}
+            <div
+              className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-emerald-300 shadow-lg shadow-emerald-950/60"
+              style={currentLocationMarkerStyle}
+            >
+              <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-950" />
+            </div>
+          </>
+        )}
         <div className="absolute right-2 top-2 flex flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950/90 shadow-lg shadow-slate-950/40">
           <button
             type="button"
@@ -804,6 +900,29 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ center, onSelect 
           </button>
         </div>
         <div className="absolute left-2 top-2 flex max-w-[calc(100%-4.5rem)] flex-col gap-1">
+          {onRequestCurrentLocation && (
+            <button
+              type="button"
+              data-map-control="true"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onRequestCurrentLocation();
+                focusCurrentLocation();
+              }}
+              className={`rounded-lg border px-2.5 py-2 text-left text-[10px] font-black uppercase tracking-wide shadow-lg shadow-slate-950/40 transition-colors ${
+                currentLocation
+                  ? 'border-emerald-300/60 bg-emerald-300/90 text-slate-950'
+                  : currentLocationError
+                    ? 'border-red-400/50 bg-red-500/20 text-red-100 hover:bg-red-500/30'
+                    : 'border-slate-700 bg-slate-950/90 text-slate-300 hover:bg-slate-800'
+              }`}
+              aria-label="Aktuelle GPS-Position anzeigen"
+              title={currentLocationError || 'Aktuelle GPS-Position anzeigen'}
+            >
+              {currentLocationLoading ? 'GPS...' : currentLocationError ? 'GPS!' : 'GPS'}
+            </button>
+          )}
           <button
             type="button"
             data-map-control="true"

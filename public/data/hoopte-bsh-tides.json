@@ -2,7 +2,7 @@
   "station": "Hamburg, Zollenspieker, Elbe",
   "bshnr": "731P",
   "sourceUrl": "https://gezeiten.bsh.de/data/DE__731P_tides.json",
-  "fetchedAt": "2026-06-22T18:04:41.074Z",
+  "fetchedAt": "2026-06-29T07:14:07.867Z",
   "events": [
     {
       "timestamp": "2026-01-01 02:08:00+01:00",

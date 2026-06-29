@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getTideOffset } from '../utils/calculations';
+import { HOOPTE_ZOLLENSPIEKER_COORDINATES } from '../data/userSpotSeeds';
 
-const SPOT_LAT = 53.396611;
-const SPOT_LNG = 10.221192;
+const SPOT_LAT = HOOPTE_ZOLLENSPIEKER_COORDINATES.lat;
+const SPOT_LNG = HOOPTE_ZOLLENSPIEKER_COORDINATES.lng;
 const HALF_TIDE_MS = 6.21 * 60 * 60 * 1000;
 const FULL_TIDE_MS = 12.42 * 60 * 60 * 1000;
 const PEGEL_STATION = 'ZOLLENSPIEKER';
